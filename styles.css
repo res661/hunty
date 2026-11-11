@@ -614,18 +614,51 @@ html[data-theme="dark"] .toast { background: #F5F2EE; color: var(--ink); }
   .radar { width: 200px; height: 200px; }
   .srch-title { margin-top: 20px; }
 }
+/* Windows often reports prefers-reduced-motion. Tone down entrance motion only.
+   The search radar, orbiting avatars, and home rings always keep playing. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .sh-rings i { animation: ring 2.8s infinite var(--spring) !important; }
-  .sh-rings i:nth-child(2) { animation-delay: .9s !important; }
-  .sh-rings i:nth-child(3) { animation-delay: 1.8s !important; }
-  .radar > i { animation: ring 2.4s infinite ease-out !important; }
-  .radar > i.r2 { animation-delay: .8s !important; }
-  .radar > i.r3 { animation-delay: 1.6s !important; }
-  .radar-me { animation: breathe 1.6s infinite ease-in-out !important; }
-  .orbit { animation: orbitIn 3s infinite !important; }
-  .orbit.o2 { animation-delay: 1s !important; }
-  .orbit.o3 { animation-delay: 2s !important; }
+  .screen,
+  .splash-center,
+  .splash.leaving,
+  .tabbar,
+  .list-group,
+  .card,
+  .large-title,
+  .match-reveal,
+  .mr-pair .av,
+  .mr-title,
+  .mr-card,
+  .msg,
+  .sys,
+  .sheet,
+  .sheet-backdrop,
+  .toast,
+  .success-ic {
+    animation: none !important;
+    transition: none !important;
+  }
+  .sh-rings i {
+    animation: ring 4.2s infinite var(--spring) !important;
+    animation-iteration-count: infinite !important;
+  }
+  .sh-rings i:nth-child(2) { animation-delay: 1.3s !important; }
+  .sh-rings i:nth-child(3) { animation-delay: 2.6s !important; }
+  .radar > i {
+    animation: ring 3.6s infinite ease-out !important;
+    animation-iteration-count: infinite !important;
+  }
+  .radar > i.r2 { animation-delay: 1.2s !important; }
+  .radar > i.r3 { animation-delay: 2.4s !important; }
+  .radar-me {
+    animation: breathe 2.4s infinite ease-in-out !important;
+    animation-iteration-count: infinite !important;
+  }
+  .orbit {
+    animation: orbitIn 4.4s infinite !important;
+    animation-iteration-count: infinite !important;
+  }
+  .orbit.o2 { animation-delay: 1.4s !important; }
+  .orbit.o3 { animation-delay: 2.8s !important; }
 }
 .composer { flex-wrap: wrap; }
 .composer-row { display: flex; align-items: center; gap: 8px; flex: 1 0 100%; min-width: 0; }
