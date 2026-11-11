@@ -6,6 +6,10 @@ const RULES = H.RULES;
 const KEY = "hunty-save-v1";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function placeText(p) {
+  if (!p) return "";
+  return [p.country, p.city].filter(Boolean).map((s) => esc(s)).join(", ");
+}
 
 /* ---------- icons ---------- */
 const P = {
@@ -451,7 +455,7 @@ function revealMatch(m) {
   const el = $("match-reveal");
   el.innerHTML = `<div class="mr-pair">${avatarHTML(state.me, "xl")}${avatarHTML(p, "xl")}</div>
     <div class="mr-title">Есть контакт!</div>
-    <div class="mr-card"><b>${esc(p.name)}, ${p.age}</b>${p.city ? " · " + esc(p.city) : ""} ${ratingChip(p)}</div>`;
+    <div class="mr-card"><b>${esc(p.name)}, ${p.age}</b>${placeText(p) ? " · " + placeText(p) : ""} ${ratingChip(p)}</div>`;
   el.classList.remove("hidden");
   haptic("success");
   setTimeout(() => { clearInterval(tipTimer); if (current === "search") openChat(m); }, 1300);
@@ -462,9 +466,10 @@ let chat = null, timerInt = null;
 function openChat(m) {
   chat = { id: m.sessionId, partner: m.partner, startedAt: m.startedAt, ended: false, unlockedShown: false, mine: 0, theirs: 0, contact: null, entry: null };
   const p = m.partner;
-  $("chat-who").innerHTML = `${avatarHTML(p, "sm")}<span class="cw-info"><b>${esc(p.name)}${p.premium ? " " + proBadge() : ""}</b><small>${p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1)} · ${p.age}</small></span>`;
+  const where = placeText(p);
+  $("chat-who").innerHTML = `${avatarHTML(p, "sm")}<span class="cw-info"><b>${esc(p.name)}${p.premium ? " " + proBadge() : ""}</b><small>${p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1)} · ${p.age}</small>${where ? `<small class="cw-place">${where}</small>` : ""}</span>`;
   $("messages").innerHTML = `
-    <button class="chat-intro" id="chat-intro">${avatarHTML(p, "lg")}<b>${esc(p.name)}, ${p.age}${p.city ? " · " + esc(p.city) : ""}</b>
+    <button class="chat-intro" id="chat-intro">${avatarHTML(p, "lg")}<b>${esc(p.name)}, ${p.age}${where ? " · " + where : ""}</b>
     <small>${ratingChip(p)} ${p.stats.chats} ${plural(p.stats.chats, "чат", "чата", "чатов")} · ср. ${fmtDur(p.stats.avgSec)}</small><span class="ci-more">Профиль</span></button>
     <div class="sys">Вы на связи. «Дальше» — сразу. Оценка — после 30 секунд и 3 сообщений с каждой стороны.</div>`;
   $("chat-intro").onclick = () => openPartnerProfile(p);
@@ -643,7 +648,7 @@ function openPartnerProfile(p) {
   const common = p.interests.filter((x) => state.me.interests.includes(x));
   const body = openSheet(`${photosHTML(p)}
     <div class="ps-name"><h2>${esc(p.name)}, ${p.age}</h2>${p.premium ? proBadge() : ""}</div>
-    <div class="ps-meta">${[p.country, p.city].filter(Boolean).map(esc).join(", ")}${p.city || p.country ? " · " : ""}${p.gender === "f" ? "девушка" : p.gender === "m" ? "парень" : "пол не указан"}</div>
+    <div class="ps-meta">${placeText(p) ? placeText(p) + " · " : ""}${p.gender === "f" ? "девушка" : p.gender === "m" ? "парень" : "пол не указан"}</div>
     <div class="ps-about">${esc(p.about)}</div>
     <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}
     <div class="ps-section">Интересы${common.length ? ` · ${common.length} ${plural(common.length, "общий", "общих", "общих")}` : ""}</div>
