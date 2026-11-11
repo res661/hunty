@@ -200,7 +200,7 @@ function showScreen(name) {
 }
 function goBack() {
   if (!$("sheet").classList.contains("hidden")) return closeSheet();
-  if (current === "chat") return leaveChat("home");
+  if (current === "chat") return confirmEndChat();
   if (current === "search") return cancelSearch();
   if (current === "register") return showScreen(state.registered ? "profile" : "onboard");
   if (current !== "home" && TABS.includes(current)) return showScreen("home");
@@ -382,7 +382,7 @@ const proBadge = () => `<span class="pro-badge">${ic("crown")}PRO</span>`;
 
 /* ---------- home ---------- */
 let onlineCount = 0;
-const TIPS = ["Оценка — после 30 секунд и трёх сообщений с каждой стороны", "Средняя оценка учитывается после 5 разговоров, до этого ты «Новый»", "«Дальше» с первой секунды. Короткий чат не оценивается", "Ссылки, @ники и номера в чате блокируются — это защита от скама"];
+const TIPS = ["Оценка 1–10 — после 3 сообщений в чате", "Средняя оценка учитывается после 5 разговоров, до этого ты «Новый»", "«Дальше» с первой секунды. Меньше 3 сообщений — без оценки", "Ссылки, @ники и номера в чате блокируются — это защита от скама"];
 const filtersActive = () => { const f = state.filters; return f.gender !== "any" || f.ageMin || f.ageMax || f.city; };
 function renderHome() {
   rollover();
@@ -435,7 +435,7 @@ function startSearch(opts) {
   }, 2600);
   searching = true;
   const exclude = state.recentPartnerIds.concat(state.blocked);
-  const filters = filtersActive() ? state.filters : null;
+  const filters = null;
   backend.findMatch({ filters, exclude, boost: state.boostUntil > Date.now() }).then((m) => {
     if (!searching) return;
     searching = false;
@@ -476,11 +476,11 @@ function openChat(m) {
   $("messages").innerHTML = `
     <button class="chat-intro" id="chat-intro">${avatarHTML(p, "lg")}<b>${esc(p.name)}, ${p.age}${where ? " · " + where : ""}</b>
     <small>${ratingChip(p)} ${p.stats.chats} ${plural(p.stats.chats, "чат", "чата", "чатов")} · ср. ${fmtDur(p.stats.avgSec)}</small><span class="ci-more">Профиль</span></button>
-    <div class="sys">Вы на связи. «Дальше» — сразу. Оценка — после 30 секунд и 3 сообщений с каждой стороны.</div>`;
+    <div class="sys">Вы на связи. «Дальше» — сразу. Оценка — после 3 сообщений в чате.</div>`;
   $("chat-intro").onclick = () => openPartnerProfile(p);
   $("composer").classList.remove("hidden"); $("composer-ended").classList.add("hidden");
   $("typing").classList.add("hidden");
-  $("msg-input").value = ""; updateSend(); renderContactBtn();
+  $("msg-input").value = ""; updateSend();
   $("chat-timer").classList.remove("unlocked");
   showScreen("chat");
   clearInterval(timerInt); tickTimer(); timerInt = setInterval(tickTimer, 1000);
@@ -490,7 +490,8 @@ function tickTimer() {
   if (!chat) return;
   const d = chatDur();
   $("timer-text").textContent = fmtDur(d);
-  const frac = Math.min(1, d / RULES.MIN_RATE_SEC);
+  const total = (chat.mine || 0) + (chat.theirs || 0);
+  const frac = Math.min(1, total / RULES.MIN_RATE_MSGS);
   $("timer-ring").style.strokeDashoffset = String(50.27 * (1 - frac));
   maybeUnlock();
 }
@@ -523,45 +524,12 @@ function sendMsg() {
   backend.sendMessage(chat.id, text).catch(() => {});
   haptic("light");
 }
-function renderContactBtn() {
-  const b = $("contact-btn");
-  if (!chat || chat.ended) { b.classList.add("hidden"); return; }
-  b.classList.remove("hidden");
-  if (chat.contact === "matched") { b.textContent = "Контакты обменены"; b.disabled = true; }
-  else if (chat.contact === "waiting") { b.textContent = "Ждём собеседника…"; b.disabled = true; }
-  else { b.textContent = "Обменяться контактами"; b.disabled = false; }
-}
-function showContactCard(username) {
-  if (!chat || chat.contact === "matched") return;
-  chat.contact = "matched";
-  const safe = String(username || "").replace(/[^a-zA-Z0-9_]/g, "");
-  if (!safe) return;
-  const box = $("messages");
-  const el = document.createElement("div");
-  el.className = "sys ok";
-  el.innerHTML = `Контакты обменены · @${esc(safe)} <button class="inline-link" type="button">открыть</button>`;
-  el.querySelector("button").onclick = () => {
-    const url = "https://t.me/" + safe;
-    try { if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, "_blank", "noopener"); }
-    catch { window.open(url, "_blank", "noopener"); }
-  };
-  box.appendChild(el); box.scrollTop = box.scrollHeight;
-  renderContactBtn(); haptic("success");
-}
-function explainNoUsername() {
-  openSheet(`<div class="sh-title">Нужен @username</div>
-    <div class="sh-sub">Задай публичное имя в настройках Telegram. Без него контакт не обменять. Писать @ники в чат по-прежнему нельзя.</div>
-    <div class="sh-actions"><button class="btn btn-primary btn-lg" id="un-ok">Понятно</button></div>`);
-  $("sheet-body").querySelector("#un-ok").onclick = () => closeSheet(true);
-}
-async function requestContact() {
-  if (!chat || chat.ended || chat.contact === "matched" || chat.contact === "waiting") return;
-  if (!myUsername()) { haptic("warning"); return explainNoUsername(); }
-  chat.contact = "waiting"; renderContactBtn(); haptic("light");
-  try {
-    const r = await backend.requestContact(chat.id);
-    if (r && r.status === "matched" && r.username) showContactCard(r.username);
-  } catch { chat.contact = null; renderContactBtn(); toast("Не удалось отправить запрос", "warn"); }
+function confirmEndChat() {
+  if (!chat || chat.ended) return leaveChat("home");
+  const body = openSheet(`<div class="sh-title">Закончить чат?</div><div class="sh-sub">Собеседник увидит, что ты вышел. Новый поиск сам не начнётся.</div>
+    <div class="sh-actions"><button class="btn btn-primary btn-lg" id="leave-yes">Да</button><button class="btn btn-soft btn-lg" id="leave-no">Остаться</button></div>`);
+  body.querySelector("#leave-yes").onclick = () => { closeSheet(true); setTimeout(() => leaveChat("home"), 220); };
+  body.querySelector("#leave-no").onclick = () => closeSheet(true);
 }
 async function endChat() {
   if (!chat) return null;
@@ -606,7 +574,7 @@ function openRateSheet(entry, after) {
     <div class="rate-grid" id="rate-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button class="rate-btn" data-n="${n}">${n}</button>`).join("")}</div>
     <div class="rate-tags" id="rate-tags">${tags.map((t) => `<button class="chip" data-t="${t}">${t}</button>`).join("")}</div>
     <div class="sh-actions row"><button class="btn btn-soft" id="rate-home">${after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary" id="rate-send" disabled>${after === "next" ? "Оценить и дальше" : "Оценить"}</button></div>
-    <div class="rate-note">Оценка анонимна. Нужны 30 секунд и хотя бы по 3 сообщения с каждой стороны.</div>`, () => afterChat(after));
+    <div class="rate-note">Оценка анонимна. Появляется после 3 сообщений в чате.</div>`, () => afterChat(after));
   body.querySelector("#rate-grid").onclick = (e) => {
     const b = e.target.closest("[data-n]"); if (!b) return;
     score = +b.dataset.n; haptic("select");
@@ -664,14 +632,10 @@ function openChatMenu() {
   if (!chat) return;
   const p = chat.partner;
   const body = openSheet(`<div class="menu-list">
-    <button class="menu-item" id="m-next"><span class="lr-ic t-coral">${ic("next")}</span>Дальше</button>
-    <button class="menu-item" id="m-contact"><span class="lr-ic t-blue">${ic("link")}</span>Обменяться контактами</button>
     <button class="menu-item" id="m-prof"><span class="lr-ic t-blue">${ic("user")}</span>Профиль: ${esc(p.name)}</button>
     <button class="menu-item danger" id="m-report"><span class="lr-ic t-red">${ic("flag")}</span>Пожаловаться</button>
     <button class="menu-item danger" id="m-block"><span class="lr-ic t-gray">${ic("block")}</span>Заблокировать</button></div>`);
   body.querySelector("#m-prof").onclick = () => openPartnerProfile(p);
-  body.querySelector("#m-contact").onclick = () => { closeSheet(true); setTimeout(requestContact, 180); };
-  body.querySelector("#m-next").onclick = () => { closeSheet(true); setTimeout(() => leaveChat("next"), 200); };
   body.querySelector("#m-report").onclick = () => openReport(p);
   body.querySelector("#m-block").onclick = () => confirmBlock(p);
 }
@@ -708,7 +672,7 @@ function confirmBlock(p) {
   };
 }
 async function doBlock(p) { if (!state.blocked.includes(p.id)) state.blocked.push(p.id); await backend.block(p.id); save(); }
-function showEnded() { $("composer").classList.add("hidden"); $("composer-ended").classList.remove("hidden"); $("typing").classList.add("hidden"); $("contact-btn").classList.add("hidden"); }
+function showEnded() { $("composer").classList.add("hidden"); $("composer-ended").classList.remove("hidden"); $("typing").classList.add("hidden"); }
 
 /* ---------- profile tab ---------- */
 function renderProfile() {
@@ -723,10 +687,11 @@ function renderProfile() {
   const pb = $("me-pro-btn"); if (pb) pb.onclick = openPremium;
   const lockOr = pro ? `<span class="chev">${ic("chev")}</span>` : `<span class="chev">${ic("lock")}</span>`;
   const boostLeft = state.boostUntil > Date.now() ? ` · ${Math.ceil((state.boostUntil - Date.now()) / 60000)} мин` : "";
-  $("me-premium-tools").innerHTML = `<button class="list-row" id="pt-raters"><span class="lr-ic t-purple">${ic("eye")}</span><span class="lr-label">Кто меня оценил</span><span class="lr-val">${pro ? "все" : revealsLeft() + " из 3"}</span><span class="chev">${ic("chev")}</span></button>
-    <button class="list-row" id="pt-boost"><span class="lr-ic t-coral">${ic("bolt")}</span><span class="lr-label">Буст${boostLeft}</span>${lockOr}</button>`;
-  $("pt-raters").onclick = openRaters;
+  $("me-premium-tools").innerHTML = `<button class="list-row" id="pt-boost"><span class="lr-ic t-coral">${ic("bolt")}</span><span class="lr-label">Буст${boostLeft}</span>${lockOr}</button>`;
   $("pt-boost").onclick = doBoost;
+  const wr = $("who-rated-bottom");
+  wr.textContent = pro ? "Кто меня оценил" : `Кто меня оценил · ${revealsLeft()} из 3`;
+  wr.onclick = openRaters;
   renderSeek($("seek-seg"), state.me.seeking || "any");
   [...$("theme-seg").children].forEach((b) => b.classList.toggle("on", b.dataset.v === state.settings.theme));
   const N = [["match", "Найден собеседник", "search", "t-coral"], ["messages", "Сообщения", "chat", "t-green"], ["ratings", "Новые оценки", "star", "t-yellow"], ["news", "Новости Hunty", "bell", "t-red"]];
@@ -771,27 +736,10 @@ function payFlow(plan) {
   };
 }
 function requirePro(fn) { return () => { if (!isPremium()) { haptic("warning"); return openPremium(); } fn(); }; }
-function openFilters() {
-  const f = state.filters;
-  const body = openSheet(`<div class="sh-title">Фильтры поиска</div><div class="sh-sub">Возраст — только внутри твоего пула (${myPool() === "teen" ? "16–17" : "18+"})</div>
-    <div class="filter-block"><label>Пол</label><div class="segment" id="ff-g"><button data-v="any">Все</button><button data-v="f">Девушки</button><button data-v="m">Парни</button></div></div>
-    <div class="filter-block"><label>Возраст</label><div class="range-row"><label class="field"><input id="ff-min" inputmode="numeric" maxlength="2" placeholder="от" value="${f.ageMin || ""}"></label><span>—</span><label class="field"><input id="ff-max" inputmode="numeric" maxlength="2" placeholder="до" value="${f.ageMax || ""}"></label></div></div>
-    <div class="filter-block"><label>Город</label><label class="field"><input id="ff-city" placeholder="Любой" value="${esc(f.city)}"></label></div>
-    <div class="sh-actions row"><button class="btn btn-soft" id="ff-reset">Сбросить</button><button class="btn btn-primary" id="ff-save">Применить</button></div>`);
-  let g = f.gender;
-  const seg = body.querySelector("#ff-g");
-  const paint = () => [...seg.children].forEach((b) => b.classList.toggle("on", b.dataset.v === g)); paint();
-  seg.onclick = (e) => { const b = e.target.closest("[data-v]"); if (b) { g = b.dataset.v; paint(); haptic("select"); } };
-  body.querySelector("#ff-reset").onclick = () => { state.filters = { gender: "any", ageMin: null, ageMax: null, city: "" }; save(); closeSheet(true); refresh(); toast("Фильтры сброшены"); };
-  body.querySelector("#ff-save").onclick = () => {
-    state.filters = { gender: g, ageMin: parseInt(body.querySelector("#ff-min").value, 10) || null, ageMax: parseInt(body.querySelector("#ff-max").value, 10) || null, city: body.querySelector("#ff-city").value.trim() };
-    save(); closeSheet(true); refresh(); toast("Фильтры применены"); haptic("success");
-  };
-}
 function openRaters() {
   const rows = [...state.raters].reverse();
   const left = revealsLeft();
-  const body = openSheet(`<div class="sh-title">Кто тебя оценил</div><div class="sh-sub">${isPremium() ? "PRO: без лимита" : `Бесплатно ${FREE_REVEALS} открытия в день · осталось ${left}`}. Чаты от 30 секунд и 3 сообщений.</div>
+  const body = openSheet(`<div class="sh-title">Кто тебя оценил</div><div class="sh-sub">${isPremium() ? "PRO: без лимита" : `Бесплатно ${FREE_REVEALS} открытия в день · осталось ${left}`}. После 3 сообщений в чате.</div>
     <div class="list-group" id="rater-list" style="margin-top:16px">${rows.length ? rows.map((h, i) => {
       const id = h.id || (h.name + ":" + h.ts);
       const open = revealed(id);
@@ -825,7 +773,7 @@ function openLimitSheet() {
 
 /* ---------- rules / restricted ---------- */
 function openRules() {
-  const R0 = [["Только 16+", "Возраст обязателен. 16–17 и 18+ — отдельные пулы, они никогда не пересекаются. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 — только если разговор шёл хотя бы 30 секунд и каждый отправил минимум 3 сообщения. «Дальше» с первой секунды: если порог не пройден, оценки нет."]];
+  const R0 = [["Только 16+", "Возраст обязателен. 16–17 и 18+ — отдельные пулы, они никогда не пересекаются. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 появляется после 3 сообщений в чате, с любой стороны. «Дальше» с первой секунды: если сообщений меньше трёх, оценки нет."]];
   openSheet(`<div class="sh-title">Правила Hunty</div><div class="sh-sub">Коротко и по делу</div>
     <div class="rules-list">${R0.map(([b, p], i) => `<div class="rule"><span class="rn">${i + 1}</span><div><b>${b}</b><p>${p}</p></div></div>`).join("")}</div>
     <div class="rate-note">Ограничения: 3 жалобы за сутки — 1 час, 6 — 24 часа, 10 за 3 дня — 7 дней.</div>`);
@@ -900,10 +848,6 @@ function bindBackend() {
     if (rec && rec.partner) state.raters.push({ id: partnerId, name: rec.partner.name, hue: rec.partner.hue, photos: rec.partner.photos, score, dur, ts: Date.now() });
     save(); refresh();
   });
-  backend.on("contactMatched", ({ sessionId, username }) => {
-    if (!chat || chat.id !== sessionId) return;
-    showContactCard(username);
-  });
 }
 
 /* ---------- bindings ---------- */
@@ -922,7 +866,6 @@ function bind() {
     const b = e.target.closest("[data-v]"); if (!b) return;
     state.me.seeking = b.dataset.v; save(); backend.updateMe(publicMe()); renderSeek($("seek-seg"), state.me.seeking); haptic("select");
   };
-  $("open-filters-free").onclick = openFilters;
   $("f-age").addEventListener("input", () => { $("f-age").value = $("f-age").value.replace(/\D/g, ""); renderAgeHint(); });
   const step = (d) => { const a = parseInt($("f-age").value, 10) || (d > 0 ? 17 : 19); $("f-age").value = Math.max(16, Math.min(99, a + d)); renderAgeHint(); haptic("select"); };
   $("age-minus").onclick = () => step(-1); $("age-plus").onclick = () => step(1);
@@ -944,12 +887,16 @@ function bind() {
   $("cd-skip").onclick = onCooldownAction;
   $("srch-cancel").onclick = cancelSearch;
 
-  $("chat-back").onclick = () => leaveChat("home");
+  $("chat-back").onclick = () => confirmEndChat();
   $("chat-skip").onclick = () => { haptic("medium"); leaveChat("next"); };
   $("chat-report").onclick = () => { if (chat) openReport(chat.partner); };
   $("chat-more").onclick = openChatMenu;
   $("chat-who").onclick = () => chat && openPartnerProfile(chat.partner);
-  $("contact-btn").onclick = requestContact;
+  $("messages").addEventListener("pointerdown", (e) => {
+    if (e.target.closest("button, a, input, textarea")) return;
+    const input = $("msg-input");
+    if (document.activeElement === input) input.blur();
+  });
   $("msg-input").addEventListener("input", updateSend);
   $("msg-input").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendMsg(); } });
   $("msg-send").addEventListener("pointerdown", (e) => e.preventDefault());

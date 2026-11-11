@@ -197,7 +197,7 @@
       const city = String((me && me.city) || "").trim().toLowerCase();
       const scored = list.map((p) => {
         const diff = Math.abs(p.age - myAge);
-        let s = Math.max(0, 24 - diff * 3);
+        let s = diff <= 2 ? 40 : diff <= 4 ? 16 : Math.max(0, 8 - diff);
         if (country && String(p.country || "").toLowerCase() === country) s += 14;
         if (city && String(p.city || "").toLowerCase() === city) s += 10;
         s += Math.random() * 4;

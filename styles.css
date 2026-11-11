@@ -727,6 +727,8 @@ html[data-theme="dark"] .toast { background: #F5F2EE; color: var(--ink); }
 .chat-pill.skip { background: var(--coral); color: #fff; }
 .chat-pill.report { background: var(--coral-soft); color: var(--coral); }
 .chat-pill:active { transform: scale(.97); }
+.more-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); box-shadow: 0 0 0 1px var(--line); }
+.who-rated-bottom { display: flex; width: calc(100% - 32px); margin: 22px 16px 8px; }
 .chat-who { gap: 9px; }
 .cw-info b { font-size: 15.5px; }
 .cw-info small { font-size: 12px; }

@@ -7,8 +7,7 @@
   const RULES = {
     MIN_AGE: 16,
     ADULT_AGE: 18,
-    MIN_RATE_SEC: 30,          // rating needs at least 30 s
-    MIN_RATE_MSGS: 3,          // and at least 3 messages from each person
+    MIN_RATE_MSGS: 3,          // rating after 3 messages total, no time gate
     NEW_UNTIL: 5,              // show "Новый" until 5 counted ratings
     PRIOR_MEAN: 7.2,           // Bayesian prior — damps tiny samples
     PRIOR_WEIGHT: 4,
@@ -45,7 +44,7 @@
 
   /**
    * ratings: [{ from, score (1..10), dur (sec), ts, raterTrust? (0..1) }]
-   * - only chats ≥ 30 s count (each side must also have sent 3 messages)
+   * - a rating is offered once the chat has 3 messages in total (either side)
    * - one rating per pair (latest wins)
    * - weight grows with conversation length and rater trust
    * - outliers vs median are damped, Bayesian prior pulls small samples to the mean
@@ -53,7 +52,7 @@
   function reputation(ratings) {
     const byFrom = new Map();
     for (const r of ratings || []) {
-      if (!r || r.dur < RULES.MIN_RATE_SEC) continue;
+      if (!r) continue;
       const s = Math.round(Number(r.score));
       if (!(s >= 1 && s <= 10)) continue;
       const prev = byFrom.get(r.from);
@@ -104,7 +103,7 @@
     { kind: "link", re: /(https?:\/\/|www\.)\S+|\b[a-z0-9-]{2,}\.(com|ru|net|org|io|me|ua|pl|xyz|app|link|ly|gg|tv|info|site|online|shop|top|cc|co|by|kz|biz|de|eu)\b/i,
       message: "Ссылки в чате запрещены — так защищаемся от скама" },
     { kind: "username", re: /(^|[^a-z0-9_])@[a-z0-9_]{4,}/i,
-      message: "Нельзя отправлять @юзернеймы. Обменяться контактами можно только взаимной кнопкой" },
+      message: "Нельзя отправлять @юзернеймы" },
     { kind: "phone", re: /(\+?\d[\d\s().-]{7,}\d)/,
       message: "Номера телефонов отправлять нельзя" },
   ];
@@ -130,8 +129,8 @@
     "Будь собой и уважай собеседника — оценку ставят оба",
   ];
 
-  function canRate(durSec, mine, theirs) {
-    return durSec >= RULES.MIN_RATE_SEC && (mine | 0) >= RULES.MIN_RATE_MSGS && (theirs | 0) >= RULES.MIN_RATE_MSGS;
+  function canRate(_durSec, mine, theirs) {
+    return ((mine | 0) + (theirs | 0)) >= RULES.MIN_RATE_MSGS;
   }
 
   function dailyLimit(isPremium) { return isPremium ? RULES.PREMIUM_SEARCHES : RULES.FREE_SEARCHES; }
