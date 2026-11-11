@@ -24,7 +24,7 @@ const backend = window.HuntyMock.createMockBackend(...)   // →  createWsBacken
 Alternative: Supabase (Postgres + Realtime channels + Edge Functions for initData validation and matchmaking). Same rules apply.
 
 ## Age & safety
-- Age is required at registration, minimum **16**. Pools: **16–17 ("teen") ↔ 16–17 only, 18+ ("adult") ↔ 18+ only**, enforced in the matcher (server), not the UI.
+- Age is required at registration, minimum **16**. Hard pools never mix: **16–17 only with 16–17, 18+ only with 18+**. Anyone **20 or older** has a hard floor of 18. Inside a pool, matching prefers nearby ages (an 18-year-old more often sees 18–20; a 16-year-old more often sees 16–17). Same country or city is a soft preference, not a block.
 - Changing age across the 18 boundary needs support review (prototype blocks it in the editor).
 - No 18+ content for anyone. Report reasons: spam, insult, nsfw, **minor in the adult pool** (urgent queue → immediate search hold pending review), scam, other.
 - Message filter (server + client): links, domains, `@usernames`, phone numbers, Telegram invites (`t.me`, `joinchat`, `+hash`) → the message is rejected, the sender gets a toast. The only way to share a Telegram @username is the mutual **Обменяться контактами** button. Chats are not stored.

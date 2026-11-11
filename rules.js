@@ -36,6 +36,18 @@
     return Number(age) >= RULES.ADULT_AGE ? "adult" : "teen";
   }
 
+  /**
+   * Hard age gate. 16–17 match only 16–17. Anyone 18+ matches only 18+.
+   * 20 and older have a hard floor of 18 — never 16 or 17.
+   */
+  function canMatchAges(a, b) {
+    const x = Number(a), y = Number(b);
+    if (!(x >= RULES.MIN_AGE) || !(y >= RULES.MIN_AGE)) return false;
+    if (agePool(x) !== agePool(y)) return false;
+    if ((x >= 20 && y < RULES.ADULT_AGE) || (y >= 20 && x < RULES.ADULT_AGE)) return false;
+    return true;
+  }
+
   function median(xs) {
     const s = [...xs].sort((a, b) => a - b);
     const m = s.length >> 1;
@@ -168,5 +180,5 @@
     return { minutes, until: now + minutes * 60e3, rapid: minutes >= 100 };
   }
 
-  window.HuntyRules = { RULES, checkMessage, SAFETY_TIPS, agePool, reputation, evaluateReports, canRate, dailyLimit, antiFarm };
+  window.HuntyRules = { RULES, checkMessage, SAFETY_TIPS, agePool, canMatchAges, reputation, evaluateReports, canRate, dailyLimit, antiFarm };
 })();

@@ -122,6 +122,24 @@
       stats: { avg: 8.9, count: 9, avgSec: 310, chats: 12 },
       greet: ["приветик", "хэй 👋"],
       lines: ["хожу на танцы три раза в неделю", "у меня кошка Муся", "что делаешь на выходных?", "в Риге холодно уже", "какие у тебя хобби?"] },
+    { id: "t15", name: "Настя", age: 18, gender: "f", city: "Варшава", country: "Польша", premium: false, hue: 4,
+      about: "Только закончила школу. Слушаю музыку и гуляю по центру.",
+      interests: ["Музыка", "Фото", "Сериалы"],
+      stats: { avg: 8.1, count: 14, avgSec: 210, chats: 18 },
+      greet: ["привет!", "хай"],
+      lines: ["мне 18, учусь на первом", "в Варшаве сейчас тепло", "какой у тебя плейлист?", "люблю гулять вечером", "ты тоже недавно закончил школу?"] },
+    { id: "t16", name: "Егор", age: 19, gender: "m", city: "Краков", country: "Польша", premium: false, hue: 1,
+      about: "Универ, футбол, мемы. Не люблю долгие паузы.",
+      interests: ["Спорт", "Мемы", "IT"],
+      stats: { avg: 7.8, count: 22, avgSec: 190, chats: 27 },
+      greet: ["йо", "привет"],
+      lines: ["мне 19, первый курс", "играю в футбол по выходным", "ты откуда?", "в Кракове дождь", "какой фильм последний смотрел?"] },
+    { id: "t17", name: "Олег", age: 36, gender: "m", city: "Вроцлав", country: "Польша", premium: false, hue: 7,
+      about: "Работаю, готовлю, иногда путешествую.",
+      interests: ["Еда", "Путешествия", "Музыка"],
+      stats: { avg: 8.0, count: 40, avgSec: 260, chats: 52 },
+      greet: ["добрый вечер", "привет"],
+      lines: ["я во Вроцлаве", "сегодня готовил ужин", "ты чем занимаешься?", "люблю спокойные разговоры", "куда ездил в последний раз?"] },
     { id: "t14", name: "Рома", age: 16, gender: "m", city: "Таллин", country: "Эстония", premium: false, hue: 9,
       about: "Собираю компы и читаю фантастику.",
       interests: ["IT", "Книги", "Наука", "Игры"],
@@ -149,6 +167,7 @@
     t01: "anya_test", t02: "max_test", t03: "olya_test", t04: "danya_test", t05: "katya_test",
     t06: "artem_test", t07: "liza_test", t08: "ilya_test", t09: "masha_test", t10: "timur_test",
     t11: "sonya_test", t12: "misha_test", t13: "vika_test", t14: "roma_test",
+    t15: "nastya_test", t16: "egor_test", t17: "oleg_test",
   };
   PROFILES.forEach((p) => { p.username = HANDLES[p.id]; });
 
@@ -177,8 +196,8 @@
     function poolOf(age) { return R.agePool(age); }
 
     function candidates(filters, exclude) {
-      const myPool = poolOf(me ? me.age : 18);
-      let list = PROFILES.filter((p) => poolOf(p.age) === myPool && !blocked.has(p.id) && !(exclude || []).includes(p.id));
+      const myAge = me && me.age != null ? me.age : 18;
+      let list = PROFILES.filter((p) => R.canMatchAges(myAge, p.age) && !blocked.has(p.id) && !(exclude || []).includes(p.id));
       const seek = me && (me.seeking === "f" || me.seeking === "m") ? me.seeking : "";
       if (seek) list = list.filter((p) => p.gender === seek);
       if (filters) {
@@ -197,15 +216,21 @@
       const city = String((me && me.city) || "").trim().toLowerCase();
       const scored = list.map((p) => {
         const diff = Math.abs(p.age - myAge);
-        let s = diff <= 2 ? 40 : diff <= 4 ? 16 : Math.max(0, 8 - diff);
-        if (country && String(p.country || "").toLowerCase() === country) s += 14;
-        if (city && String(p.city || "").toLowerCase() === city) s += 10;
-        s += Math.random() * 4;
+        let s = diff <= 1 ? 48 : diff <= 2 ? 34 : diff <= 4 ? 10 : 1;
+        if (country && String(p.country || "").toLowerCase() === country) s += 6;
+        if (city && String(p.city || "").toLowerCase() === city) s += 4;
+        s += Math.random() * 3;
         return { p, s };
       }).sort((a, b) => b.s - a.s);
-      const top = scored.slice(0, Math.max(1, Math.ceil(scored.length * 0.45)));
-      const bag = Math.random() < 0.8 ? top : scored;
-      return pick(bag.map((x) => x.p));
+      const near = scored.filter((x) => Math.abs(x.p.age - myAge) <= 2);
+      const bag = near.length && Math.random() < 0.85 ? near : scored;
+      const total = bag.reduce((sum, x) => sum + x.s, 0);
+      let roll = Math.random() * total;
+      for (const x of bag) {
+        roll -= x.s;
+        if (roll <= 0) return x.p;
+      }
+      return bag[bag.length - 1].p;
     }
 
     function startSession(p) {
