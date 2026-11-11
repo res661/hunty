@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#F6F2EC" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=9" type="image/svg+xml" />
+  <link rel="icon" href="assets/mark.svg?v=10" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -168,7 +168,7 @@
       <div class="list-group">
         <div class="list-row static"><span class="lr-ic t-orange" data-ic="flask"></span><span class="lr-label">Тестовый режим<small>Сервера пока нет: собеседники — 14 тестовых профилей со скриптами</small></span></div>
         <button class="list-row" id="t-pause"><span class="lr-ic t-indigo" data-ic="clock"></span><span class="lr-label">Симулировать паузу поиска</span></button>
-        <button class="list-row" id="t-reports"><span class="lr-ic t-pink" data-ic="flag"></span><span class="lr-label">Симулировать 3 жалобы на меня</span></button>
+        <button class="list-row" id="t-reports"><span class="lr-ic t-pink" data-ic="flag"></span><span class="lr-label">Симулировать 30 жалоб (бан на 10 ч)</span></button>
         <button class="list-row" id="t-ratings"><span class="lr-ic t-yellow" data-ic="star"></span><span class="lr-label">Добавить 5 тестовых оценок мне</span></button>
         <button class="list-row danger" id="t-reset"><span class="lr-ic t-red" data-ic="trash"></span><span class="lr-label">Сбросить всё</span></button>
       </div>
@@ -234,7 +234,7 @@
       <div class="rs-timer" id="rs-timer">59:59</div>
       <div class="rs-caption">до снятия ограничения</div>
       <div class="rs-list">
-        <div>Профиль доступен</div><div>Новые чаты — после таймера</div><div>Повторные жалобы продлевают срок</div>
+        <div>Профиль доступен</div><div>Новые чаты — после 10 часов</div><div>Ещё 30 жалоб за сутки — снова 10 часов</div>
       </div>
     </div>
     <div class="bottom-cta stack">
@@ -256,8 +256,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=9"></script>
-<script src="mock.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="rules.js?v=10"></script>
+<script src="mock.js?v=10"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

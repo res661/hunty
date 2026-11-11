@@ -17,4 +17,4 @@ Bot: [@gohunty_bot](https://t.me/gohunty_bot) · Hosting: `https://res661.github
 When updating, bump `?v=` in `index.html` to bust Telegram's cache.
 
 ## Test mode tools (Профиль → Тестовый режим)
-Simulate 3 reports (soft-ban screen), add 5 test ratings, reset everything. Premium purchase is mocked (no Stars are charged).
+**Simulate 30 reports** opens the soft-ban screen: 30 reports in a rolling 24 hours block search for 10 hours. After the timer, search works again; another 30 reports start another 10 hours. Low ratings never ban. Add 5 test ratings, or reset everything. Premium purchase is mocked (no Stars are charged).

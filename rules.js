@@ -15,12 +15,12 @@
     OUTLIER_WEIGHT: 0.35,
     FREE_SEARCHES: 30,
     PREMIUM_SEARCHES: 300,
-    // Soft-ban is driven ONLY by reports from unique users, never by low ratings.
-    BAN_LEVELS: [
-      { reports: 3, windowH: 24, banMin: 60 },
-      { reports: 6, windowH: 24, banMin: 24 * 60 },
-      { reports: 10, windowH: 72, banMin: 7 * 24 * 60 },
-    ],
+    // Soft-ban is driven ONLY by reports, never by low ratings.
+    // 30 reports inside a rolling 24 h window → search blocked for 10 h.
+    // Reports that already triggered a ban do not immediately start another one.
+    BAN_REPORTS: 30,
+    BAN_WINDOW_MS: 24 * 3600e3,
+    BAN_MS: 10 * 3600e3,
     REPORT_REASONS: [
       { id: "spam", label: "Спам или реклама" },
       { id: "insult", label: "Оскорбления" },
@@ -73,23 +73,35 @@
   }
 
   /**
-   * reports: [{ from, reason, ts }] against one user. Counts unique reporters inside
-   * each level's window. Returns { level, until } or null.
+   * reports: [{ from, reason, ts }] against one user.
+   * 30 reports inside any rolling 24 h window start a 10 h search ban from that 30th report.
+   * When the 10 h end, those reports are spent. Another 30 in a later 24 h window starts another 10 h.
+   * Returns { level: 1, reports, until, triggeredAt } or null. Ratings never come through here.
    */
   function evaluateReports(reports, now) {
     now = now || Date.now();
-    let hit = null;
-    RULES.BAN_LEVELS.forEach((lvl, i) => {
-      const since = now - lvl.windowH * 3600e3;
-      const uniq = new Set();
-      for (const r of reports || []) {
-        if (r.ts >= since) uniq.add(r.from);
+    const list = (reports || []).filter((r) => r && r.ts).slice().sort((a, b) => a.ts - b.ts);
+    const need = RULES.BAN_REPORTS;
+    const windowMs = RULES.BAN_WINDOW_MS;
+    const banMs = RULES.BAN_MS;
+    let cursor = 0;
+    let active = null;
+    while (cursor < list.length) {
+      let trigger = null;
+      for (let i = cursor; i < list.length; i++) {
+        const ts = list[i].ts;
+        const since = ts - windowMs;
+        let count = 0;
+        for (let j = cursor; j <= i; j++) if (list[j].ts >= since) count++;
+        if (count >= need) { trigger = { ts, reports: count }; break; }
       }
-      if (uniq.size >= lvl.reports) hit = { level: i + 1, minutes: lvl.banMin, reports: uniq.size };
-    });
-    if (!hit) return null;
-    const last = Math.max(...reports.map((r) => r.ts));
-    return { level: hit.level, reports: hit.reports, until: last + hit.minutes * 60e3 };
+      if (!trigger) break;
+      const until = trigger.ts + banMs;
+      active = { level: 1, reports: trigger.reports, until, triggeredAt: trigger.ts };
+      if (now < until) return active;
+      while (cursor < list.length && list[cursor].ts <= trigger.ts) cursor++;
+    }
+    return null;
   }
 
   /**

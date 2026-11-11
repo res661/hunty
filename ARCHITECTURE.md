@@ -40,13 +40,7 @@ Alternative: Supabase (Postgres + Realtime channels + Edge Functions for initDat
 - Ratings **never** trigger bans.
 
 ## Soft-ban (only from reports)
-Unique reporters within a window:
-| Level | Reports | Window | Search blocked |
-|---|---|---|---|
-| 1 | 3 | 24 h | 1 h |
-| 2 | 6 | 24 h | 24 h |
-| 3 | 10 | 72 h | 7 days + manual review |
-Reports from new / low-trust accounts weigh less; "minor" reports go to the urgent queue. User sees the restricted screen with a timer; the profile stays available. Chats are not stored.
+30 reports inside a rolling 24-hour window block search for 10 hours, counted from the report that crossed 30. When those 10 hours end, the app works again; the reports that already triggered the ban do not immediately start another one. A new run of 30 reports inside a 24-hour window starts another 10-hour ban. Ratings never trigger bans. "Minor" reports still go to the urgent queue. The restricted screen shows a timer; the profile stays available.
 
 ## Premium (Telegram Stars)
 - Plans: week 99 ★, month 299 ★ (prices are placeholders).

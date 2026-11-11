@@ -776,7 +776,7 @@ function openRules() {
   const R0 = [["Только 16+", "Возраст обязателен. 16–17 и 18+ — отдельные пулы, они никогда не пересекаются. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 появляется после 3 сообщений в чате, с любой стороны. «Дальше» с первой секунды: если сообщений меньше трёх, оценки нет."]];
   openSheet(`<div class="sh-title">Правила Hunty</div><div class="sh-sub">Коротко и по делу</div>
     <div class="rules-list">${R0.map(([b, p], i) => `<div class="rule"><span class="rn">${i + 1}</span><div><b>${b}</b><p>${p}</p></div></div>`).join("")}</div>
-    <div class="rate-note">Ограничения: 3 жалобы за сутки — 1 час, 6 — 24 часа, 10 за 3 дня — 7 дней.</div>`);
+    <div class="rate-note">Ограничение поиска: 30 жалоб за 24 часа — пауза на 10 часов. Низкие оценки никогда не ограничивают. После таймера можно снова пользоваться; ещё 30 жалоб за сутки — снова 10 часов.</div>`);
 }
 let rsInt = null;
 function renderRestricted() {
@@ -787,7 +787,7 @@ function renderRestricted() {
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
     $("rs-timer").textContent = (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(sec).padStart(2, "0");
   };
-  if (state.ban) $("rs-reason").textContent = `На тебя пожаловались ${state.ban.reports} разных человека за сутки. Низкие оценки к ограничениям не приводят — только жалобы.`;
+  if (state.ban) $("rs-reason").textContent = `За последние 24 часа на тебя пришло ${state.ban.reports} жалоб. Поиск закрыт на 10 часов. Низкие оценки к этому не приводят — только жалобы.`;
   tick(); rsInt = setInterval(tick, 1000);
 }
 
@@ -803,7 +803,7 @@ function simulatePause() {
 }
 function simulateReports() {
   const now = Date.now();
-  for (let i = 0; i < 3; i++) state.reportsAgainstMe.push({ from: "test_" + Math.random().toString(36).slice(2, 7), reason: "insult", ts: now - i * 1000 });
+  for (let i = 0; i < 30; i++) state.reportsAgainstMe.push({ from: "test_" + Math.random().toString(36).slice(2, 8), reason: "insult", ts: now - (29 - i) * 1000 });
   const ev = H.evaluateReports(state.reportsAgainstMe, now);
   if (ev) state.ban = ev;
   save(); haptic("warning");
