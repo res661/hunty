@@ -3,41 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#F6F2EC" />
+  <meta name="theme-color" content="#F2F2F7" />
   <meta name="format-detection" content="telephone=no" />
-  <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=1" type="image/svg+xml" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Чат</title>
+  <link rel="stylesheet" href="styles.css?v=3" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 <div id="app">
 
-  <!-- SPLASH -->
   <section class="screen splash" data-screen="splash">
-    <div class="splash-center">
-      <div class="brand-mark xl" data-mark></div>
-      <div class="wordmark">Hunty</div>
-      <div class="splash-sub">найди своего собеседника</div>
-    </div>
-    <div class="splash-dots"><i></i><i></i><i></i></div>
+    <div class="spinner lg" aria-hidden="true"></div>
   </section>
 
-  <!-- ONBOARDING -->
   <section class="screen hidden onboard" data-screen="onboard">
     <div class="onboard-top"><button class="link-btn" id="ob-skip">Пропустить</button></div>
     <div class="onboard-track" id="ob-track">
       <article class="ob-slide">
         <div class="ob-art art-cards">
-          <div class="mini-card c3"><span class="av sm" style="--h:6">Л</span><div><b>Лиза, 26</b><small>★ 9.4 · 301 чат</small></div></div>
-          <div class="mini-card c2"><span class="av sm" style="--h:3">Д</span><div><b>Даня, 27</b><small>★ 8.3 · 212 чатов</small></div></div>
-          <div class="mini-card c1"><span class="av sm" style="--h:0">А</span><div><b>Аня, 22</b><small>★ 8.7 · 124 чата</small></div><span class="live-dot"></span></div>
+          <div class="mini-card c3"><span class="av sm" data-h="6">Л</span><div><b>Лиза, 26</b><small>9.4 · 301 чат</small></div></div>
+          <div class="mini-card c2"><span class="av sm" data-h="3">Д</span><div><b>Даня, 27</b><small>8.3 · 212 чатов</small></div></div>
+          <div class="mini-card c1"><span class="av sm" data-h="0">А</span><div><b>Аня, 22</b><small>8.7 · 124 чата</small></div></div>
         </div>
         <h1>Один тап — и ты в разговоре</h1>
-        <p>Жми «Поиск», и Hunty сразу соединит тебя со случайным человеком. Не зашло — «Дальше».</p>
+        <p>Жми «Поиск», и тебя сразу соединит со случайным человеком. Не зашло — «Дальше».</p>
       </article>
       <article class="ob-slide">
         <div class="ob-art art-rating">
@@ -49,19 +39,19 @@
           <div class="rate-pills"><span>7</span><span>8</span><span class="on">9</span><span>10</span></div>
         </div>
         <h1>Больше, чем фото</h1>
-        <p>После разговора длиннее минуты вы оцениваете друг друга. В профиле видно, какой человек в общении.</p>
+        <p>Если разговор шёл хотя бы 30 секунд и вы оба написали по 3 сообщения, вы оцениваете друг друга. В профиле видно, какой человек в общении.</p>
       </article>
       <article class="ob-slide">
         <div class="ob-art art-safe">
           <div class="safe-widget">
-            <div class="safe-row"><span class="si coral" data-ic="flag"></span>Жалоба в один тап</div>
-            <div class="safe-row"><span class="si ink" data-ic="block"></span>Блок навсегда</div>
-            <div class="safe-row"><span class="si mint" data-ic="shield"></span>16–17 и 18+ не пересекаются</div>
-            <div class="safe-row"><span class="si gold" data-ic="link"></span>Ссылки и контакты в чате закрыты</div>
+            <div class="safe-row"><span class="si t-red" data-ic="flag"></span>Жалоба в один тап</div>
+            <div class="safe-row"><span class="si t-gray" data-ic="block"></span>Блок навсегда</div>
+            <div class="safe-row"><span class="si t-green" data-ic="shield"></span>16–17 и 18+ не пересекаются</div>
+            <div class="safe-row"><span class="si t-blue" data-ic="link"></span>Контакты только по взаимному обмену</div>
           </div>
         </div>
         <h1>Безопасно по умолчанию</h1>
-        <p>Без 18+ контента и скама. На нарушителей жалуются, и они теряют доступ к поиску.</p>
+        <p>Без 18+ контента и скама. Ссылки и номера в чате закрыты. На нарушителей жалуются, и они теряют доступ к поиску.</p>
       </article>
     </div>
     <div class="onboard-bottom">
@@ -70,9 +60,8 @@
     </div>
   </section>
 
-  <!-- REGISTRATION -->
   <section class="screen hidden reg" data-screen="register">
-    <header class="nav-bar"><button class="icon-btn" id="reg-back" data-ic="back" aria-label="Назад"></button><div class="nav-title" id="reg-title">Твой профиль</div><span class="icon-btn ghost"></span></header>
+    <header class="nav-bar"><button class="icon-btn" id="reg-back" data-ic="back" aria-label="Назад"></button><div class="nav-title" id="reg-title">Твой профиль</div><span class="nav-side"></span></header>
     <div class="scroll" id="reg-scroll">
       <div class="reg-lead" id="reg-lead">Четыре поля — и можно искать. Обязательны фото, имя и возраст.</div>
 
@@ -104,23 +93,21 @@
 
       <label class="check-row" id="rules-row">
         <input type="checkbox" id="f-rules" /><span class="check"></span>
-        <span>Я принимаю <button class="inline-link" id="open-rules-reg">правила Hunty</button>: без 18+ контента, оскорблений, скама и обмана с возрастом.</span>
+        <span>Я принимаю <button class="inline-link" id="open-rules-reg">правила</button>: без 18+ контента, оскорблений, скама и обмана с возрастом.</span>
       </label>
       <div class="spacer-bottom"></div>
     </div>
     <div class="bottom-cta"><button class="btn btn-primary btn-lg" id="reg-save">Начать</button></div>
   </section>
 
-  <!-- HOME -->
   <section class="screen hidden tabbed" data-screen="home">
     <div class="scroll" id="home-scroll">
-      <header class="home-head">
-        <div class="brand-row"><span class="brand-mark sm" data-mark></span><span class="wordmark sm">Hunty</span></div>
+      <header class="large-title home-title">
+        <h1>Поиск</h1>
         <div class="online-pill"><span class="live-dot"></span><span id="online-count">1 500</span> онлайн</div>
       </header>
 
       <div class="search-hero" id="search-hero">
-        <div class="sh-rings"><i></i><i></i><i></i></div>
         <button class="search-btn" id="btn-search">
           <span class="sb-ic" data-ic="search"></span>
           <span class="sb-label">Поиск</span>
@@ -134,7 +121,6 @@
 
       <div class="quick-row">
         <button class="quick" id="q-filters"><span class="q-ic" data-ic="filter"></span><span>Фильтры</span><span class="lock" data-ic="lock"></span></button>
-        <button class="quick" id="q-rewind"><span class="q-ic" data-ic="rewind"></span><span>Вернуть</span><span class="lock" data-ic="lock"></span></button>
         <button class="quick" id="q-boost"><span class="q-ic" data-ic="bolt"></span><span id="q-boost-label">Буст</span><span class="lock" data-ic="lock"></span></button>
       </div>
 
@@ -145,16 +131,6 @@
     </div>
   </section>
 
-  <!-- CHATS (history) -->
-  <section class="screen hidden tabbed" data-screen="chats">
-    <div class="scroll">
-      <header class="large-title"><h1>Чаты</h1><p>История разговоров. Если вы оба поставили 8+, можно отправить взаимный лайк и продолжить.</p></header>
-      <div id="history-list"></div>
-      <div class="tab-spacer"></div>
-    </div>
-  </section>
-
-  <!-- PROFILE -->
   <section class="screen hidden tabbed" data-screen="profile">
     <div class="scroll">
       <header class="large-title"><h1>Профиль</h1></header>
@@ -178,65 +154,65 @@
 
       <div class="group-title pad">Тестовый режим</div>
       <div class="list-group">
-        <div class="list-row static"><span class="lr-ic t-orange" data-ic="flask"></span><span class="lr-label">Тестовый режим<small>Сервера пока нет: собеседники — 14 тестовых профилей со скриптами</small></span></div>
+        <div class="list-row static"><span class="lr-ic t-purple" data-ic="flask"></span><span class="lr-label">Тестовый режим<small>Сервера пока нет: собеседники — 14 тестовых профилей со скриптами</small></span></div>
         <button class="list-row" id="t-reports"><span class="lr-ic t-pink" data-ic="flag"></span><span class="lr-label">Симулировать 3 жалобы на меня</span></button>
         <button class="list-row" id="t-ratings"><span class="lr-ic t-yellow" data-ic="star"></span><span class="lr-label">Добавить 5 тестовых оценок мне</span></button>
         <button class="list-row danger" id="t-reset"><span class="lr-ic t-red" data-ic="trash"></span><span class="lr-label">Сбросить всё</span></button>
       </div>
-      <div class="foot-note">Hunty · прототип v1 · @gohunty_bot</div>
+      <div class="foot-note">Тестовый режим · прототип</div>
       <div class="tab-spacer"></div>
     </div>
   </section>
 
-  <!-- SEARCHING -->
   <section class="screen hidden searching" data-screen="search">
     <div class="srch-center">
       <div class="radar">
         <i class="r1"></i><i class="r2"></i><i class="r3"></i>
-        <span class="orbit o1 av sm" style="--h:2">О</span>
-        <span class="orbit o2 av sm" style="--h:5">А</span>
-        <span class="orbit o3 av sm" style="--h:8">М</span>
+        <span class="orbit o1 av sm" data-h="2">О</span>
+        <span class="orbit o2 av sm" data-h="5">А</span>
+        <span class="orbit o3 av sm" data-h="8">М</span>
         <div class="radar-me" id="radar-me"></div>
       </div>
       <div class="srch-title" id="srch-title">Ищем собеседника…</div>
       <div class="srch-sub" id="srch-sub">в пуле 18+</div>
     </div>
     <div class="match-reveal hidden" id="match-reveal"></div>
-    <div class="safety-tip" id="safety-tip"><span class="st-ic" data-ic="shield"></span><div><b>Совет безопасности</b><p id="safety-text"></p></div></div>
+    <div class="safety-tip" id="safety-tip"><span class="si t-blue" data-ic="shield"></span><div><b>Совет безопасности</b><p id="safety-text"></p></div></div>
     <div class="bottom-cta"><button class="btn btn-soft btn-lg" id="srch-cancel">Отмена</button></div>
   </section>
 
-  <!-- CHAT -->
   <section class="screen hidden chat" data-screen="chat">
     <header class="chat-head">
       <button class="icon-btn" id="chat-back" data-ic="back" aria-label="Выйти"></button>
       <button class="chat-who" id="chat-who"></button>
       <div class="timer" id="chat-timer"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" class="tr-bg"/><circle cx="10" cy="10" r="8" class="tr-fg" id="timer-ring"/></svg><span id="timer-text">0:00</span></div>
-      <button class="icon-btn next-ic" id="chat-skip" data-ic="next" aria-label="Дальше"></button>
+      <button class="text-btn" id="chat-skip">Дальше</button>
       <button class="icon-btn" id="chat-more" data-ic="more" aria-label="Ещё"></button>
     </header>
     <div class="messages" id="messages"></div>
-    <div class="typing hidden" id="typing"><i></i><i></i><i></i></div>
+    <div class="typing hidden" id="typing"><span class="typing-bubble"><i></i><i></i><i></i></span></div>
     <footer class="composer" id="composer">
-      <label class="msg-field"><input id="msg-input" placeholder="Сообщение" autocomplete="off" maxlength="500" /></label>
-      <button class="send-btn" id="msg-send" data-ic="send" aria-label="Отправить"></button>
+      <button class="contact-btn" id="contact-btn" type="button">Обменяться контактами</button>
+      <div class="composer-row">
+        <label class="msg-field"><input id="msg-input" placeholder="Сообщение" autocomplete="off" maxlength="500" /></label>
+        <button class="send-btn" id="msg-send" data-ic="send" aria-label="Отправить" disabled></button>
+      </div>
     </footer>
     <footer class="composer ended hidden" id="composer-ended">
-      <button class="btn btn-soft" id="ended-home">Домой</button>
+      <button class="btn btn-soft" id="ended-home">Назад</button>
       <button class="btn btn-primary" id="ended-next">Искать дальше</button>
     </footer>
   </section>
 
-  <!-- RESTRICTED -->
   <section class="screen hidden restricted" data-screen="restricted">
     <div class="rs-center">
-      <div class="brand-mark lg muted" data-mark></div>
+      <div class="rs-lock" data-ic="lock"></div>
       <h1>Поиск временно ограничен</h1>
       <p id="rs-reason">На твой профиль пожаловались несколько человек. Низкие оценки к ограничениям не приводят — только жалобы.</p>
       <div class="rs-timer" id="rs-timer">59:59</div>
       <div class="rs-caption">до снятия ограничения</div>
       <div class="rs-list">
-        <div>Профиль и история доступны</div><div>Новые чаты — после таймера</div><div>Повторные жалобы продлевают срок</div>
+        <div>Профиль доступен</div><div>Новые чаты — после таймера</div><div>Повторные жалобы продлевают срок</div>
       </div>
     </div>
     <div class="bottom-cta stack">
@@ -246,21 +222,18 @@
     </div>
   </section>
 
-  <!-- FLOATING TAB BAR -->
   <nav class="tabbar hidden" id="tabbar">
     <button class="tab on" data-tab="home"><span data-ic="search"></span><b>Поиск</b></button>
-    <button class="tab" data-tab="chats"><span data-ic="chat"></span><b>Чаты</b><em class="badge hidden" id="chats-badge"></em></button>
     <button class="tab" data-tab="profile"><span data-ic="user"></span><b>Профиль</b></button>
   </nav>
 
-  <!-- SHEET + TOAST -->
   <div class="sheet-backdrop hidden" id="sheet-backdrop"></div>
   <div class="sheet hidden" id="sheet" role="dialog"><div class="sheet-grab"></div><div class="sheet-body" id="sheet-body"></div></div>
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=1"></script>
-<script src="mock.js?v=1"></script>
-<script src="app.js?v=1"></script>
+<script src="rules.js?v=3"></script>
+<script src="mock.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

@@ -16,7 +16,7 @@
  *        "typing"        { sessionId, on: boolean }
  *        "partnerLeft"   { sessionId, reason }
  *        "ratedByPartner"{ sessionId, partnerId, score, dur }
- *        "mutual"        { partnerId }
+ *        "contactMatched"{ sessionId, username }
  *   findMatch({ filters, exclude, boost }) → Promise<{ sessionId, partner, startedAt }>
  *                                            rejects { code: "cancelled" | "empty" }
  *                                            Age pools are enforced here (16–17 ↔ 16–17, 18+ ↔ 18+).
@@ -26,8 +26,8 @@
  *   rate(sessionId, score, tags)           → Promise<{ accepted, reason? }>
  *   report(partnerId, reason, sessionId?)  → Promise<{ ok, urgent }>
  *   block(partnerId)                       → Promise<{ ok }>
- *   sendLike(partnerId)                    → Promise<{ ok }>   (mutual → "mutual" event)
- *   reconnect(partnerId)                   → Promise<{ sessionId, partner, startedAt }>
+ *   requestContact(sessionId)              → Promise<{ status: "waiting" }>
+ *                                            Partner may later emit "contactMatched" (test mode: sometimes).
  *   getProfile(partnerId)                  → partner public profile (incl. stats)
  *   purchasePremium(planId)                → Promise<{ ok, until }>  (real: Stars invoice)
  *
@@ -139,16 +139,23 @@
     [/чем занимаешься|работаешь|учишься/i, (p) => p.about.split(".")[0].toLowerCase() + "."],
     [/музык|слушаешь/i, () => pick(["сейчас в плейлисте много инди и старого рока", "всё подряд, от джаза до фонка", "последнее время Radiohead на повторе"])],
     [/фильм|кино|сериал/i, () => pick(["обожаю Вечное сияние чистого разума", "сейчас смотрю Медведя, очень советую", "лучше всего — старые фильмы Миядзаки"])],
-    [/телеграм|инст|номер|контакт/i, () => "давай пока тут поболтаем 🙂 если что, есть взаимный лайк после чата"],
+    [/телеграм|инст|номер|контакт/i, () => "давай пока тут поболтаем 🙂 контактами можно обменяться только кнопкой"],
     [/\?$/, () => pick(["хм, хороший вопрос", "дай подумать... скорее да, чем нет", "сложно сказать, а ты как думаешь?"])],
   ];
 
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function uid() { return Math.random().toString(36).slice(2, 10); }
   function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
+  const HANDLES = {
+    t01: "anya_test", t02: "max_test", t03: "olya_test", t04: "danya_test", t05: "katya_test",
+    t06: "artem_test", t07: "liza_test", t08: "ilya_test", t09: "masha_test", t10: "timur_test",
+    t11: "sonya_test", t12: "misha_test", t13: "vika_test", t14: "roma_test",
+  };
+  PROFILES.forEach((p) => { p.username = HANDLES[p.id]; });
+
   function publicProfile(p) {
     if (!p) return null;
-    const { greet, lines, ...pub } = p;
+    const { greet, lines, username, ...pub } = p;
     return JSON.parse(JSON.stringify(pub));
   }
 
@@ -159,7 +166,6 @@
     let me = null;
     let online = 1480 + Math.floor(Math.random() * 300);
     let searchCtl = null;
-    const likesSent = new Set();
     const partnerRatings = new Map(); // partnerId → score they gave me (last)
     const myRatings = new Map();      // partnerId → score I gave them
     const blocked = new Set(opts.blocked || []);
@@ -185,11 +191,11 @@
       return list;
     }
 
-    function startSession(p, reconnect) {
-      const s = { id: "s_" + uid(), partner: p, startedAt: Date.now(), mine: 0, theirs: 0, lineIdx: 0, alive: true, timers: [], idleTimer: null };
+    function startSession(p) {
+      const s = { id: "s_" + uid(), partner: p, startedAt: Date.now(), mine: 0, theirs: 0, lineIdx: 0, alive: true, timers: [], idleTimer: null, contact: null };
       sessions.set(s.id, s);
-      const first = reconnect ? "о, снова ты! рад(а) продолжить 🙂".replace("(а)", p.gender === "f" ? "а" : "") : pick(p.greet);
-      if (reconnect || Math.random() < 0.65) partnerSay(s, first, 900 + Math.random() * 900);
+      const first = pick(p.greet);
+      if (Math.random() < 0.65) partnerSay(s, first, 900 + Math.random() * 900);
       armIdle(s);
       return s;
     }
@@ -275,19 +281,20 @@
         clearTimeout(s.idleTimer);
         const dur = Math.round((Date.now() - s.startedAt) / 1000);
         s.dur = dur;
-        // partner rates you too (only if the chat was long enough)
-        if (R.canRate(dur)) {
+        // partner rates you too only when time and both message counts qualify
+        const qualified = R.canRate(dur, s.mine, s.theirs);
+        if (qualified) {
           const score = Math.max(1, Math.min(10, Math.round(6 + Math.min(3.5, s.mine * 0.5) + (Math.random() * 2 - 1))));
           partnerRatings.set(s.partner.id, score);
           setTimeout(() => em.emit("ratedByPartner", { sessionId, partnerId: s.partner.id, score, dur }), 1200);
         }
-        return { dur, canRate: R.canRate(dur) };
+        return { dur, canRate: qualified };
       },
 
       async rate(sessionId, score) {
         const s = sessions.get(sessionId);
         if (!s) return { accepted: false, reason: "unknown" };
-        if (!R.canRate(s.dur || 0)) return { accepted: false, reason: "short" };
+        if (!R.canRate(s.dur || 0, s.mine, s.theirs)) return { accepted: false, reason: "short" };
         if (s.rated) return { accepted: false, reason: "duplicate" };
         s.rated = true;
         myRatings.set(s.partner.id, score);
@@ -300,20 +307,20 @@
       },
       async block(partnerId) { blocked.add(partnerId); return { ok: true }; },
 
-      async sendLike(partnerId) {
-        likesSent.add(partnerId);
-        const theirs = partnerRatings.get(partnerId);
-        if (theirs >= R.RULES.MUTUAL_MIN) setTimeout(() => em.emit("mutual", { partnerId }), 2200);
-        return { ok: true };
-      },
-
-      async reconnect(partnerId) {
-        const p = PROFILES.find((x) => x.id === partnerId);
-        if (!p || blocked.has(partnerId)) throw { code: "unavailable" };
-        if (poolOf(p.age) !== poolOf(me ? me.age : 18)) throw { code: "pool" };
-        await wait(500);
-        const s = startSession(p, true);
-        return { sessionId: s.id, partner: publicProfile(p), startedAt: s.startedAt };
+      async requestContact(sessionId) {
+        const s = sessions.get(sessionId);
+        if (!s || !s.alive) throw { code: "closed" };
+        if (s.contact === "matched") return { status: "matched", username: s.partner.username };
+        s.contact = "waiting";
+        // Test partners auto-accept sometimes, never instantly.
+        if (!s.contactTimer && Math.random() < 0.65) {
+          s.contactTimer = setTimeout(() => {
+            if (!s.alive || s.contact !== "waiting") return;
+            s.contact = "matched";
+            em.emit("contactMatched", { sessionId: s.id, username: s.partner.username });
+          }, 1400 + Math.random() * 1800);
+        }
+        return { status: "waiting" };
       },
 
       getProfile(partnerId) { return publicProfile(PROFILES.find((x) => x.id === partnerId)); },

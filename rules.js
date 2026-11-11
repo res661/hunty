@@ -7,7 +7,8 @@
   const RULES = {
     MIN_AGE: 16,
     ADULT_AGE: 18,
-    MIN_RATE_SEC: 60,          // rating unlocks only after 60 s of conversation
+    MIN_RATE_SEC: 30,          // rating needs at least 30 s
+    MIN_RATE_MSGS: 3,          // and at least 3 messages from each person
     NEW_UNTIL: 5,              // show "Новый" until 5 counted ratings
     PRIOR_MEAN: 7.2,           // Bayesian prior — damps tiny samples
     PRIOR_WEIGHT: 4,
@@ -15,7 +16,6 @@
     OUTLIER_WEIGHT: 0.35,
     FREE_SEARCHES: 30,
     PREMIUM_SEARCHES: 300,
-    MUTUAL_MIN: 8,             // both ratings ≥ 8 → mutual like possible
     // Soft-ban is driven ONLY by reports from unique users, never by low ratings.
     BAN_LEVELS: [
       { reports: 3, windowH: 24, banMin: 60 },
@@ -45,7 +45,7 @@
 
   /**
    * ratings: [{ from, score (1..10), dur (sec), ts, raterTrust? (0..1) }]
-   * - only chats ≥ 60 s count
+   * - only chats ≥ 30 s count (message minimum is enforced when the rating is accepted)
    * - one rating per pair (latest wins)
    * - weight grows with conversation length and rater trust
    * - outliers vs median are damped, Bayesian prior pulls small samples to the mean
@@ -104,7 +104,7 @@
     { kind: "link", re: /(https?:\/\/|www\.)\S+|\b[a-z0-9-]{2,}\.(com|ru|net|org|io|me|ua|pl|xyz|app|link|ly|gg|tv|info|site|online|shop|top|cc|co|by|kz|biz|de|eu)\b/i,
       message: "Ссылки в чате запрещены — так защищаемся от скама" },
     { kind: "username", re: /(^|[^a-z0-9_])@[a-z0-9_]{4,}/i,
-      message: "Нельзя отправлять @юзернеймы. Хотите продолжить — взаимный лайк после чата" },
+      message: "Нельзя отправлять @юзернеймы. Обменяться контактами можно только взаимной кнопкой" },
     { kind: "phone", re: /(\+?\d[\d\s().-]{7,}\d)/,
       message: "Номера телефонов отправлять нельзя" },
   ];
@@ -122,7 +122,7 @@
   }
 
   const SAFETY_TIPS = [
-    "Осторожно со скамом: никто из Hunty не просит деньги или «подтверждение»",
+    "Осторожно со скамом: никто в чате не просит деньги или «подтверждение»",
     "Не переходи по чужим ссылкам — в чате они и так заблокированы",
     "Не отправляй личные данные, адрес, коды из SMS и пароли",
     "Никогда не переводи деньги людям из чата",
@@ -130,7 +130,10 @@
     "Будь собой и уважай собеседника — оценку ставят оба",
   ];
 
-  function canRate(durSec) { return durSec >= RULES.MIN_RATE_SEC; }
+  /** Rating is offered only after 30 s and at least 3 messages from each side. */
+  function canRate(durSec, mine, theirs) {
+    return durSec >= RULES.MIN_RATE_SEC && (mine | 0) >= RULES.MIN_RATE_MSGS && (theirs | 0) >= RULES.MIN_RATE_MSGS;
+  }
 
   function dailyLimit(isPremium) { return isPremium ? RULES.PREMIUM_SEARCHES : RULES.FREE_SEARCHES; }
 

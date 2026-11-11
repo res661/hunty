@@ -3,8 +3,8 @@
 ## Today (prototype, "тестовый режим")
 - Static Mini App (HTML/CSS/JS, no build step), hosted on GitHub Pages: `https://res661.github.io/hunty/`.
 - `rules.js` — pure product rules (age pools, reputation math, soft-ban thresholds, message filter, safety tips). **The server must run the same rules; the client copy is display-only.**
-- `mock.js` — the only backend adapter. 14 scripted test profiles (10 in the 18+ pool, 4 in the 16–17 pool), typing indicator, scripted replies, partner ratings, mutual likes, mock Stars purchase.
-- `app.js` — UI/state. Persists to `localStorage["hunty-save-v1"]`.
+- `mock.js` — the only backend adapter. 14 scripted test profiles (10 in the 18+ pool, 4 in the 16–17 pool), typing indicator, scripted replies, partner ratings, mutual contact exchange, mock Stars purchase.
+- `app.js` — UI/state. Persists to `localStorage["hunty-save-v2"]` (v1 saves migrate; chat transcripts are dropped).
 
 To go live, implement the interface documented at the top of `mock.js` in a new `ws.js` adapter and replace one line in `app.js`:
 ```js
@@ -19,7 +19,7 @@ const backend = window.HuntyMock.createMockBackend(...)   // →  createWsBacken
 | R2 | Profile photos (resized server-side, moderated before public). |
 | DO `Matchmaker` (one per age pool: `teen`, `adult`) | Waiting queue, filters (premium), boost priority, excludes blocked pairs and the last 3 partners. **A teen and an adult are never in the same DO, so they can never match.** |
 | DO `ChatRoom` (one per session) | WebSocket relay for both peers, server-side timer (source of truth for `dur`), message filter, typing events, `partnerLeft`. |
-| Bot webhook | `/start`, Stars invoices (`createInvoiceLink`, currency `XTR`), `pre_checkout_query`, `successful_payment` → set premium, notifications (new rating, mutual like). |
+| Bot webhook | `/start`, Stars invoices (`createInvoiceLink`, currency `XTR`), `pre_checkout_query`, `successful_payment` → set premium, notifications (new rating, mutual contact exchange). |
 
 Alternative: Supabase (Postgres + Realtime channels + Edge Functions for initData validation and matchmaking). Same rules apply.
 
@@ -27,11 +27,11 @@ Alternative: Supabase (Postgres + Realtime channels + Edge Functions for initDat
 - Age is required at registration, minimum **16**. Pools: **16–17 ("teen") ↔ 16–17 only, 18+ ("adult") ↔ 18+ only**, enforced in the matcher (server), not the UI.
 - Changing age across the 18 boundary needs support review (prototype blocks it in the editor).
 - No 18+ content for anyone. Report reasons: spam, insult, nsfw, **minor in the adult pool** (urgent queue → immediate search hold pending review), scam, other.
-- Message filter (server + client): links, domains, `@usernames`, phone numbers, Telegram invites (`t.me`, `joinchat`, `+hash`) → the message is rejected, the sender gets a toast. Mutual like is the only way to continue contact.
+- Message filter (server + client): links, domains, `@usernames`, phone numbers, Telegram invites (`t.me`, `joinchat`, `+hash`) → the message is rejected, the sender gets a toast. The only way to share a Telegram @username is the mutual **Обменяться контактами** button. Chats are not stored.
 - Rotating safety tips are shown on every search screen.
 
 ## Ratings (anti-boost)
-- A rating is accepted only if the server-side chat duration is **≥ 60 s**.
+- A rating is accepted only if the server-side chat duration is **≥ 30 s** and **both people sent at least 3 messages**. Skip is always available immediately; below that threshold there is no rating.
 - **One rating per pair** (latest wins); a pair that keeps re-matching cannot pump each other.
 - Weighted average: weight = `(0.6 + 0.4·min(1, dur/300)) · raterTrust`; raterTrust grows with account age/clean history.
 - Outlier damping: ratings more than 3.5 from the median get weight × 0.35.
@@ -46,7 +46,7 @@ Unique reporters within a window:
 | 1 | 3 | 24 h | 1 h |
 | 2 | 6 | 24 h | 24 h |
 | 3 | 10 | 72 h | 7 days + manual review |
-Reports from new / low-trust accounts weigh less; "minor" reports go to the urgent queue. User sees the restricted screen with a timer; profile and history stay available.
+Reports from new / low-trust accounts weigh less; "minor" reports go to the urgent queue. User sees the restricted screen with a timer; the profile stays available. Chats are not stored.
 
 ## Premium (Telegram Stars)
 - Plans: week 99 ★, month 299 ★ (prices are placeholders).

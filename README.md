@@ -1,6 +1,6 @@
-# Hunty — Telegram Mini App (prototype v1)
+# Hunty — Telegram Mini App (prototype v2)
 
-Random chat with real people: press **Поиск**, talk, press **Дальше**. After a chat longer than a minute both sides rate it 1–10, and profiles show what a person is like to talk to (avg rating, avg chat time, number of chats).
+Random chat: press **Поиск**, talk, press **Дальше**. **Дальше** is one tap from the first second. Messages are not saved and there is no chat list or reconnect. A 1–10 rating is offered only if the chat lasted at least 30 seconds and both people sent at least 3 messages; otherwise skip goes straight to the next search with no rating screen. Profiles still show avg rating, avg time, and chat count. Contacts are shared only if both tap **Обменяться контактами**.
 
 Bot: [@gohunty_bot](https://t.me/gohunty_bot) · Hosting: `https://res661.github.io/hunty/`
 
