@@ -75,13 +75,14 @@ function todayKey() { const d = new Date(); return `${d.getFullYear()}-${d.getMo
 function defaultState() {
   return {
     v: 1, onboarded: false, registered: false,
-    me: { id: "me_" + Math.random().toString(36).slice(2, 9), name: "", age: null, gender: "", country: "", city: "", about: "", photos: [], interests: [], hue: 0, username: "" },
+    me: { id: "me_" + Math.random().toString(36).slice(2, 9), name: "", age: null, gender: "", seeking: "any", country: "", city: "", about: "", photos: [], interests: [], hue: 0, username: "" },
     settings: { theme: "auto", notif: { match: true, messages: true, ratings: true, news: false } },
     premium: { active: false, until: 0, plan: null },
     boostUntil: 0,
     searches: { day: todayKey(), used: 0 },
     ratingsReceived: [], raters: [], reportsAgainstMe: [],
     ban: null, blocked: [], recentPartnerIds: [], activity: [], cooldown: null,
+    reveals: { day: "", ids: [] },
     filters: { gender: "any", ageMin: null, ageMax: null, city: "" },
     totals: { chats: 0, sec: 0 },
   };
@@ -97,6 +98,8 @@ function load() {
     if (!Array.isArray(out.raters)) out.raters = [];
     if (!Array.isArray(out.recentPartnerIds)) out.recentPartnerIds = [];
     if (!out.cooldown || typeof out.cooldown.until !== "number") out.cooldown = null;
+    if (!out.me.seeking) out.me.seeking = "any";
+    if (!out.reveals || !Array.isArray(out.reveals.ids)) out.reveals = { day: "", ids: [] };
     return out;
   } catch { return defaultState(); }
 }
@@ -241,7 +244,6 @@ function syncOb() {
 function finishOnboarding() { state.onboarded = true; save(); openRegister(false); }
 
 /* ---------- registration ---------- */
-const INTERESTS = ["Музыка", "Кино", "Игры", "Спорт", "Путешествия", "Аниме", "Книги", "IT", "Мемы", "Еда", "Животные", "Искусство", "Фото", "Танцы", "Сериалы", "Наука", "Кофе", "Психология", "Языки", "Авто"];
 let draft = null;
 function openRegister(edit) {
   draft = JSON.parse(JSON.stringify(state.me));
@@ -255,15 +257,12 @@ function openRegister(edit) {
   $("f-city").value = draft.city || "";
   $("f-about").value = draft.about || "";
   $("f-rules").checked = !!edit;
-  renderGender(); renderPhotos(); renderAgeHint();
+  renderGender(); renderSeek($("f-seek"), draft.seeking || "any"); renderPhotos(); renderAgeHint();
   showScreen("register");
   $("reg-scroll").scrollTop = 0;
 }
 function renderGender() { [...$("f-gender").children].forEach((b) => b.classList.toggle("on", b.dataset.v === (draft.gender || ""))); }
-function renderInterests() {
-  $("f-interests").innerHTML = INTERESTS.map((x) => `<button class="chip ${draft.interests.includes(x) ? "on" : ""}" data-v="${x}">${x}</button>`).join("");
-  $("int-count").textContent = `${draft.interests.length} из 8`;
-}
+function renderSeek(root, value) { [...root.children].forEach((b) => b.classList.toggle("on", b.dataset.v === (value || "any"))); }
 function renderPhotos() {
   const slots = [0, 1, 2].map((i) => {
     const src = draft.photos[i];
@@ -309,6 +308,7 @@ function saveRegister() {
     toast("Возраст между 16–17 и 18+ меняется только через поддержку", "warn"); haptic("error"); return;
   }
   draft.name = name.slice(0, 20); draft.age = age;
+  draft.seeking = draft.seeking || "any";
   draft.country = $("f-country").value.trim().slice(0, 28);
   draft.city = $("f-city").value.trim().slice(0, 28);
   draft.username = myUsername();
@@ -321,7 +321,15 @@ function saveRegister() {
   showScreen(first ? "home" : "profile");
   toast(first ? `Привет, ${state.me.name}! Жми «Поиск»` : "Профиль сохранён");
 }
-function publicMe() { const m = state.me; return { id: m.id, name: m.name, age: m.age, gender: m.gender, country: m.country, city: m.city, interests: m.interests, premium: isPremium() }; }
+function publicMe() { const m = state.me; return { id: m.id, name: m.name, age: m.age, gender: m.gender, seeking: m.seeking || "any", country: m.country, city: m.city, premium: isPremium() }; }
+const FREE_REVEALS = 3;
+function revealBag() {
+  const day = todayKey();
+  if (!state.reveals || state.reveals.day !== day) state.reveals = { day, ids: [] };
+  return state.reveals;
+}
+function revealsLeft() { return isPremium() ? 99 : Math.max(0, FREE_REVEALS - revealBag().ids.length); }
+function revealed(id) { return isPremium() || revealBag().ids.includes(id); }
 function myUsername() {
   try {
     const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
@@ -392,21 +400,16 @@ function renderHome() {
   }
   clearInterval(cdInt);
   if (paused) cdInt = setInterval(() => { if (current === "home") renderHome(); }, 1000);
-  $("pool-note").textContent = myPool() === "teen" ? "Твой пул: 16–17 лет" : "Твой пул: 18+";
   const pro = isPremium();
-  document.querySelectorAll(".quick .lock").forEach((l) => l.classList.toggle("hidden", pro));
-  const boostOn = state.boostUntil > Date.now();
-  $("q-boost").classList.toggle("active", boostOn);
-  $("q-boost-label").textContent = boostOn ? `Буст ${Math.ceil((state.boostUntil - Date.now()) / 60000)} мин` : "Буст";
-  $("q-filters").classList.toggle("active", pro && !!filtersActive());
   $("my-stats").innerHTML = `<div class="card-head"><h3>Твоя репутация</h3><small>${state.totals.chats ? "по оценкам собеседников" : "появится после чатов"}</small></div>` + myStatsHTML();
   $("home-premium").className = "card premium-card" + (pro ? " on" : "");
   $("home-premium").innerHTML = pro
-    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} Hunty PRO</h3><p>Активен до ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Паузы короче, фильтры и буст уже твои.</p>`
-    : `<span class="pc-star">${ic("star")}</span><h3>Hunty PRO</h3><p>Снимает паузу после длинной серии, фильтры, кто тебя оценил и буст.</p><button class="btn" id="home-pro-btn">Подробнее · от 99 ★</button>`;
+    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} Hunty PRO</h3><p>Активен до ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Паузы короче, оценки без лимита и буст.</p>`
+    : `<span class="pc-star">${ic("star")}</span><h3>Hunty PRO</h3><p>Снимает паузу, открывает все оценки и включает буст.</p><button class="btn" id="home-pro-btn">Подробнее · от 99 ★</button>`;
   const b = $("home-pro-btn"); if (b) b.onclick = openPremium;
   $("home-tip").innerHTML = `<span class="si coral">${ic("info")}</span><div>${TIPS[Math.floor(Date.now() / 60000) % TIPS.length]}</div>`;
   paintIcons($("home-tip"));
+  paintStaticAvatars();
 }
 
 /* ---------- search ---------- */
@@ -420,7 +423,7 @@ function startSearch(opts) {
   haptic("medium");
   $("radar-me").innerHTML = avatarHTML(state.me);
   $("srch-title").textContent = "Ищем собеседника…";
-  $("srch-sub").textContent = (myPool() === "teen" ? "в пуле 16–17" : "в пуле 18+") + (isPremium() && filtersActive() ? " · фильтры включены" : "");
+  $("srch-sub").textContent = (myPool() === "teen" ? "в пуле 16–17" : "в пуле 18+") + (filtersActive() ? " · фильтры включены" : "");
   $("match-reveal").classList.add("hidden");
   showScreen("search");
   let tip = Math.floor(Math.random() * H.SAFETY_TIPS.length);
@@ -432,7 +435,7 @@ function startSearch(opts) {
   }, 2600);
   searching = true;
   const exclude = state.recentPartnerIds.concat(state.blocked);
-  const filters = isPremium() && filtersActive() ? state.filters : null;
+  const filters = filtersActive() ? state.filters : null;
   backend.findMatch({ filters, exclude, boost: state.boostUntil > Date.now() }).then((m) => {
     if (!searching) return;
     searching = false;
@@ -467,7 +470,9 @@ function openChat(m) {
   chat = { id: m.sessionId, partner: m.partner, startedAt: m.startedAt, ended: false, unlockedShown: false, mine: 0, theirs: 0, contact: null, entry: null };
   const p = m.partner;
   const where = placeText(p);
-  $("chat-who").innerHTML = `${avatarHTML(p, "sm")}<span class="cw-info"><b>${esc(p.name)}${p.premium ? " " + proBadge() : ""}</b><small>${p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1)} · ${p.age}</small>${where ? `<small class="cw-place">${where}</small>` : ""}</span>`;
+  $("chat-who").innerHTML = `${avatarHTML(p, "sm")}<span class="cw-info"><b>${esc(p.name)}${p.premium ? " " + proBadge() : ""}</b><small>${p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1)} · ${p.age}</small></span>`;
+  $("chat-place").textContent = where;
+  $("chat-place").classList.toggle("hidden", !where);
   $("messages").innerHTML = `
     <button class="chat-intro" id="chat-intro">${avatarHTML(p, "lg")}<b>${esc(p.name)}, ${p.age}${where ? " · " + where : ""}</b>
     <small>${ratingChip(p)} ${p.stats.chats} ${plural(p.stats.chats, "чат", "чата", "чатов")} · ср. ${fmtDur(p.stats.avgSec)}</small><span class="ci-more">Профиль</span></button>
@@ -645,14 +650,11 @@ function bindPhotoDots(body) {
   }, { passive: true });
 }
 function openPartnerProfile(p) {
-  const common = p.interests.filter((x) => state.me.interests.includes(x));
   const body = openSheet(`${photosHTML(p)}
     <div class="ps-name"><h2>${esc(p.name)}, ${p.age}</h2>${p.premium ? proBadge() : ""}</div>
     <div class="ps-meta">${placeText(p) ? placeText(p) + " · " : ""}${p.gender === "f" ? "девушка" : p.gender === "m" ? "парень" : "пол не указан"}</div>
     <div class="ps-about">${esc(p.about)}</div>
     <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}
-    <div class="ps-section">Интересы${common.length ? ` · ${common.length} ${plural(common.length, "общий", "общих", "общих")}` : ""}</div>
-    <div class="chips">${p.interests.map((x) => `<span class="chip static ${common.includes(x) ? "match" : ""}">${esc(x)}</span>`).join("")}</div>
     <div class="sh-actions row"><button class="btn btn-soft" id="pp-report">${ic("flag")}Жалоба</button><button class="btn btn-soft" id="pp-block">${ic("block")}Блок</button></div>`);
   bindPhotoDots(body);
   body.querySelector("#pp-report").onclick = () => openReport(p);
@@ -711,19 +713,21 @@ function showEnded() { $("composer").classList.add("hidden"); $("composer-ended"
 /* ---------- profile tab ---------- */
 function renderProfile() {
   const m = state.me, pro = isPremium(), rep = myRep();
-  $("me-card").innerHTML = `${avatarHTML(m, "lg")}<div class="mc-info"><h2>${esc(m.name || "Без имени")}${m.age ? ", " + m.age : ""} ${pro ? proBadge() : ""}</h2><p>${[m.country, m.city, m.age ? (myPool() === "teen" ? "пул 16–17" : "пул 18+") : ""].filter(Boolean).map(esc).join(" · ")}</p></div><button class="btn btn-soft" id="me-edit">${ic("edit")}Изменить</button>`;
+  $("me-card").innerHTML = `${avatarHTML(m, "lg")}<div class="mc-info"><h2>${esc(m.name || "Без имени")}${m.age ? ", " + m.age : ""} ${pro ? proBadge() : ""}</h2><p>${[m.country, m.city, m.age ? (myPool() === "teen" ? "пул 16–17" : "пул 18+") : ""].filter(Boolean).map(esc).join(" · ")}</p></div><button class="btn btn-edit" id="me-edit">${ic("edit")}Изменить</button>`;
   $("me-edit").onclick = () => openRegister(true);
   $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML();
   $("me-premium").className = "card premium-card" + (pro ? " on" : "");
   $("me-premium").innerHTML = pro
-    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO активен</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")} · паузы короче, фильтры и буст</p>`
-    : `<span class="pc-star">${ic("star")}</span><h3>Hunty PRO</h3><p>Снимает паузу, фильтры, кто тебя оценил и буст.</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
+    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO активен</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")} · паузы короче, оценки без лимита и буст</p>`
+    : `<span class="pc-star">${ic("star")}</span><h3>Hunty PRO</h3><p>Снимает паузу, все оценки и буст.</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
   const pb = $("me-pro-btn"); if (pb) pb.onclick = openPremium;
   const lockOr = pro ? `<span class="chev">${ic("chev")}</span>` : `<span class="chev">${ic("lock")}</span>`;
-  $("me-premium-tools").innerHTML = `<button class="list-row" id="pt-raters"><span class="lr-ic t-purple">${ic("eye")}</span><span class="lr-label">Кто меня оценил</span>${lockOr}</button>
-    <button class="list-row" id="pt-filters"><span class="lr-ic t-blue">${ic("filter")}</span><span class="lr-label">Фильтры поиска</span>${lockOr}</button>`;
+  const boostLeft = state.boostUntil > Date.now() ? ` · ${Math.ceil((state.boostUntil - Date.now()) / 60000)} мин` : "";
+  $("me-premium-tools").innerHTML = `<button class="list-row" id="pt-raters"><span class="lr-ic t-purple">${ic("eye")}</span><span class="lr-label">Кто меня оценил</span><span class="lr-val">${pro ? "все" : revealsLeft() + " из 3"}</span><span class="chev">${ic("chev")}</span></button>
+    <button class="list-row" id="pt-boost"><span class="lr-ic t-coral">${ic("bolt")}</span><span class="lr-label">Буст${boostLeft}</span>${lockOr}</button>`;
   $("pt-raters").onclick = openRaters;
-  $("pt-filters").onclick = openFilters;
+  $("pt-boost").onclick = doBoost;
+  renderSeek($("seek-seg"), state.me.seeking || "any");
   [...$("theme-seg").children].forEach((b) => b.classList.toggle("on", b.dataset.v === state.settings.theme));
   const N = [["match", "Найден собеседник", "search", "t-coral"], ["messages", "Сообщения", "chat", "t-green"], ["ratings", "Новые оценки", "star", "t-yellow"], ["news", "Новости Hunty", "bell", "t-red"]];
   $("notif-list").innerHTML = N.map(([k, l, i, c]) => `<div class="list-row"><span class="lr-ic ${c}">${ic(i)}</span><span class="lr-label">${l}</span><button class="toggle ${state.settings.notif[k] ? "on" : ""}" data-n="${k}" aria-label="${l}"></button></div>`).join("");
@@ -734,7 +738,7 @@ function renderProfile() {
 const PLANS = [{ id: "week", name: "Неделя", stars: 99, note: "7 дней" }, { id: "month", name: "Месяц", stars: 299, note: "30 дней", save: "−30%" }];
 function openPremium() {
   let plan = "month";
-  const feats = [["clock", "Пауза короче", "снять текущую и укоротить следующие"], ["filter", "Фильтры", "пол, возраст, город"], ["eye", "Кто тебя оценил", "без сохранённой переписки"], ["bolt", "Буст профиля", "30 минут быстрее в поиске"], ["crown", "Значок PRO", "в профиле и в чате"]];
+  const feats = [["clock", "Пауза короче", "снять текущую и укоротить следующие"], ["eye", "Кто тебя оценил", "без дневного лимита"], ["bolt", "Буст профиля", "30 минут быстрее в поиске"], ["crown", "Значок PRO", "в профиле и в чате"]];
   const body = openSheet(`<div class="prem-hero"><div class="prem-badge-big">${ic("crown")}</div><div class="sh-title">Hunty PRO</div><div class="sh-sub">Оплата через Telegram Stars</div></div>
     <div class="feat-list">${feats.map(([i, b, s]) => `<div class="feat"><span class="lr-ic">${ic(i)}</span><div><b>${b}</b><small>${s}</small></div></div>`).join("")}</div>
     <div class="plans" id="plans">${PLANS.map((p) => `<button class="plan ${p.id === plan ? "on" : ""}" data-p="${p.id}">${p.save ? `<span class="save">${p.save}</span>` : ""}<b>${p.name}</b><span class="price">${ic("star")}${p.stars}</span><small>${p.note}</small></button>`).join("")}</div>
@@ -767,7 +771,7 @@ function payFlow(plan) {
   };
 }
 function requirePro(fn) { return () => { if (!isPremium()) { haptic("warning"); return openPremium(); } fn(); }; }
-const openFilters = requirePro(() => {
+function openFilters() {
   const f = state.filters;
   const body = openSheet(`<div class="sh-title">Фильтры поиска</div><div class="sh-sub">Возраст — только внутри твоего пула (${myPool() === "teen" ? "16–17" : "18+"})</div>
     <div class="filter-block"><label>Пол</label><div class="segment" id="ff-g"><button data-v="any">Все</button><button data-v="f">Девушки</button><button data-v="m">Парни</button></div></div>
@@ -783,17 +787,31 @@ const openFilters = requirePro(() => {
     state.filters = { gender: g, ageMin: parseInt(body.querySelector("#ff-min").value, 10) || null, ageMax: parseInt(body.querySelector("#ff-max").value, 10) || null, city: body.querySelector("#ff-city").value.trim() };
     save(); closeSheet(true); refresh(); toast("Фильтры применены"); haptic("success");
   };
-});
-const openRaters = requirePro(() => {
+}
+function openRaters() {
   const rows = [...state.raters].reverse();
-  openSheet(`<div class="sh-title">Кто тебя оценил</div><div class="sh-sub">Только чаты от 30 секунд, где оба написали хотя бы по 3 сообщения</div>
-    <div class="list-group" style="margin-top:16px">${rows.length ? rows.map((h) => `<div class="rated-row">${avatarHTML(h, "sm")}<div><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div></div><span class="score">${h.score}</span></div>`).join("") : `<div class="rated-row"><span class="hint">Пока никто. Нужны 30 секунд и по 3 сообщения.</span></div>`}</div>`);
-});
+  const left = revealsLeft();
+  const body = openSheet(`<div class="sh-title">Кто тебя оценил</div><div class="sh-sub">${isPremium() ? "PRO: без лимита" : `Бесплатно ${FREE_REVEALS} открытия в день · осталось ${left}`}. Чаты от 30 секунд и 3 сообщений.</div>
+    <div class="list-group" id="rater-list" style="margin-top:16px">${rows.length ? rows.map((h, i) => {
+      const id = h.id || (h.name + ":" + h.ts);
+      const open = revealed(id);
+      return `<div class="rated-row" data-rid="${esc(id)}" data-i="${i}">${open ? `${avatarHTML(h, "sm")}<div><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div></div><span class="score">${h.score}</span>` : `<span class="av sm">?</span><div><b>Скрыто</b><div class="hint" style="margin:0">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
+    }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Нужны 30 секунд и по 3 сообщения.</span></div>`}</div>`);
+  body.querySelector("#rater-list").onclick = (e) => {
+    const row = e.target.closest("[data-rid]");
+    if (!row || revealed(row.dataset.rid)) return;
+    if (!e.target.closest(".reveal-one") && !e.target.closest(".rated-row")) return;
+    if (isPremium() || revealsLeft() > 0) {
+      if (!isPremium()) { revealBag().ids.push(row.dataset.rid); save(); }
+      openRaters();
+    } else openPremium();
+  };
+}
 const doBoost = requirePro(() => {
   if (state.boostUntil > Date.now()) return toast("Буст уже работает");
-  state.boostUntil = Date.now() + 30 * 60e3; save(); renderHome(); haptic("success"); toast("Буст на 30 минут включён");
+  state.boostUntil = Date.now() + 30 * 60e3; save(); haptic("success"); toast("Буст на 30 минут включён");
+  if (current === "profile") renderProfile();
 });
-const doRewind = requirePro(() => { toast("Чаты не сохраняются — начни новый поиск"); });
 function onCooldownAction() {
   if (isPremium()) { clearCooldown(); haptic("success"); toast("Пауза снята"); renderHome(); return; }
   openPremium();
@@ -879,7 +897,7 @@ function bindBackend() {
   backend.on("ratedByPartner", ({ sessionId, score, dur, partnerId }) => {
     const rec = recent.get(sessionId);
     state.ratingsReceived.push({ from: partnerId, score, dur, ts: Date.now() });
-    if (rec && rec.partner) state.raters.push({ name: rec.partner.name, hue: rec.partner.hue, photos: rec.partner.photos, score, dur, ts: Date.now() });
+    if (rec && rec.partner) state.raters.push({ id: partnerId, name: rec.partner.name, hue: rec.partner.hue, photos: rec.partner.photos, score, dur, ts: Date.now() });
     save(); refresh();
   });
   backend.on("contactMatched", ({ sessionId, username }) => {
@@ -899,6 +917,12 @@ function bind() {
 
   $("reg-back").onclick = goBack;
   $("f-gender").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; draft.gender = b.dataset.v; renderGender(); haptic("select"); };
+  $("f-seek").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; draft.seeking = b.dataset.v; renderSeek($("f-seek"), draft.seeking); haptic("select"); };
+  $("seek-seg").onclick = (e) => {
+    const b = e.target.closest("[data-v]"); if (!b) return;
+    state.me.seeking = b.dataset.v; save(); backend.updateMe(publicMe()); renderSeek($("seek-seg"), state.me.seeking); haptic("select");
+  };
+  $("open-filters-free").onclick = openFilters;
   $("f-age").addEventListener("input", () => { $("f-age").value = $("f-age").value.replace(/\D/g, ""); renderAgeHint(); });
   const step = (d) => { const a = parseInt($("f-age").value, 10) || (d > 0 ? 17 : 19); $("f-age").value = Math.max(16, Math.min(99, a + d)); renderAgeHint(); haptic("select"); };
   $("age-minus").onclick = () => step(-1); $("age-plus").onclick = () => step(1);
@@ -918,9 +942,6 @@ function bind() {
 
   $("btn-search").onclick = () => startSearch();
   $("cd-skip").onclick = onCooldownAction;
-  $("q-filters").onclick = openFilters;
-  $("q-rewind").onclick = doRewind;
-  $("q-boost").onclick = doBoost;
   $("srch-cancel").onclick = cancelSearch;
 
   $("chat-back").onclick = () => leaveChat("home");

@@ -179,15 +179,33 @@
     function candidates(filters, exclude) {
       const myPool = poolOf(me ? me.age : 18);
       let list = PROFILES.filter((p) => poolOf(p.age) === myPool && !blocked.has(p.id) && !(exclude || []).includes(p.id));
+      const seek = me && (me.seeking === "f" || me.seeking === "m") ? me.seeking : "";
+      if (seek) list = list.filter((p) => p.gender === seek);
       if (filters) {
-        let f = list;
-        if (filters.gender && filters.gender !== "any") f = f.filter((p) => p.gender === filters.gender);
-        if (filters.ageMin) f = f.filter((p) => p.age >= filters.ageMin);
-        if (filters.ageMax) f = f.filter((p) => p.age <= filters.ageMax);
-        if (filters.city) f = f.filter((p) => p.city.toLowerCase().includes(String(filters.city).toLowerCase()));
-        list = f;
+        if (filters.gender && filters.gender !== "any") list = list.filter((p) => p.gender === filters.gender);
+        if (filters.ageMin) list = list.filter((p) => p.age >= filters.ageMin);
+        if (filters.ageMax) list = list.filter((p) => p.age <= filters.ageMax);
+        if (filters.city) list = list.filter((p) => p.city.toLowerCase().includes(String(filters.city).toLowerCase()));
       }
       return list;
+    }
+
+    function rankPick(list) {
+      if (list.length <= 1) return list[0];
+      const myAge = Number(me && me.age) || 18;
+      const country = String((me && me.country) || "").trim().toLowerCase();
+      const city = String((me && me.city) || "").trim().toLowerCase();
+      const scored = list.map((p) => {
+        const diff = Math.abs(p.age - myAge);
+        let s = Math.max(0, 24 - diff * 3);
+        if (country && String(p.country || "").toLowerCase() === country) s += 14;
+        if (city && String(p.city || "").toLowerCase() === city) s += 10;
+        s += Math.random() * 4;
+        return { p, s };
+      }).sort((a, b) => b.s - a.s);
+      const top = scored.slice(0, Math.max(1, Math.ceil(scored.length * 0.45)));
+      const bag = Math.random() < 0.8 ? top : scored;
+      return pick(bag.map((x) => x.p));
     }
 
     function startSession(p) {
@@ -254,7 +272,7 @@
             let list = candidates(filters, exclude);
             if (!list.length && filters) list = []; // filtered empty → tell UI
             if (!list.length) return reject({ code: "empty" });
-            const p = pick(list);
+            const p = rankPick(list);
             const s = startSession(p);
             resolve({ sessionId: s.id, partner: publicProfile(p), startedAt: s.startedAt });
           }, (boost ? 900 : 1700) + Math.random() * 1500);

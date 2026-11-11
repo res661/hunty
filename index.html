@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#F6F2EC" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=6" type="image/svg+xml" />
+  <link rel="icon" href="assets/mark.svg?v=7" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=7" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -96,6 +96,11 @@
         <button data-v="">Не указывать</button><button data-v="f">Девушка</button><button data-v="m">Парень</button>
       </div>
 
+      <div class="group-title">Кого искать</div>
+      <div class="segment" id="f-seek">
+        <button data-v="f">Девушек</button><button data-v="m">Парней</button><button data-v="any">Без разницы</button>
+      </div>
+
       <div class="group-title">Страна <span class="opt">необязательно</span></div>
       <label class="field"><input id="f-country" maxlength="28" placeholder="Например, Польша" autocomplete="off" /></label>
 
@@ -127,6 +132,9 @@
           <span class="sb-ic" data-ic="search"></span>
           <span class="sb-label">Поиск</span>
         </button>
+        <span class="hero-orbit o1 av sm" style="--h:0">А</span>
+        <span class="hero-orbit o2 av sm" style="--h:3">Д</span>
+        <span class="hero-orbit o3 av sm" style="--h:6">Л</span>
         <div class="sh-meta">
           <div class="cooldown hidden" id="cooldown-box">
             <div class="cd-kicker">Поиск снова через</div>
@@ -135,13 +143,6 @@
             <button class="btn" id="cd-skip" type="button">Снять паузу</button>
           </div>
         </div>
-        <div class="sh-pool" id="pool-note"></div>
-      </div>
-
-      <div class="quick-row">
-        <button class="quick" id="q-filters"><span class="q-ic" data-ic="filter"></span><span>Фильтры</span><span class="lock" data-ic="lock"></span></button>
-        <button class="quick" id="q-rewind"><span class="q-ic" data-ic="rewind"></span><span>Вернуть</span><span class="lock" data-ic="lock"></span></button>
-        <button class="quick" id="q-boost"><span class="q-ic" data-ic="bolt"></span><span id="q-boost-label">Буст</span><span class="lock" data-ic="lock"></span></button>
       </div>
 
       <div class="card stats-card" id="my-stats"></div>
@@ -154,11 +155,19 @@
   <!-- PROFILE -->
   <section class="screen hidden tabbed" data-screen="profile">
     <div class="scroll">
-      <header class="large-title"><h1>Профиль</h1></header>
+      <header class="large-title center"><h1>Профиль</h1></header>
       <div class="card me-card" id="me-card"></div>
       <div class="card stats-card" id="me-stats"></div>
       <div class="card premium-card" id="me-premium"></div>
       <div class="list-group" id="me-premium-tools"></div>
+
+      <div class="group-title pad">Кого искать</div>
+      <div class="segment seek-seg" id="seek-seg">
+        <button data-v="f">Девушек</button><button data-v="m">Парней</button><button data-v="any">Без разницы</button>
+      </div>
+      <div class="list-group" style="margin-top:10px">
+        <button class="list-row" id="open-filters-free"><span class="lr-ic t-blue" data-ic="filter"></span><span class="lr-label">Фильтры поиска</span><span class="chev" data-ic="chev"></span></button>
+      </div>
 
       <div class="group-title pad">Оформление</div>
       <div class="list-group"><div class="list-row"><span class="lr-ic t-indigo" data-ic="moon"></span><span class="lr-label">Тема</span>
@@ -207,12 +216,17 @@
   <!-- CHAT -->
   <section class="screen hidden chat" data-screen="chat">
     <header class="chat-head">
-      <button class="icon-btn" id="chat-back" data-ic="back" aria-label="Выйти"></button>
-      <button class="chat-who" id="chat-who"></button>
-      <div class="timer" id="chat-timer"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" class="tr-bg"/><circle cx="10" cy="10" r="8" class="tr-fg" id="timer-ring"/></svg><span id="timer-text">0:00</span></div>
-      <button class="icon-btn" id="chat-report" data-ic="flag" aria-label="Пожаловаться"></button>
-      <button class="icon-btn next-ic" id="chat-skip" data-ic="next" aria-label="Дальше"></button>
-      <button class="icon-btn" id="chat-more" data-ic="more" aria-label="Ещё"></button>
+      <div class="chat-head-top">
+        <button class="icon-btn" id="chat-back" data-ic="back" aria-label="Выйти"></button>
+        <button class="chat-who" id="chat-who"></button>
+        <div class="timer" id="chat-timer"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" class="tr-bg"/><circle cx="10" cy="10" r="8" class="tr-fg" id="timer-ring"/></svg><span id="timer-text">0:00</span></div>
+        <button class="icon-btn" id="chat-more" data-ic="more" aria-label="Ещё"></button>
+      </div>
+      <div class="chat-head-actions">
+        <span class="cw-place" id="chat-place"></span>
+        <button class="chat-pill report" id="chat-report" type="button">Жалоба</button>
+        <button class="chat-pill skip" id="chat-skip" type="button">Дальше</button>
+      </div>
     </header>
     <div class="messages" id="messages"></div>
     <div class="typing hidden" id="typing"><i></i><i></i><i></i></div>
@@ -260,8 +274,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=6"></script>
-<script src="mock.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="rules.js?v=7"></script>
+<script src="mock.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
