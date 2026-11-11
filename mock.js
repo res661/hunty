@@ -27,7 +27,6 @@
  *   report(partnerId, reason, sessionId?)  → Promise<{ ok, urgent }>
  *   block(partnerId)                       → Promise<{ ok }>
  *   requestContact(sessionId)              → Promise<{ status: "waiting" }>
- *                                            Partner may later emit "contactMatched" (test mode: sometimes).
  *   getProfile(partnerId)                  → partner public profile (incl. stats)
  *   purchasePremium(planId)                → Promise<{ ok, until }>  (real: Stars invoice)
  *
@@ -281,7 +280,6 @@
         clearTimeout(s.idleTimer);
         const dur = Math.round((Date.now() - s.startedAt) / 1000);
         s.dur = dur;
-        // partner rates you too only when time and both message counts qualify
         const qualified = R.canRate(dur, s.mine, s.theirs);
         if (qualified) {
           const score = Math.max(1, Math.min(10, Math.round(6 + Math.min(3.5, s.mine * 0.5) + (Math.random() * 2 - 1))));
@@ -312,7 +310,6 @@
         if (!s || !s.alive) throw { code: "closed" };
         if (s.contact === "matched") return { status: "matched", username: s.partner.username };
         s.contact = "waiting";
-        // Test partners auto-accept sometimes, never instantly.
         if (!s.contactTimer && Math.random() < 0.65) {
           s.contactTimer = setTimeout(() => {
             if (!s.alive || s.contact !== "waiting") return;

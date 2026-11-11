@@ -45,7 +45,7 @@
 
   /**
    * ratings: [{ from, score (1..10), dur (sec), ts, raterTrust? (0..1) }]
-   * - only chats ≥ 30 s count (message minimum is enforced when the rating is accepted)
+   * - only chats ≥ 30 s count (each side must also have sent 3 messages)
    * - one rating per pair (latest wins)
    * - weight grows with conversation length and rater trust
    * - outliers vs median are damped, Bayesian prior pulls small samples to the mean
@@ -122,7 +122,7 @@
   }
 
   const SAFETY_TIPS = [
-    "Осторожно со скамом: никто в чате не просит деньги или «подтверждение»",
+    "Осторожно со скамом: никто из Hunty не просит деньги или «подтверждение»",
     "Не переходи по чужим ссылкам — в чате они и так заблокированы",
     "Не отправляй личные данные, адрес, коды из SMS и пароли",
     "Никогда не переводи деньги людям из чата",
@@ -130,12 +130,32 @@
     "Будь собой и уважай собеседника — оценку ставят оба",
   ];
 
-  /** Rating is offered only after 30 s and at least 3 messages from each side. */
   function canRate(durSec, mine, theirs) {
     return durSec >= RULES.MIN_RATE_SEC && (mine | 0) >= RULES.MIN_RATE_MSGS && (theirs | 0) >= RULES.MIN_RATE_MSGS;
   }
 
   function dailyLimit(isPremium) { return isPremium ? RULES.PREMIUM_SEARCHES : RULES.FREE_SEARCHES; }
 
-  window.HuntyRules = { RULES, checkMessage, SAFETY_TIPS, agePool, reputation, evaluateReports, canRate, dailyLimit };
+  /** Pause only after a huge recent volume. Rapid skips wait longer; slow real chats often do not. */
+  function antiFarm(events, now, isPremium) {
+    now = now || Date.now();
+    const recent = (events || []).filter((e) => e && now - e.ts < 24 * 3600e3).sort((a, b) => a.ts - b.ts);
+    if (recent.length < 200) return null;
+    let gapSum = 0;
+    for (let i = 1; i < recent.length; i++) gapSum += Math.max(0, recent[i].ts - recent[i - 1].ts);
+    const meanGap = recent.length > 1 ? gapSum / (recent.length - 1) : 1e9;
+    const short = recent.filter((e) => (e.dur || 0) < 20).length / recent.length;
+    if (meanGap >= 150000 && short < 0.35) return null;
+    if (meanGap >= 90000 && short < 0.45 && recent.length < 300) return null;
+    let minutes = 60;
+    if (meanGap < 8000 || short > 0.8) minutes = 120;
+    else if (meanGap < 20000 || short > 0.6) minutes = 105;
+    else if (meanGap < 45000 || short > 0.4) minutes = 90;
+    else if (meanGap < 90000) minutes = 75;
+    if (recent.length >= 300) minutes = Math.min(120, minutes + 10);
+    if (isPremium) minutes = Math.max(30, Math.round(minutes / 2));
+    return { minutes, until: now + minutes * 60e3, rapid: minutes >= 100 };
+  }
+
+  window.HuntyRules = { RULES, checkMessage, SAFETY_TIPS, agePool, reputation, evaluateReports, canRate, dailyLimit, antiFarm };
 })();

@@ -4,7 +4,7 @@
 - Static Mini App (HTML/CSS/JS, no build step), hosted on GitHub Pages: `https://res661.github.io/hunty/`.
 - `rules.js` — pure product rules (age pools, reputation math, soft-ban thresholds, message filter, safety tips). **The server must run the same rules; the client copy is display-only.**
 - `mock.js` — the only backend adapter. 14 scripted test profiles (10 in the 18+ pool, 4 in the 16–17 pool), typing indicator, scripted replies, partner ratings, mutual contact exchange, mock Stars purchase.
-- `app.js` — UI/state. Persists to `localStorage["hunty-save-v2"]` (v1 saves migrate; chat transcripts are dropped).
+- `app.js` — UI/state. Persists to `localStorage["hunty-save-v1"]`.
 
 To go live, implement the interface documented at the top of `mock.js` in a new `ws.js` adapter and replace one line in `app.js`:
 ```js
@@ -31,7 +31,7 @@ Alternative: Supabase (Postgres + Realtime channels + Edge Functions for initDat
 - Rotating safety tips are shown on every search screen.
 
 ## Ratings (anti-boost)
-- A rating is accepted only if the server-side chat duration is **≥ 30 s** and **both people sent at least 3 messages**. Skip is always available immediately; below that threshold there is no rating.
+- A rating is accepted only if the server-side chat duration is **≥ 30 s** and **both people sent at least 3 messages**. Skip is one tap from the first second; below that threshold there is no rating screen.
 - **One rating per pair** (latest wins); a pair that keeps re-matching cannot pump each other.
 - Weighted average: weight = `(0.6 + 0.4·min(1, dur/300)) · raterTrust`; raterTrust grows with account age/clean history.
 - Outlier damping: ratings more than 3.5 from the median get weight × 0.35.
@@ -51,7 +51,7 @@ Reports from new / low-trust accounts weigh less; "minor" reports go to the urge
 ## Premium (Telegram Stars)
 - Plans: week 99 ★, month 299 ★ (prices are placeholders).
 - Flow: app → `POST /invoice` → Worker calls `createInvoiceLink` (XTR) → `tg.openInvoice(link)` → bot receives `successful_payment` → DB `premium_until` → app refreshes.
-- Perks: 300 searches/day (free 30), filters (gender/age within own pool/city), see who rated you, 30-min boost, rewind last skip, PRO badge. Premium never changes rating math or report rules.
+- Perks: clear or shorten the anti-farm search pause, filters (gender/age within own pool/city), see who rated you, 30-min boost, PRO badge. Premium never changes rating math or report rules.
 
 ## Limits
-- Free 30 searches/day, PRO 300/day, counted on the server per Telegram user id, reset at local midnight.
+- Search is unlimited in normal use. After roughly 200–300 chats in a day, a pause of about 1–2 hours applies and is longer for rapid skips than for slow real chats. When it ends, the window resets. There is no daily counter on screen.
