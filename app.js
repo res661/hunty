@@ -181,7 +181,7 @@ function initTelegram() {
 }
 
 /* ---------- navigation ---------- */
-let current = "splash";
+let current = "home";
 const TABS = ["home", "profile"];
 function showScreen(name) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("hidden", s.dataset.screen !== name));
@@ -992,10 +992,8 @@ function boot() {
   backend.connect({ initData: tg ? tg.initData : "", me: publicMe() }).then(() => refresh());
   save();
   const next = !state.onboarded ? "onboard" : !state.registered ? "register" : banned() ? "restricted" : "home";
-  showScreen("splash");
-  window._splashTimer = setTimeout(() => {
-    const sp = document.querySelector(".splash"); sp.classList.add("leaving");
-    setTimeout(() => { sp.classList.remove("leaving"); if (next === "register") openRegister(false); else showScreen(next); if (next === "onboard") syncOb(); }, 380);
-  }, 1300);
+  if (next === "register") openRegister(false);
+  else showScreen(next);
+  if (next === "onboard") syncOb();
 }
 boot();
