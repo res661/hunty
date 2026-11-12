@@ -171,16 +171,34 @@ function applyTheme() {
   const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute("content", color);
   try { if (tg && tg.setBackgroundColor) tg.setBackgroundColor(color); if (tg && tg.setHeaderColor) tg.setHeaderColor(color); } catch {}
 }
+function requestTgFullscreen() {
+  try {
+    if (tg && typeof tg.requestFullscreen === "function" && !tg.isFullscreen) tg.requestFullscreen();
+  } catch {}
+}
 function initTelegram() {
   if (tg) {
     try { tg.ready(); } catch {}
     try { tg.expand(); } catch {}
     try { if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes(); } catch {}
+    requestTgFullscreen();
+    let fullscreenRetryArmed = false;
     try {
       tg.onEvent("themeChanged", applyTheme);
       tg.onEvent("viewportChanged", () => { try { if (!tg.isExpanded) tg.expand(); } catch {} applyChrome(); });
       tg.onEvent("safeAreaChanged", applyChrome);
       tg.onEvent("contentSafeAreaChanged", applyChrome);
+      tg.onEvent("fullscreenChanged", applyChrome);
+      tg.onEvent("fullscreenFailed", (e) => {
+        const code = String((e && e.error) || "").toUpperCase();
+        if (code === "ALREADY_FULLSCREEN" || fullscreenRetryArmed) return;
+        fullscreenRetryArmed = true;
+        const once = () => {
+          window.removeEventListener("pointerdown", once);
+          requestTgFullscreen();
+        };
+        window.addEventListener("pointerdown", once);
+      });
       if (tg.BackButton) tg.BackButton.onClick(goBack);
     } catch {}
   }
