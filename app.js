@@ -400,6 +400,10 @@ function myUsername() {
 const recent = new Map();
 let cdInt = null;
 function syncCooldown() {
+  if (backend && backend.mode === "test") {
+    if (state.cooldown) { state.cooldown = null; state.activity = []; save(); }
+    return null;
+  }
   const now = Date.now();
   if (state.cooldown && state.cooldown.until > now) return state.cooldown;
   if (state.cooldown && state.cooldown.until <= now) {

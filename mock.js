@@ -146,6 +146,66 @@
       stats: { avg: 7.2, count: 4, avgSec: 160, chats: 6 },
       greet: ["привет", "о, привет"],
       lines: ["собрал себе комп сам", "читаю Азимова сейчас", "что читаешь?", "в Таллине школа начинается рано, жесть", "любишь научную фантастику?"] },
+    { id: "t18", name: "Лера", age: 18, gender: "f", city: "Варшава", country: "Польша", premium: false, hue: 0,
+      about: "Первый курс, рисую в скетчбуке в метро.",
+      interests: ["Искусство", "Музыка", "Кофе"],
+      stats: { avg: 8.4, count: 16, avgSec: 220, chats: 20 },
+      greet: ["привет!", "хай, ты как?"],
+      lines: ["мне 18, только поступила", "в Варшаве люблю Лазенки", "что слушаешь сейчас?", "рисую людей в метро", "ты тоже на первом?"] },
+    { id: "t19", name: "Кира", age: 19, gender: "f", city: "Краков", country: "Польша", premium: true, hue: 2,
+      about: "Учусь на журналистику и пью слишком много чая.",
+      interests: ["Книги", "Чай", "Кино"],
+      stats: { avg: 8.6, count: 28, avgSec: 260, chats: 34 },
+      greet: ["приветик", "о, привет 👋"],
+      lines: ["мне 19, журфак", "в Кракове дождь, как обычно", "какой чай любишь?", "пишу тексты для универа", "расскажи, как прошёл день"] },
+    { id: "t20", name: "Алина", age: 20, gender: "f", city: "Киев", country: "Украина", premium: false, hue: 4,
+      about: "Танцую и учусь на дизайнера.",
+      interests: ["Танцы", "Искусство", "Музыка"],
+      stats: { avg: 8.2, count: 21, avgSec: 240, chats: 29 },
+      greet: ["привет)", "хай"],
+      lines: ["мне 20, дизайн", "сегодня была репетиция", "ты чем занимаешься?", "в Киеве вечер тихий", "какую музыку включить?"] },
+    { id: "t21", name: "Полина", age: 21, gender: "f", city: "Гданьск", country: "Польша", premium: false, hue: 6,
+      about: "Живу у моря и фотографирую закаты.",
+      interests: ["Фото", "Путешествия", "Море"],
+      stats: { avg: 8.8, count: 33, avgSec: 300, chats: 41 },
+      greet: ["привет 🌊", "добрый вечер"],
+      lines: ["мне 21, живу в Гданьске", "сегодня море спокойное", "любишь воду или горы?", "учусь на фотографа", "куда хочешь съездить?"] },
+    { id: "t22", name: "Ника", age: 22, gender: "f", city: "Львов", country: "Украина", premium: false, hue: 8,
+      about: "Бариста по утрам, сериалы по ночам.",
+      interests: ["Кофе", "Сериалы", "Книги"],
+      stats: { avg: 8.3, count: 45, avgSec: 280, chats: 52 },
+      greet: ["привет!", "хей, как ты?"],
+      lines: ["мне 22, варю кофе во Львове", "какой сериал досмотреть?", "ты кофе или чай?", "сегодня смена была длинная", "что тебя радует?"] },
+    { id: "t23", name: "Саша", age: 18, gender: "m", city: "Варшава", country: "Польша", premium: false, hue: 1,
+      about: "Только поступил, играю в футбол во дворе.",
+      interests: ["Спорт", "Мемы", "Игры"],
+      stats: { avg: 7.9, count: 12, avgSec: 180, chats: 16 },
+      greet: ["йо", "привет"],
+      lines: ["мне 18, первый курс", "в Варшаве учусь", "во что играешь?", "после пар сразу на поле", "ты откуда?"] },
+    { id: "t24", name: "Марк", age: 19, gender: "m", city: "Краков", country: "Польша", premium: false, hue: 3,
+      about: "Снимаю короткие видео и учусь на айти.",
+      interests: ["IT", "Фото", "Музыка"],
+      stats: { avg: 8.0, count: 18, avgSec: 210, chats: 23 },
+      greet: ["хай", "привет 👋"],
+      lines: ["мне 19, информатика", "в Кракове учусь", "какой у тебя плейлист?", "снимаю видео для универа", "что делаешь вечером?"] },
+    { id: "t25", name: "Денис", age: 20, gender: "m", city: "Киев", country: "Украина", premium: true, hue: 5,
+      about: "Бегаю по набережной и читаю фантастику.",
+      interests: ["Спорт", "Книги", "Наука"],
+      stats: { avg: 8.5, count: 30, avgSec: 250, chats: 36 },
+      greet: ["привет", "добрый вечер"],
+      lines: ["мне 20, живу в Киеве", "сегодня бегал вдоль реки", "что читаешь?", "учусь на инженера", "ты жаворонок или сова?"] },
+    { id: "t26", name: "Глеб", age: 21, gender: "m", city: "Вроцлав", country: "Польша", premium: false, hue: 7,
+      about: "Готовлю пасту и спорю о фильмах.",
+      interests: ["Еда", "Кино", "Музыка"],
+      stats: { avg: 7.7, count: 24, avgSec: 200, chats: 31 },
+      greet: ["привет)", "йо, как дела?"],
+      lines: ["мне 21, во Вроцлаве", "сегодня варил пасту", "какой фильм советуешь?", "учусь на повара, почти", "что ел сегодня?"] },
+    { id: "t27", name: "Степан", age: 22, gender: "m", city: "Познань", country: "Польша", premium: false, hue: 9,
+      about: "Катаюсь на велосипеде и учусь на экономиста.",
+      interests: ["Спорт", "Путешествия", "Музыка"],
+      stats: { avg: 8.1, count: 27, avgSec: 230, chats: 33 },
+      greet: ["привет", "ну привет"],
+      lines: ["мне 22, в Познани", "каждый день на велике", "ты где живёшь?", "учусь на экономиста", "куда бы поехал прямо сейчас?"] },
   ];
 
   const KEYWORDS = [
@@ -168,6 +228,8 @@
     t06: "artem_test", t07: "liza_test", t08: "ilya_test", t09: "masha_test", t10: "timur_test",
     t11: "sonya_test", t12: "misha_test", t13: "vika_test", t14: "roma_test",
     t15: "nastya_test", t16: "egor_test", t17: "oleg_test",
+    t18: "lera_test", t19: "kira_test", t20: "alina_test", t21: "polina_test", t22: "nika_test",
+    t23: "sasha_test", t24: "mark_test", t25: "denis_test", t26: "gleb_test", t27: "stepan_test",
   };
   PROFILES.forEach((p) => { p.username = HANDLES[p.id]; });
 
@@ -193,19 +255,18 @@
       em.emit("online", { count: online });
     }, 4000);
 
-    function poolOf(age) { return R.agePool(age); }
-
-    function candidates(filters, exclude) {
+    function legalList() {
       const myAge = me && me.age != null ? me.age : 18;
-      let list = PROFILES.filter((p) => R.canMatchAges(myAge, p.age) && !blocked.has(p.id) && !(exclude || []).includes(p.id));
       const seek = me && (me.seeking === "f" || me.seeking === "m") ? me.seeking : "";
-      if (seek) list = list.filter((p) => p.gender === seek);
-      if (filters) {
-        if (filters.gender && filters.gender !== "any") list = list.filter((p) => p.gender === filters.gender);
-        if (filters.ageMin) list = list.filter((p) => p.age >= filters.ageMin);
-        if (filters.ageMax) list = list.filter((p) => p.age <= filters.ageMax);
-        if (filters.city) list = list.filter((p) => p.city.toLowerCase().includes(String(filters.city).toLowerCase()));
-      }
+      return PROFILES.filter((p) => R.canMatchAges(myAge, p.age) && (!seek || p.gender === seek));
+    }
+
+    function candidates(_filters, exclude) {
+      const legal = legalList();
+      const ex = new Set(exclude || []);
+      let list = legal.filter((p) => !blocked.has(p.id) && !ex.has(p.id));
+      if (!list.length) list = legal.filter((p) => !blocked.has(p.id));
+      if (!list.length) list = legal.slice();
       return list;
     }
 
@@ -237,7 +298,7 @@
       const s = { id: "s_" + uid(), partner: p, startedAt: Date.now(), mine: 0, theirs: 0, lineIdx: 0, alive: true, timers: [], idleTimer: null, contact: null };
       sessions.set(s.id, s);
       const first = pick(p.greet);
-      if (Math.random() < 0.65) partnerSay(s, first, 900 + Math.random() * 900);
+      partnerSay(s, first, 1600 + Math.random() * 700);
       armIdle(s);
       return s;
     }
@@ -301,7 +362,6 @@
           const t = setTimeout(() => {
             done = true; searchCtl = null;
             let list = candidates(filters, exclude);
-            if (!list.length && filters) list = []; // filtered empty → tell UI
             if (!list.length) return reject({ code: "empty" });
             const p = rankPick(list);
             const s = startSession(p);
