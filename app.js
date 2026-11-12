@@ -82,15 +82,17 @@ function flagFor(score) {
 function flagMark() {
   return `<svg class="flag-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 2.85a1.05 1.05 0 0 1 1.05 1.05v16.2a1.05 1.05 0 0 1-2.1 0V3.9A1.05 1.05 0 0 1 5 2.85z"/><path fill="currentColor" d="M6.2 4.55c2.15-.95 3.55 1.15 5.75.4 2.15-.75 3.5-1.9 5.75-.85.95.42 1.7 1.05 1.7 1.95l-.4 6.2c-.06.75-.65 1.2-1.35.95-2.2-.75-3.6.95-5.75.25-2.2-.7-3.6-2.55-5.7-1.6V4.55z"/></svg>`;
 }
-function flagWidget(flag, count, on) {
+function flagWidget(flag, count, on, compact) {
   if (!flag) return "";
   const n = count == null ? "" : `<em>${count}</em>`;
-  return `<span class="flag-w ${flag.cls}${on ? " on" : ""}" data-f="${flag.id}">${flagMark()}<b>${esc(flag.name)}</b>${n}</span>`;
+  const name = compact ? "" : `<b>${esc(flag.name)}</b>`;
+  const label = compact ? ` aria-label="${esc(flag.name)}${count == null ? "" : " " + count}"` : "";
+  return `<span class="flag-w ${flag.cls}${on ? " on" : ""}${compact ? " compact" : ""}" data-f="${flag.id}"${label}>${flagMark()}${name}${n}</span>`;
 }
 function flagChips(counts) {
   const rows = FLAGS.map((f) => [f, counts && counts[f.id] ? counts[f.id] | 0 : 0]).filter(([, n]) => n > 0);
   if (!rows.length) return "";
-  return `<div class="flag-row">${rows.map(([f, n]) => flagWidget(f, n, false)).join("")}</div>`;
+  return `<div class="flag-row compact">${rows.map(([f, n]) => flagWidget(f, n, false, true)).join("")}</div>`;
 }
 function myFlagCounts() {
   const counts = { green: 0, mid: 0, red: 0 };
@@ -608,7 +610,7 @@ function plural(n, a, b, c) { const m10 = n % 10, m100 = n % 100; return m10 ===
 function myRep() { return H.reputation(state.ratingsReceived); }
 function statsHTML(avg, isNew, count, avgSec, chats, matches) {
   const ratingVal = isNew ? `<b class="new-tag">Новый</b><span>${count} из 5 оценок</span>` : `<b>${avg.toFixed(1)}</b><span>из ${count} ${plural(count, "оценки", "оценок", "оценок")}</span>`;
-  const matchCell = matches == null ? "" : `<div class="stat"><b>${matches}</b><span>${plural(matches, "матч", "матча", "матчей")}</span></div>`;
+  const matchCell = matches == null ? "" : `<div class="stat"><b>${matches}</b><span>${plural(matches, "встреча", "встречи", "встреч")}</span></div>`;
   return `<div class="stat-grid${matchCell ? " has-match" : ""}">
     <div class="stat hl">${ratingVal}</div>
     <div class="stat"><b>${fmtDur(avgSec)}</b><span>ср. разговор</span></div>
@@ -742,12 +744,7 @@ function maskPhase(sec) {
 function openChat(m) {
   chat = { id: m.sessionId, partner: m.partner, startedAt: m.startedAt, ended: false, partnerGone: false, unlockedShown: false, masksOff: false, mine: 0, theirs: 0, contact: null, entry: null, given: null };
   if (chat.partner) chat.partner.faceShown = false;
-  $("messages").innerHTML = `<button class="chat-intro" id="chat-intro"></button>`;
-  $("chat-intro").onclick = (e) => {
-    const img = e.target.closest(".av img");
-    if (img && img.getAttribute("src") && chat && chat.masksOff) { openViewer([img.src], 0); return; }
-    if (chat) openPartnerProfile(chat.partner);
-  };
+  $("messages").innerHTML = "";
   paintChatFace();
   $("composer").classList.remove("hidden"); $("composer-ended").classList.add("hidden");
   $("gone-rate").classList.add("hidden");
@@ -766,10 +763,7 @@ function paintChatFace() {
   const crown = p.premium ? `<i class="name-crown">${ic("crown")}</i>` : "";
   const stat = p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1);
   const av = chat.masksOff ? avatarHTML(p, "sm") : anonHTML("sm");
-  const avLg = chat.masksOff ? avatarHTML(p, "lg") : anonHTML("lg");
   $("chat-who").innerHTML = `${av}<span class="cw-info"><b>${esc(p.name)}${crown}</b><small>${chat.partnerGone ? "вышел" : stat}</small></span>`;
-  const intro = $("chat-intro");
-  if (intro) intro.innerHTML = `${avLg}<b>${esc(p.name)}, ${p.age}</b><small>${ratingChip(p)} ${p.stats.chats} ${plural(p.stats.chats, "чат", "чата", "чатов")} · ср. ${fmtDur(p.stats.avgSec)}</small><span class="ci-more">Профиль</span>`;
   paintIcons($("chat-who"));
 }
 function paintMaskNote() {
@@ -801,7 +795,7 @@ function addMatchMoment() {
   if (!box) return;
   const el = document.createElement("div");
   el.className = "match-moment";
-  el.innerHTML = `<b>Матч</b><span>Вы увидели друг друга</span>`;
+  el.innerHTML = `<b>Встреча</b><span>Вы увидели друг друга</span>`;
   box.appendChild(el);
   box.scrollTop = box.scrollHeight;
 }
@@ -827,7 +821,7 @@ function tickTimer() {
   maybeUnlock();
 }
 function maybeUnlock() {
-  if (!chat || chat.unlockedShown || chat.ended) return;
+  if (!chat || chat.unlockedShown || chat.ended || !chat.masksOff) return;
   if (!H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0)) return;
   chat.unlockedShown = true; $("chat-timer").classList.add("unlocked");
 }
@@ -876,7 +870,7 @@ function markPartnerGone() {
   $("msg-input").placeholder = "Собеседник вышел";
   $("msg-input").blur();
   updateSend();
-  const can = H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0) && chat.given == null;
+  const can = chat.masksOff && H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0) && chat.given == null;
   $("gone-rate").classList.toggle("hidden", !can);
 }
 function shakeField(el) { el.classList.remove("blocked"); void el.offsetWidth; el.classList.add("blocked"); setTimeout(() => el.classList.remove("blocked"), 900); }
@@ -920,12 +914,20 @@ async function endChat() {
   if ($("messages") && current !== "chat") $("messages").innerHTML = "";
   return entry;
 }
-async function leaveChat(after) {
-  if (!chat) return showScreen("home");
-  const entry = await endChat();
-  if (entry && entry.canRate && entry.given == null) return openRateSheet(entry, after);
+async function commitLeave(after) {
+  if (chat && !chat.ended) await endChat();
   if ($("messages")) $("messages").innerHTML = "";
   afterChat(after);
+}
+async function leaveChat(after) {
+  if (!chat) return showScreen("home");
+  const can = !chat.ended && chat.masksOff && H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0) && chat.given == null;
+  if (can) {
+    const entry = chat.entry || { id: chat.id, partner: chat.partner, dur: chatDur(), canRate: true, given: null };
+    chat.entry = entry;
+    return openRateSheet(entry, after);
+  }
+  await commitLeave(after);
 }
 function afterChat(after) {
   chat = null;
@@ -943,7 +945,7 @@ function openRateSheet(entry, after) {
     <div class="flag-row" id="flag-row">${FLAGS.map((f) => flagWidget(f, null, false)).join("")}</div>
     <div class="rate-grid" id="rate-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button class="rate-btn" data-n="${n}">${n}</button>`).join("")}</div>
     <div class="sh-actions row"><button class="btn btn-soft rate-act" id="rate-home">${stay ? "Не сейчас" : after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary rate-act" id="rate-send" disabled>${stay || after !== "next" ? "Оценить" : "Оценить и дальше"}</button></div>
-    <div class="rate-note">Имя и фото видны в «Мои оценки».</div>`, () => { if (!stay) afterChat(after); });
+    <div class="rate-note">Имя и фото видны в «Мои оценки».</div>`);
   $("sheet").classList.add("is-rate");
   body.querySelector("#rate-grid").onclick = (e) => {
     const b = e.target.closest("[data-n]"); if (!b) return;
@@ -957,7 +959,7 @@ function openRateSheet(entry, after) {
     body.querySelectorAll("#flag-row .flag-w").forEach((el) => el.classList.toggle("on", el.dataset.f === flag.id));
     body.querySelector("#rate-send").disabled = false;
   };
-  body.querySelector("#rate-home").onclick = () => { closeSheet(true); if (!stay) afterChat(after); };
+  body.querySelector("#rate-home").onclick = () => { closeSheet(true); if (!stay) commitLeave(after); };
   body.querySelector("#rate-send").onclick = async () => {
     if (!score) return;
     const r = await backend.rate(entry.id, score);
@@ -984,7 +986,8 @@ function openRateSheet(entry, after) {
       save(); haptic("success"); toast("Спасибо! Оценка учтена");
     }
     else toast(r.reason === "duplicate" ? "Ты уже оценил этот разговор" : "Оценка недоступна", "warn");
-    closeSheet();
+    closeSheet(true);
+    if (!stay && r.accepted) commitLeave(after);
   };
 }
 
@@ -1105,11 +1108,18 @@ function renderMyMatches() {
   const box = $("my-matches");
   if (!box) return;
   const rows = [...(state.matches || [])].reverse();
+  const head = `<div class="card-head"><h3>Встречи</h3></div><p class="match-sub">С кем дошли до 2:30</p>`;
   if (!rows.length) {
-    box.innerHTML = `<div class="card-head"><h3>Мои матчи</h3></div><p class="hint">Пока нет. Матч — если договорить до 2:30.</p>`;
+    box.innerHTML = head + `<p class="hint">Пока нет. Встреча — если дойти до 2:30.</p>`;
     return;
   }
-  box.innerHTML = `<div class="card-head"><h3>Мои матчи</h3><small>${rows.length}</small></div>` + rows.map((m) => `<button class="match-row" type="button" data-mid="${esc(m.sessionId)}">${avatarHTML(m, "sm")}<span class="rater-main"><b>${esc(m.name)}${m.age ? ", " + m.age : ""}</b><span class="hint">${fmtDur(m.dur)}</span></span></button>`).join("");
+  box.innerHTML = head + rows.map((m) => {
+    const flag = flagFor(m.theirScore);
+    const got = m.theirScore == null
+      ? `<span class="match-wait">Пока без оценки</span>`
+      : `<span class="match-got">${flag ? flagWidget(flag, null, true, true) : ""}<b>${m.theirScore}</b></span>`;
+    return `<button class="match-row" type="button" data-mid="${esc(m.sessionId)}">${avatarHTML(m, "sm")}<span class="rater-main"><b>${esc(m.name)}${m.age ? ", " + m.age : ""}</b><span class="hint">${fmtDur(m.dur)}</span></span>${got}</button>`;
+  }).join("");
 }
 function renderProfile() {
   const m = state.me, pro = isPremium(), rep = myRep();
@@ -1295,10 +1305,13 @@ function bindBackend() {
   backend.on("ratedByPartner", ({ sessionId, score, dur, partnerId, tags }) => {
     const rec = recent.get(sessionId);
     const partner = rec && rec.partner;
+    const shown = !!((partner && partner.faceShown) || (chat && chat.id === sessionId && chat.masksOff));
+    if (!shown) return;
     state.ratingsReceived.push({ from: partnerId, score, dur, ts: Date.now(), tags: tags || [] });
+    const row = (state.matches || []).find((x) => x.sessionId === sessionId);
+    if (row) row.theirScore = score;
     if (partner) {
-      const shown = !!partner.faceShown || !!(chat && chat.id === sessionId && chat.masksOff);
-      state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: shown ? (partner.photos || []) : [], faceShown: shown, age: partner.age, country: partner.country, city: partner.city, premium: partner.premium, score, dur, ts: Date.now() });
+      state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: partner.photos || [], faceShown: true, age: partner.age, country: partner.country, city: partner.city, premium: partner.premium, score, dur, ts: Date.now() });
     }
     save(); refresh();
   });
@@ -1316,40 +1329,38 @@ function startBumps() {
   stopBumps();
   const field = $("bump-field");
   if (!field) return;
-  const n = 5;
-  field.innerHTML = Array.from({ length: n }, () => `<span class="mask-dancer">${ANON_MARK}</span>`).join("");
-  const nodes = [...field.children];
+  field.innerHTML = `<div class="veil"></div><span class="guest">${ANON_MARK}</span><span class="guest">${ANON_MARK}</span>`;
+  const guests = [...field.querySelectorAll(".guest")];
+  const veil = field.querySelector(".veil");
   const t0 = performance.now();
+  const ease = (t) => t * t * (3 - 2 * t);
   const step = (now) => {
     const reveal = $("match-reveal");
     if (!searching || current !== "search" || (reveal && !reveal.classList.contains("hidden"))) { bumpRaf = 0; return; }
     const w = field.clientWidth, h = field.clientHeight;
     if (w < 40 || h < 40) { bumpRaf = requestAnimationFrame(step); return; }
-    const cx = w / 2, cy = h * 0.40;
-    const rx = Math.min(w, h) * 0.30, ry = Math.min(w, h) * 0.20;
+    const cx = w / 2, cy = h * 0.38;
     const t = (now - t0) / 1000;
-    const cycle = 4.4;
+    const cycle = 7.2;
+    const turn = Math.floor(t / cycle);
     const u = (t % cycle) / cycle;
-    const pair = Math.floor(t / cycle) % n;
-    const mate = (pair + 2) % n;
-    let k = 0;
-    if (u > 0.36 && u < 0.54) k = (u - 0.36) / 0.18;
-    else if (u >= 0.54 && u < 0.74) k = 1;
-    else if (u >= 0.74 && u < 0.90) k = 1 - (u - 0.74) / 0.16;
-    k = Math.max(0, Math.min(1, k));
-    const e = k * k * (3 - 2 * k);
-    nodes.forEach((el, i) => {
-      const ang = (i / n) * Math.PI * 2 - Math.PI / 2 + t * 0.18;
-      let x = cx + Math.cos(ang) * rx;
-      let y = cy + Math.sin(ang) * ry;
-      if (i === pair || i === mate) {
-        x += (cx - x) * 0.46 * e;
-        y += (cy - y) * 0.46 * e;
-      }
-      const sc = (i === pair || i === mate) ? 1 + 0.14 * e : 0.92;
-      el.style.transform = `translate(${(x - 22).toFixed(1)}px, ${(y - 22).toFixed(1)}px) scale(${sc.toFixed(3)})`;
-      el.classList.add("go");
+    const ang = turn * 1.05 + 0.4;
+    let approach = 0, alpha = 0, lift = 0;
+    if (u < 0.18) { alpha = ease(u / 0.18); approach = 0; }
+    else if (u < 0.62) { alpha = 1; approach = ease((u - 0.18) / 0.44); }
+    else if (u < 0.78) { alpha = 1; approach = 1; }
+    else { alpha = 1 - ease((u - 0.78) / 0.22); approach = 1; lift = ease((u - 0.78) / 0.22) * 28; }
+    const far = Math.min(w, h) * 0.46;
+    const near = Math.min(w, h) * 0.18;
+    const dist = far + (near - far) * approach;
+    guests.forEach((el, i) => {
+      const a = ang + i * Math.PI;
+      const x = cx + Math.cos(a) * dist;
+      const y = cy + Math.sin(a) * dist * 0.62 - lift;
+      el.style.opacity = String(alpha);
+      el.style.transform = `translate(${(x - 26).toFixed(1)}px, ${(y - 26).toFixed(1)}px)`;
     });
+    if (veil) veil.style.opacity = String(0.55 + 0.45 * Math.sin(t * 0.7));
     bumpRaf = requestAnimationFrame(step);
   };
   bumpRaf = requestAnimationFrame(step);
@@ -1588,7 +1599,7 @@ function bind() {
   $("chat-skip").onclick = () => { haptic("medium"); leaveChat("next"); };
   $("chat-report").onclick = () => { if (chat) openReport(chat.partner); };
   $("gone-rate").onclick = () => {
-    if (!chat || chat.given != null) return;
+    if (!chat || chat.given != null || !chat.masksOff) return;
     if (!H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0)) return;
     const entry = chat.entry || { id: chat.id, partner: chat.partner, dur: chatDur(), canRate: true, given: null };
     chat.entry = entry;
