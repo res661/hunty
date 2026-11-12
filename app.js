@@ -762,7 +762,8 @@ function paintChatFace() {
   const p = chat.partner;
   const crown = p.premium ? `<i class="name-crown">${ic("crown")}</i>` : "";
   const av = chat.masksOff ? avatarHTML(p, "sm") : anonHTML("sm");
-  $("chat-who").innerHTML = `${av}<span class="cw-info"><b>${esc(p.name)}${crown}</b></span>`;
+  const rate = p.stats.count < RULES.NEW_UNTIL ? `<span class="cw-rate">новый</span>` : ratingChip(p);
+  $("chat-who").innerHTML = `<span class="who-av">${av}${crown}</span>${rate}`;
   const photoBtn = $("chat-photo");
   if (photoBtn) photoBtn.classList.toggle("hidden", !chat.masksOff);
   paintIcons($("chat-who"));

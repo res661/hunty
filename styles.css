@@ -503,6 +503,9 @@ html[data-theme="dark"] .mr-card { color: rgba(255,255,255,.75); }
 .chat-head .chat-pill.report { justify-self: start; }
 .chat-head .chat-pill.skip { justify-self: end; }
 .chat-who { justify-self: center; min-width: 0; max-width: 52%; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: left; padding: 2px 6px; border-radius: 14px; }
+.who-av { position: relative; display: inline-flex; flex: none; }
+.who-av .name-crown { position: absolute; right: -3px; bottom: -2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; }
+.cw-rate { font-weight: 700; font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
 .chat-who:active { background: var(--surface-2); }
 .cw-info { min-width: 0; }
 .cw-info b { font-family: var(--font-display); font-size: 15px; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; }
