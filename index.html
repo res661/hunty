@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#EFEFF4" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/cupion-mascot.png?v=35" type="image/png" />
-  <link rel="stylesheet" href="styles.css?v=35" />
+  <link rel="icon" href="assets/cupion-mascot.png?v=36" type="image/png" />
+  <link rel="stylesheet" href="styles.css?v=36" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     (function () {
@@ -34,7 +34,7 @@
     <div class="onboard-track" id="ob-track">
       <article class="ob-slide">
         <div class="ob-art art-cards">
-          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=35" alt="" draggable="false"></div>
+          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=36" alt="" draggable="false"></div>
           <div class="mini-card c3"><span class="av sm anon" data-anon></span><div><b>Лиза, 26</b><small>★ 9.4 · 301 чат</small></div></div>
           <div class="mini-card c2"><span class="av sm anon" data-anon></span><div><b>Даня, 27</b><small>★ 8.3 · 212 чатов</small></div></div>
           <div class="mini-card c1"><span class="av sm anon" data-anon></span><div><b>Аня, 22</b><small>★ 8.7 · 124 чата</small></div><span class="live-dot"></span></div>
@@ -129,14 +129,20 @@
   <section class="screen hidden tabbed" data-screen="home">
     <div class="scroll" id="home-scroll">
       <div class="search-hero" id="search-hero">
+        <h1 class="find-title">Найти<br>собеседника</h1>
         <div class="orb-wrap">
-          <div class="sh-rings" aria-hidden="true"><i></i><i></i><i></i></div>
-          <button class="search-btn" id="btn-search" type="button">
+          <span class="heart-glow" aria-hidden="true"></span>
+          <button class="search-btn" id="btn-search" type="button" aria-label="Найти собеседника">
+            <span class="heart-shadow" aria-hidden="true"></span>
+            <span class="heart-pop"><span class="heart-beat">
+              <svg class="heart-svg" viewBox="0 0 200 180" aria-hidden="true"><defs><radialGradient id="hg" cx="32%" cy="28%" r="78%"><stop offset="0%" stop-color="#ffe7f3"/><stop offset="28%" stop-color="#ff7eb3"/><stop offset="60%" stop-color="#ff3d8b"/><stop offset="100%" stop-color="#c41062"/></radialGradient><linearGradient id="hs" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#7a0a40" stop-opacity=".4"/></linearGradient></defs><path fill="url(#hg)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><path fill="url(#hs)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><ellipse cx="78" cy="56" rx="24" ry="13" fill="#fff" opacity=".72" transform="rotate(-28 78 56)"/></svg>
+            </span></span>
             <span class="sb-icon" data-ic="search"></span>
             <span class="sb-label">Поиск</span>
             <span class="sb-hint">Найти собеседника</span>
           </button>
         </div>
+        <canvas id="heart-fx" aria-hidden="true"></canvas>
         <div class="sh-meta">
           <div class="cooldown hidden" id="cooldown-box">
             <div class="cd-kicker">Поиск снова через</div>
@@ -214,6 +220,7 @@
       <div class="bump-field" id="bump-field"></div>
       <div class="radar">
         <i class="r1"></i><i class="r2"></i><i class="r3"></i>
+        <div class="search-heart" aria-hidden="true"><span class="heart-beat"><svg class="heart-svg" viewBox="0 0 200 180" aria-hidden="true"><defs><radialGradient id="hg2" cx="32%" cy="28%" r="78%"><stop offset="0%" stop-color="#ffe7f3"/><stop offset="28%" stop-color="#ff7eb3"/><stop offset="60%" stop-color="#ff3d8b"/><stop offset="100%" stop-color="#c41062"/></radialGradient><linearGradient id="hs2" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#7a0a40" stop-opacity=".4"/></linearGradient></defs><path fill="url(#hg2)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><path fill="url(#hs2)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><ellipse cx="78" cy="56" rx="24" ry="13" fill="#fff" opacity=".72" transform="rotate(-28 78 56)"/></svg></span></div>
         <div class="radar-me" id="radar-me"></div>
       </div>
       <div class="srch-title" id="srch-title">Ищем собеседника…</div>
@@ -253,7 +260,7 @@
   <!-- RESTRICTED -->
   <section class="screen hidden restricted" data-screen="restricted">
     <div class="rs-center">
-      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=35" alt="" draggable="false"></div>
+      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=36" alt="" draggable="false"></div>
       <h1>Поиск временно ограничен</h1>
       <p id="rs-reason">На твой профиль пожаловались несколько человек. Низкие оценки к ограничениям не приводят — только жалобы.</p>
       <div class="rs-timer" id="rs-timer">59:59</div>
@@ -291,8 +298,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=35"></script>
-<script src="mock.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="rules.js?v=36"></script>
+<script src="mock.js?v=36"></script>
+<script src="app.js?v=36"></script>
 </body>
 </html>

@@ -902,3 +902,81 @@ html[data-theme="dark"] .toast { background: #F2F2F7; color: #000; }
   .search-btn, .sh-rings i, .radar > i, .radar-me { animation: none !important; }
   .reg-track { transition: none !important; }
 }
+
+/* Search page: glossy heart, no stats */
+.home-quiet { display: none; }
+.find-title {
+  position: relative;
+  z-index: 2;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+  text-align: center;
+  margin: 0 0 8px;
+}
+.search-hero .orb-wrap { width: 280px; height: 260px; }
+.search-hero .heart-glow {
+  position: absolute;
+  width: 280px; height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 90, 160, 0.42), rgba(255, 61, 139, 0) 68%);
+  opacity: 0.35;
+  transform: scale(0.72);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.search-hero .search-btn.burst .heart-glow,
+.search-hero:has(.search-btn.burst) .heart-glow { opacity: 1; transform: scale(1); }
+.search-hero .search-btn {
+  width: 200px; height: 180px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  animation: none;
+  overflow: visible;
+}
+.search-hero .search-btn .sb-icon,
+.search-hero .search-btn .sb-label,
+.search-hero .search-btn .sb-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.heart-shadow {
+  position: absolute;
+  bottom: 8px;
+  width: 130px; height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 61, 139, 0.45), rgba(255, 61, 139, 0) 72%);
+  animation: heartShade 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  pointer-events: none;
+}
+.heart-pop { display: grid; place-items: center; }
+.search-btn.burst .heart-pop { animation: heartPop 0.62s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes heartPop {
+  0% { transform: scale(0.9); }
+  42% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.heart-beat { display: grid; place-items: center; animation: lubdub 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite; will-change: transform; }
+.search-btn.off .heart-beat,
+.search-btn.off .heart-shadow { animation: none; }
+.search-btn.off .heart-svg { filter: grayscale(0.4); opacity: 0.55; }
+@keyframes lubdub {
+  0% { transform: scale(1); }
+  11% { transform: scale(1.045); }
+  22% { transform: scale(0.998); }
+  34% { transform: scale(1.026); }
+  52%, 100% { transform: scale(1); }
+}
+@keyframes heartShade {
+  0%, 52%, 100% { transform: scale(1); opacity: 0.4; }
+  11% { transform: scale(1.12); opacity: 0.58; }
+  34% { transform: scale(1.06); opacity: 0.48; }
+}
+.heart-svg { width: 168px; height: 156px; display: block; overflow: visible; }
+#heart-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+.search-hero { position: relative; }
+.searching .bump-field { opacity: 0; }
+.searching .radar-me { position: absolute; width: 0; height: 0; overflow: hidden; opacity: 0; animation: none; box-shadow: none; }
+.searching .search-heart { position: relative; z-index: 4; display: grid; place-items: center; }
+.searching .search-heart .heart-beat { animation-duration: 0.86s; }
+.searching .radar > i { border-color: rgba(255, 61, 139, 0.45); }
+html[data-theme="dark"] .heart-shadow { background: radial-gradient(closest-side, rgba(255, 50, 130, 0.62), rgba(255, 50, 130, 0) 72%); }

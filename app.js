@@ -50,7 +50,7 @@ const P = {
 function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
-const MASCOT_SRC = "assets/cupion-mascot.png?v=35";
+const MASCOT_SRC = "assets/cupion-mascot.png?v=36";
 function mascotImg(cls) { return `<img class="${cls || "mascot"}" src="${MASCOT_SRC}" alt="" draggable="false">`; }
 function maskArt(bg) {
   const ink = "#FFF7F6";
@@ -1854,6 +1854,91 @@ function mountViewer() {
 }
 function paintObFlags() {}
 
+/* ---------- heart burst (search tap) ---------- */
+function burstStars() {
+  const canvas = $("heart-fx");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const reduce = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } })();
+  if (reduce) return;
+  const r = canvas.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const w = r.width, h = r.height;
+  const parts = Array.from({ length: 42 }, (_, i) => ({
+    star: i % 5 !== 2,
+    x: w * (0.08 + Math.random() * 0.84),
+    y: -16 - Math.random() * 160,
+    vx: (Math.random() - 0.5) * 34,
+    vy: 28 + Math.random() * 80,
+    size: 10 + Math.random() * 12,
+    rot: Math.random() * 6.28,
+    vr: (Math.random() - 0.5) * 2,
+    tumble: Math.random() * 6.28,
+    vt: 1.2 + Math.random() * 2,
+    delay: Math.random() * 0.28,
+    age: 0,
+    life: 2.2 + Math.random() * 0.8,
+  }));
+  function star(c, rad) {
+    c.beginPath();
+    c.moveTo(0, -rad);
+    c.bezierCurveTo(rad * 0.2, -rad * 0.2, rad * 0.2, -rad * 0.2, rad, 0);
+    c.bezierCurveTo(rad * 0.2, rad * 0.2, rad * 0.2, rad * 0.2, 0, rad);
+    c.bezierCurveTo(-rad * 0.2, rad * 0.2, -rad * 0.2, rad * 0.2, -rad, 0);
+    c.bezierCurveTo(-rad * 0.2, -rad * 0.2, -rad * 0.2, -rad * 0.2, 0, -rad);
+    c.closePath();
+  }
+  function heart(c, rad) {
+    const s = rad / 12;
+    c.beginPath();
+    c.moveTo(0, 5 * s);
+    c.bezierCurveTo(-11 * s, -2 * s, -7 * s, -12 * s, 0, -6 * s);
+    c.bezierCurveTo(7 * s, -12 * s, 11 * s, -2 * s, 0, 5 * s);
+    c.closePath();
+  }
+  let prev = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.032, (now - prev) / 1000);
+    prev = now;
+    ctx.clearRect(0, 0, w, h);
+    let alive = 0;
+    for (const p of parts) {
+      p.age += dt;
+      if (p.age < p.delay) { alive++; continue; }
+      const t = p.age - p.delay;
+      if (t > p.life) continue;
+      alive++;
+      p.vy += 900 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      p.tumble += p.vt * dt;
+      const fade = t < 0.15 ? t / 0.15 : Math.max(0, 1 - (t - (p.life - 0.55)) / 0.55);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.scale(Math.cos(p.tumble), 1);
+      ctx.globalAlpha = Math.max(0, Math.min(1, fade));
+      if (p.star) {
+        const g = ctx.createLinearGradient(-p.size, -p.size, p.size, p.size);
+        g.addColorStop(0, "#fff6c8"); g.addColorStop(0.4, "#ffd15a"); g.addColorStop(1, "#e36a12");
+        ctx.fillStyle = g; star(ctx, p.size); ctx.fill();
+      } else {
+        const g = ctx.createLinearGradient(0, -p.size, 0, p.size);
+        g.addColorStop(0, "#ffd0e4"); g.addColorStop(1, "#ff3d8b");
+        ctx.fillStyle = g; heart(ctx, p.size); ctx.fill();
+      }
+      ctx.restore();
+    }
+    if (alive) requestAnimationFrame(frame);
+    else ctx.clearRect(0, 0, w, h);
+  }
+  requestAnimationFrame(frame);
+}
+
 /* ---------- bindings ---------- */
 function bind() {
   const fsBtn = $("desk-fs");
@@ -1899,7 +1984,16 @@ function bind() {
   $("open-rules-reg").onclick = (e) => { e.preventDefault(); e.stopPropagation(); openRules(); };
   $("reg-save").onclick = regAdvance;
 
-  $("btn-search").onclick = () => startSearch();
+  let heartArm = false;
+  $("btn-search").onclick = () => {
+    const ready = state.registered && (state.me.age | 0) >= RULES.MIN_AGE && !banned() && !$("btn-search").classList.contains("off");
+    if (!ready) return startSearch();
+    if (heartArm) return;
+    heartArm = true;
+    $("btn-search").classList.add("burst");
+    burstStars();
+    setTimeout(() => { heartArm = false; $("btn-search").classList.remove("burst"); startSearch(); }, 420);
+  };
   $("cd-skip").onclick = onCooldownAction;
   $("srch-cancel").onclick = cancelSearch;
 
