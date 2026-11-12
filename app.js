@@ -507,7 +507,7 @@ function renderHome() {
   clearInterval(cdInt);
   if (paused) cdInt = setInterval(() => { if (current === "home") renderHome(); }, 1000);
   const pro = isPremium();
-  $("my-stats").innerHTML = `<div class="card-head"><h3>Твоя репутация</h3><small>${state.totals.chats ? "по оценкам собеседников" : "появится после чатов"}</small></div>` + myStatsHTML();
+  $("my-stats").innerHTML = `<div class="card-head"><h3>Твоя репутация</h3><small>${state.totals.chats ? "по оценкам собеседников" : "появится после чатов"}</small></div>` + myStatsHTML() + flagChips(myFlagCounts());
   $("home-premium").className = "card premium-card" + (pro ? " on" : "");
   $("home-premium").innerHTML = pro
     ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</p>`
@@ -729,7 +729,6 @@ function openRateSheet(entry, after) {
   const stay = after === "stay";
   const body = openSheet(`
     <div class="sh-title">Как прошёл разговор?</div>
-    <div class="sh-sub">с ${esc(entry.partner.name)} · ${fmtDur(entry.dur)}</div>
     <div class="rate-big empty" id="rate-big"><b>–</b><span>Выбери от 1 до 10</span></div>
     <div class="flag-row" id="flag-row">${FLAGS.map((f) => flagWidget(f, null, false)).join("")}</div>
     <div class="rate-grid" id="rate-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button class="rate-btn" data-n="${n}">${n}</button>`).join("")}</div>
