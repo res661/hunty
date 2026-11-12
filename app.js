@@ -1,5 +1,17 @@
 /* Hunty v1 — UI layer. Talks to the backend only through `backend` (mock.js adapter). */
 "use strict";
+const APP_V = "40";
+(function () {
+  try {
+    if (sessionStorage.getItem("cupion-vreload") === "1") return;
+    fetch("index.html?ts=" + Date.now(), { cache: "no-store" }).then((r) => r.text()).then((html) => {
+      const m = String(html || "").match(/app\.js\?v=(\d+)/);
+      if (!m || m[1] === APP_V) return;
+      sessionStorage.setItem("cupion-vreload", "1");
+      location.reload();
+    }).catch(() => {});
+  } catch (e) {}
+})();
 const tg = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData !== undefined ? window.Telegram.WebApp : null;
 const H = window.HuntyRules;
 const RULES = H.RULES;
@@ -53,7 +65,7 @@ const P = {
 function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
-const MASCOT_SRC = "assets/cupion-mascot.png?v=39";
+const MASCOT_SRC = "assets/cupion-mascot.png?v=40";
 function mascotImg(cls) { return `<img class="${cls || "mascot"}" src="${MASCOT_SRC}" alt="" draggable="false">`; }
 function maskArt(bg) {
   const ink = "#FFF7F6";
@@ -1089,10 +1101,25 @@ function openChat(m) {
 function chatDur() { return chat ? Math.floor(((chat.endedAt || Date.now()) - chat.startedAt) / 1000) : 0; }
 function paintChatFace() {
   if (!chat) return;
+  const p = chat.partner || {};
+  const open = !!chat.masksOff;
   const av = $("chat-avatar");
-  if (av && !av.querySelector("svg")) av.innerHTML = ic("user");
+  const name = document.querySelector("#chat-who b");
   const st = $("chat-status");
-  if (st) st.textContent = chat.partnerGone ? "не в сети" : (chat.typing ? "печатает…" : "в сети");
+  if (name) name.textContent = open ? (p.name || "Собеседник") : "Собеседник";
+  if (av) {
+    if (open && p.photos && p.photos[0]) av.innerHTML = `<img src="${p.photos[0]}" alt="">`;
+    else if (open) av.textContent = ((p.name || "?").trim().charAt(0) || "?").toUpperCase();
+    else av.innerHTML = ic("user");
+  }
+  if (st) {
+    if (chat.partnerGone) st.textContent = "не в сети";
+    else if (chat.typing) st.textContent = "печатает…";
+    else if (open && p.age) st.textContent = p.age + " лет";
+    else st.textContent = "в сети";
+  }
+  const who = $("chat-who");
+  if (who) who.classList.toggle("unlocked", open);
 }
 function paintMaskNote() {
   const el = $("mask-note");
@@ -1119,13 +1146,25 @@ function recordMatch() {
   save();
 }
 function addMatchMoment() {
+  const host = document.querySelector('[data-screen="chat"]');
   const box = $("messages");
-  if (!box) return;
-  const el = document.createElement("div");
-  el.className = "match-moment";
-  el.innerHTML = `<b>Вы замэтчились</b><span>Это мэтч</span>`;
-  box.appendChild(el);
-  box.scrollTop = box.scrollHeight;
+  if (!host || !box || host.querySelector(".match-play")) return;
+  haptic("success");
+  const overlay = document.createElement("div");
+  overlay.className = "match-play";
+  const bits = Array.from({ length: 16 }, (_, i) => `<i style="--a:${i * 22}deg;--d:${64 + (i % 5) * 16}px;animation-delay:${(0.62 + (i % 4) * 0.03).toFixed(2)}s"></i>`).join("");
+  overlay.innerHTML = `<div class="mp-stage"><span class="mp-av a"></span><span class="mp-av b"></span><span class="mp-heart" aria-hidden="true"></span><span class="mp-burst">${bits}</span></div><h2 class="mp-title">Вы замэтчились</h2>`;
+  host.appendChild(overlay);
+  setTimeout(() => {
+    overlay.classList.add("out");
+    const card = document.createElement("div");
+    card.className = "match-moment";
+    card.innerHTML = `<b>Вы замэтчились</b><span>Это мэтч</span><button type="button" class="match-open">Смотреть профиль</button>`;
+    card.querySelector(".match-open").onclick = () => { if (chat) openPartnerProfile(chat.partner); };
+    box.appendChild(card);
+    box.scrollTop = box.scrollHeight;
+    setTimeout(() => overlay.remove(), 320);
+  }, 2100);
 }
 function tryUnmask() {
   if (!chat || chat.masksOff || chat.ended || chat.partnerGone) return;
@@ -1135,7 +1174,6 @@ function tryUnmask() {
   paintChatFace();
   paintMaskNote();
   addMatchMoment();
-  haptic("light");
 }
 function tickTimer() {
   if (!chat) return;
@@ -1531,13 +1569,24 @@ function partnerShown(p) {
   if (chat && chat.partner && chat.partner.id === p.id) return !!chat.masksOff;
   return !!p.faceShown;
 }
-function openPartnerProfile(p, opts) {
-  const fromChat = !!(opts && opts.lean);
+function genderWord(g) { return g === "m" ? "Парень" : g === "f" ? "Девушка" : ""; }
+function openPartnerProfile(p) {
   const shown = partnerShown(p);
-  const photos = shown ? photosHTML(p) : anonBlock(p);
-  const who = fromChat ? "" : `<div class="ps-name"><h2>${p.age ? esc(String(p.age)) + " лет" : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>`;
-  const body = openSheet(`${photos}
-    ${who}
+  if (!shown) {
+    openSheet(`<div class="anon-lock">${ic("user")}</div><div class="sh-title">Собеседник</div><div class="sh-sub">Имя, фото и возраст откроются после мэтча.</div>`);
+    return;
+  }
+  const place = [p.city, p.country].filter(Boolean).map((s) => esc(s)).join(", ");
+  const chips = (p.interests || []).map((t) => `<span class="chip static">${esc(t)}</span>`).join("");
+  const rows = [
+    genderWord(p.gender) ? `<div class="ps-meta">Пол · ${genderWord(p.gender)}</div>` : "",
+    p.about ? `<p class="ps-about">${esc(p.about)}</p>` : "",
+  ].join("");
+  const body = openSheet(`${photosHTML(p)}
+    <div class="ps-name"><h2>${esc(p.name || "Собеседник")}${p.age ? ", " + esc(String(p.age)) : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
+    ${place ? `<div class="ps-meta">${place}</div>` : ""}
+    ${rows}
+    ${chips ? `<div class="chips ps-chips">${chips}</div>` : ""}
     <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}
     <div class="sh-actions row"><button class="btn btn-soft flat" id="pp-report">${ic("flag")}Жалоба</button><button class="btn btn-soft flat" id="pp-block">${ic("block")}Блок</button></div>`);
   bindPhotoDots(body);
@@ -1726,6 +1775,7 @@ function openPremium() {
   $("sheet").classList.add("is-pro");
   paintIcons($("sheet"));
   requestAnimationFrame(pinPremiumSheet);
+  setTimeout(pinPremiumSheet, 60);
   const sheet = $("sheet");
   sheet.querySelector("#plans").onclick = (e) => {
     const b = e.target.closest("[data-p]"); if (!b) return;
@@ -2321,7 +2371,11 @@ function bind() {
     chat.entry = entry;
     openRateSheet(entry, "stay");
   };
-  $("chat-who").onclick = () => { if (chat) toast("Имя, фото и возраст скрыты"); };
+  $("chat-who").onclick = () => {
+    if (!chat) return;
+    if (!chat.masksOff) { toast("Профиль откроется после мэтча"); return; }
+    openPartnerProfile(chat.partner);
+  };
   let chatPhotoTap = null;
   let lastMsgTap = { id: "", t: 0 };
   $("messages").addEventListener("pointerdown", (e) => {
@@ -2626,21 +2680,21 @@ function mountLetterFields() {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
   };
+  const spots = [[14, 22], [32, 14], [68, 16], [86, 24], [10, 42], [90, 40], [12, 64], [88, 62], [16, 84], [34, 90], [66, 88], [84, 78], [24, 32], [76, 30], [22, 74], [78, 72], [48, 14], [52, 90]];
   const fill = (el) => {
     if (!el || el.childElementCount) return;
     for (let i = 0; i < 18; i++) {
       const a = unit(i + 1), b = unit(i + 23), c = unit(i + 47), d = unit(i + 71);
-      let x = 8 + a * 84;
-      let y = 8 + b * 76;
-      if (Math.abs(x - 50) < 14 && Math.abs(y - 48) < 16) x += x < 50 ? -16 : 16;
-      const size = Math.round(24 + c * 48);
+      const x = spots[i][0];
+      const y = spots[i][1];
+      const size = Math.round(26 + (i % 5) * 9);
       const depth = 1 - (size - 24) / 48;
       const node = document.createElement("span");
       node.className = "letter-av";
       node.textContent = letters[(i * 7 + 2) % letters.length];
       const c1 = palette[i % palette.length];
       const c2 = palette[(i + 5) % palette.length];
-      node.style.cssText = "--s:" + size + "px;--x:" + x.toFixed(1) + "%;--y:" + y.toFixed(1) + "%;--o:" + (0.26 + (1 - depth) * 0.5).toFixed(2) + ";--blur:" + (depth * 2.4).toFixed(2) + "px;--dx:" + Math.round((d - 0.5) * 72) + "px;--dy:" + Math.round((a - 0.5) * 96) + "px;--dur:" + (18 + b * 20).toFixed(1) + "s;--delay:" + (-c * 24).toFixed(1) + "s;background:linear-gradient(155deg," + c1 + "," + c2 + ")";
+      node.style.cssText = "--s:" + size + "px;--x:" + x + "%;--y:" + y + "%;--o:" + (0.42 + (1 - depth) * 0.38).toFixed(2) + ";--blur:" + (depth * 1.1).toFixed(2) + "px;--dx:" + Math.round((d - 0.5) * 36) + "px;--dy:" + Math.round((a - 0.5) * 42) + "px;--dur:" + (18 + b * 20).toFixed(1) + "s;--delay:" + (-c * 24).toFixed(1) + "s;background:linear-gradient(155deg," + c1 + "," + c2 + ")";
       el.appendChild(node);
     }
   };
