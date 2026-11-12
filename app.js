@@ -53,7 +53,7 @@ const P = {
 function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
-const MASCOT_SRC = "assets/cupion-mascot.png?v=38";
+const MASCOT_SRC = "assets/cupion-mascot.png?v=39";
 function mascotImg(cls) { return `<img class="${cls || "mascot"}" src="${MASCOT_SRC}" alt="" draggable="false">`; }
 function maskArt(bg) {
   const ink = "#FFF7F6";
@@ -1677,16 +1677,16 @@ function paintPremBanner() {
   if (!el) return;
   const pro = isPremium();
   el.classList.toggle("is-on", pro);
-  el.innerHTML = `<span class="prem-art" aria-hidden="true"><svg viewBox="0 0 200 180"><path fill="#fff" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><ellipse cx="74" cy="52" rx="22" ry="12" fill="#fff" opacity=".55" transform="rotate(-32 74 52)"/></svg></span><span class="prem-copy"><span class="prem-badge">${pro ? "Активна" : "Premium"}</span><b>Cupion Premium</b><small>${pro ? "До " + new Date(state.premium.until).toLocaleDateString("ru-RU") : "Голосовые сообщения"}</small></span><span class="prem-go">${pro ? "Открыть" : "Подключить"}</span>`;
+  el.innerHTML = `<span class="prem-glow" aria-hidden="true"></span><span class="prem-art" aria-hidden="true"><svg viewBox="0 0 200 180"><path fill="#fff" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><ellipse cx="74" cy="52" rx="22" ry="12" fill="#fff" opacity=".55" transform="rotate(-32 74 52)"/></svg></span><span class="prem-copy"><b>Cupion Premium</b><small>${pro ? "Активна до " + new Date(state.premium.until).toLocaleDateString("ru-RU") : "Голосовые сообщения"}</small></span><span class="prem-go">${ic("chev")}</span>`;
 }
 function paintHero() {
   const el = $("profile-hero");
   if (!el) return;
   const m = state.me;
   const r = myRep();
-  const num = r.isNew ? "Новый" : (r.avg || 0).toFixed(1);
+  const num = r.isNew ? "Новый" : "Рейтинг " + (r.avg || 0).toFixed(1);
   const av = (m.photos && m.photos[0]) ? avatarHTML(m, "xl") : `<span class="av xl" style="${avStyle(m.hue)}">${esc(((m.name || "?").trim().charAt(0) || "?").toUpperCase())}</span>`;
-  el.innerHTML = `${av}<div class="hero-copy"><p class="kicker">Профиль</p><h1>${esc(m.name || "Без имени")}</h1><p class="stat-line"><span>Рейтинг</span><b>${num}</b></p></div>`;
+  el.innerHTML = `${av}<h1>${esc(m.name || "Без имени")}</h1><p class="profile-meta">${num}</p>`;
 }
 function renderProfile() {
   const m = state.me;
