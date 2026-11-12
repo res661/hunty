@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#F2F3F5" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/cupion-mascot.png?v=32" type="image/png" />
+  <link rel="icon" href="assets/cupion-mascot.png?v=33" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=32" />
+  <link rel="stylesheet" href="styles.css?v=33" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     (function () {
@@ -37,7 +37,7 @@
     <div class="onboard-track" id="ob-track">
       <article class="ob-slide">
         <div class="ob-art art-cards">
-          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=32" alt="" draggable="false"></div>
+          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=33" alt="" draggable="false"></div>
           <div class="mini-card c3"><span class="av sm anon" data-anon></span><div><b>Лиза, 26</b><small>★ 9.4 · 301 чат</small></div></div>
           <div class="mini-card c2"><span class="av sm anon" data-anon></span><div><b>Даня, 27</b><small>★ 8.3 · 212 чатов</small></div></div>
           <div class="mini-card c1"><span class="av sm anon" data-anon></span><div><b>Аня, 22</b><small>★ 8.7 · 124 чата</small></div><span class="live-dot"></span></div>
@@ -90,7 +90,7 @@
       <p class="field-why">16–17 общаются только между собой, 18+ — только с 18+.</p>
       <div class="age-row">
         <button class="step-btn" id="age-minus" aria-label="Меньше">−</button>
-        <label class="field age-field"><input id="f-age" inputmode="numeric" maxlength="2" placeholder="18" /></label>
+        <label class="field age-field"><input id="f-age" inputmode="numeric" maxlength="2" placeholder="16" /></label>
         <button class="step-btn" id="age-plus" aria-label="Больше">+</button>
       </div>
       <div class="hint err hidden" id="age-hint"></div>
@@ -120,10 +120,8 @@
   <section class="screen hidden tabbed" data-screen="home">
     <div class="scroll" id="home-scroll">
       <div class="search-hero" id="search-hero">
-        <div class="sh-rings"><i></i><i></i><i></i></div>
-        <button class="search-btn" id="btn-search">
-          <span class="sb-ic" data-ic="search"></span>
-          <span class="sb-label">Поиск</span>
+        <button class="search-btn" id="btn-search" type="button">
+          <span class="sb-label">Найти собеседника</span>
         </button>
         <div class="sh-meta">
           <div class="cooldown hidden" id="cooldown-box">
@@ -152,7 +150,7 @@
         <label class="field"><input id="p-name" maxlength="20" placeholder="Имя" autocomplete="off" enterkeyhint="done" /></label>
         <div class="age-row">
           <button class="step-btn" id="p-age-minus" type="button" aria-label="Меньше">−</button>
-          <label class="field age-field"><input id="p-age" inputmode="numeric" enterkeyhint="done" maxlength="2" placeholder="18" /></label>
+          <label class="field age-field"><input id="p-age" inputmode="numeric" enterkeyhint="done" maxlength="2" placeholder="16" /></label>
           <button class="step-btn" id="p-age-plus" type="button" aria-label="Больше">+</button>
         </div>
         <div class="group-title">Пол</div>
@@ -221,6 +219,7 @@
     <div class="typing hidden" id="typing"><i></i><i></i><i></i></div>
     <footer class="composer" id="composer">
       <div class="mask-note hidden" id="mask-note"></div>
+      <div class="reply-bar hidden" id="reply-bar"><div class="reply-copy"><b>Ответ</b><span id="reply-preview"></span></div><button type="button" id="reply-x" aria-label="Убрать ответ">×</button></div>
       <div class="composer-row">
         <button class="attach-btn hidden" id="chat-photo" type="button" data-ic="camera" aria-label="Фото"></button>
         <input type="file" id="chat-photo-input" accept="image/*" hidden />
@@ -238,7 +237,7 @@
   <!-- RESTRICTED -->
   <section class="screen hidden restricted" data-screen="restricted">
     <div class="rs-center">
-      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=32" alt="" draggable="false"></div>
+      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=33" alt="" draggable="false"></div>
       <h1>Поиск временно ограничен</h1>
       <p id="rs-reason">На твой профиль пожаловались несколько человек. Низкие оценки к ограничениям не приводят — только жалобы.</p>
       <div class="rs-timer" id="rs-timer">59:59</div>
@@ -272,12 +271,12 @@
 
   <!-- SHEET + TOAST -->
   <div class="sheet-backdrop hidden" id="sheet-backdrop"></div>
-  <div class="sheet hidden" id="sheet" role="dialog"><div class="sheet-grab"></div><div class="sheet-body" id="sheet-body"></div></div>
+  <div class="sheet hidden" id="sheet" role="dialog"><div class="sheet-grab"></div><div class="prem-dock-top" id="prem-dock-top"></div><div class="sheet-body" id="sheet-body"></div><div class="prem-dock-bot" id="prem-dock-bot"></div></div>
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=32"></script>
-<script src="mock.js?v=32"></script>
-<script src="app.js?v=32"></script>
+<script src="rules.js?v=33"></script>
+<script src="mock.js?v=33"></script>
+<script src="app.js?v=33"></script>
 </body>
 </html>

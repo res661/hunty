@@ -400,7 +400,7 @@
       },
       updateMe(profile) { me = profile; },
 
-      findMatch({ filters, exclude, fast, preferId } = {}) {
+      findMatch({ filters, exclude, fast, preferId, direct } = {}) {
         if (searchCtl) searchCtl.cancel();
         return new Promise((resolve, reject) => {
           let done = false;
@@ -411,6 +411,7 @@
             if (preferId) {
               const hit = legalList().find((x) => x.id === preferId && !blocked.has(x.id));
               if (hit) p = hit;
+              else if (direct) return reject({ code: "away" });
               else preferMiss = true;
             }
             if (!p) {
@@ -420,7 +421,7 @@
             }
             const s = startSession(p);
             resolve({ sessionId: s.id, partner: publicProfile(p), startedAt: s.startedAt, preferMiss });
-          }, (fast ? 700 : 1700) + Math.random() * 1500);
+          }, direct ? 280 : (fast ? 700 : 1700) + Math.random() * 1500);
           searchCtl = { cancel() { if (!done) { clearTimeout(t); searchCtl = null; reject({ code: "cancelled" }); } } };
         });
       },
