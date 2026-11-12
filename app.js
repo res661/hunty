@@ -182,13 +182,14 @@ function initTelegram() {
 
 /* ---------- navigation ---------- */
 let current = "home";
-const TABS = ["home", "profile"];
+const TABS = ["home", "ratings", "profile"];
 function showScreen(name) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("hidden", s.dataset.screen !== name));
   current = name;
   $("tabbar").classList.toggle("hidden", !TABS.includes(name));
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.dataset.tab === name));
   if (name === "home") renderHome();
+  if (name === "ratings") renderRatings();
   if (name === "profile") renderProfile();
   if (name === "restricted") renderRestricted();
   try {
@@ -322,7 +323,7 @@ function saveRegister() {
   toast(first ? `Привет, ${state.me.name}! Жми «Поиск»` : "Профиль сохранён");
 }
 function publicMe() { const m = state.me; return { id: m.id, name: m.name, age: m.age, gender: m.gender, seeking: m.seeking || "any", country: m.country, city: m.city, premium: isPremium() }; }
-const FREE_REVEALS = 3;
+const FREE_REVEALS = 5;
 function revealBag() {
   const day = todayKey();
   if (!state.reveals || state.reveals.day !== day) state.reveals = { day, ids: [] };
@@ -594,8 +595,8 @@ function openRateSheet(entry, after) {
     <div class="rate-big empty" id="rate-big"><b>–</b><span>Выбери от 1 до 10</span></div>
     <div class="rate-grid" id="rate-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button class="rate-btn" data-n="${n}">${n}</button>`).join("")}</div>
     <div class="rate-tags" id="rate-tags">${tags.map((t) => `<button class="chip" data-t="${t}">${t}</button>`).join("")}</div>
-    <div class="sh-actions row"><button class="btn btn-soft" id="rate-home">${after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary" id="rate-send" disabled>${after === "next" ? "Оценить и дальше" : "Оценить"}</button></div>
-    <div class="rate-note">Оценка анонимна. Появляется после 3 сообщений в чате.</div>`, () => afterChat(after));
+    <div class="sh-actions row"><button class="btn btn-soft rate-act" id="rate-home">${after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary rate-act" id="rate-send" disabled>${after === "next" ? "Оценить и дальше" : "Оценить"}</button></div>
+    <div class="rate-note">Имя и фото видны в «Мои оценки». После 3 сообщений.</div>`, () => afterChat(after));
   body.querySelector("#rate-grid").onclick = (e) => {
     const b = e.target.closest("[data-n]"); if (!b) return;
     score = +b.dataset.n; haptic("select");
@@ -711,8 +712,8 @@ function renderProfile() {
   $("me-premium-tools").innerHTML = `<button class="list-row" id="pt-boost"><span class="lr-ic t-coral">${ic("bolt")}</span><span class="lr-label">Буст${boostLeft}</span>${lockOr}</button>`;
   $("pt-boost").onclick = doBoost;
   const wr = $("who-rated-bottom");
-  wr.textContent = pro ? "Кто меня оценил" : `Кто меня оценил · ${revealsLeft()} из 3`;
-  wr.onclick = openRaters;
+  wr.textContent = pro ? "Мои оценки" : `Мои оценки · ${revealsLeft()} из ${FREE_REVEALS}`;
+  wr.onclick = () => showScreen("ratings");
   renderSeek($("seek-seg"), state.me.seeking || "any");
   [...$("theme-seg").children].forEach((b) => b.classList.toggle("on", b.dataset.v === state.settings.theme));
   const N = [["match", "Найден собеседник", "search", "t-coral"], ["messages", "Сообщения", "chat", "t-green"], ["ratings", "Новые оценки", "star", "t-yellow"], ["news", "Новости Hunty", "bell", "t-red"]];
@@ -757,24 +758,35 @@ function payFlow(plan) {
   };
 }
 function requirePro(fn) { return () => { if (!isPremium()) { haptic("warning"); return openPremium(); } fn(); }; }
-function openRaters() {
+function renderRatings() {
   const rows = [...state.raters].reverse();
   const left = revealsLeft();
-  const body = openSheet(`<div class="sh-title">Кто тебя оценил</div><div class="sh-sub">${isPremium() ? "PRO: без лимита" : `Бесплатно ${FREE_REVEALS} открытия в день · осталось ${left}`}. После 3 сообщений в чате.</div>
-    <div class="list-group" id="rater-list" style="margin-top:16px">${rows.length ? rows.map((h, i) => {
-      const id = h.id || (h.name + ":" + h.ts);
-      const open = revealed(id);
-      return `<div class="rated-row" data-rid="${esc(id)}" data-i="${i}">${open ? `${avatarHTML(h, "sm")}<div><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div></div><span class="score">${h.score}</span>` : `<span class="av sm">?</span><div><b>Скрыто</b><div class="hint" style="margin:0">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
-    }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Нужны 3 сообщения в чате.</span></div>`}</div>`);
-  body.querySelector("#rater-list").onclick = (e) => {
-    const row = e.target.closest("[data-rid]");
-    if (!row || revealed(row.dataset.rid)) return;
-    if (!e.target.closest(".reveal-one") && !e.target.closest(".rated-row")) return;
-    if (isPremium() || revealsLeft() > 0) {
-      if (!isPremium()) { revealBag().ids.push(row.dataset.rid); save(); }
-      openRaters();
-    } else openPremium();
-  };
+  const sub = $("ratings-sub");
+  if (sub) sub.textContent = isPremium() ? "PRO · без лимита" : `Бесплатно ${FREE_REVEALS} в день · осталось ${left}`;
+  const box = $("rater-list");
+  if (!box) return;
+  box.innerHTML = rows.length ? rows.map((h) => {
+    const id = h.id || (h.name + ":" + h.ts);
+    const open = isPremium() || revealed(id);
+    const tags = (h.tags || []).map((t) => `<i>${esc(t)}</i>`).join("");
+    return `<div class="rated-row" data-rid="${esc(id)}">${open
+      ? `${avatarHTML(h, "sm")}<div class="rater-main"><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div>${tags ? `<div class="rater-tags">${tags}</div>` : ""}</div><span class="score">${h.score}</span>`
+      : `<span class="av sm">?</span><div class="rater-main"><b>Скрыто</b><div class="hint" style="margin:0">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
+  }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Нужны 3 сообщения в чате.</span></div>`;
+}
+function openRevealPaywall() {
+  const body = openSheet(`<div class="sh-title">Лимит открытий</div><div class="sh-sub">Бесплатно ${FREE_REVEALS} в день. В PRO — без лимита.</div>
+    <div class="sh-actions"><button class="btn btn-primary btn-lg" id="rev-pro">Подключить PRO</button><button class="btn btn-ghost" id="rev-no">Не сейчас</button></div>`);
+  body.querySelector("#rev-pro").onclick = () => { closeSheet(true); setTimeout(openPremium, 220); };
+  body.querySelector("#rev-no").onclick = () => closeSheet(true);
+}
+function revealRater(id) {
+  if (!id || isPremium() || revealed(id)) return;
+  if (revealsLeft() <= 0) return openRevealPaywall();
+  revealBag().ids.push(id);
+  save();
+  renderRatings();
+  if (current === "profile") renderProfile();
 }
 const doBoost = requirePro(() => {
   if (state.boostUntil > Date.now()) return toast("Буст уже работает");
@@ -794,7 +806,7 @@ function openLimitSheet() {
 
 /* ---------- rules / restricted ---------- */
 function openRules() {
-  const R0 = [["Только 16+", "Возраст обязателен. 16–17 и 18+ — отдельные пулы, они никогда не пересекаются. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 только после 3 сообщений в чате. Короткий пропуск не попадает в среднюю и не считается чатом."]];
+  const R0 = [["Только 16+", "Возраст обязателен. 16–17 и 18+ — отдельные пулы, они никогда не пересекаются. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 только после 3 сообщений в чате. Имя, фото и метки того, кто оценил, видны в «Мои оценки». Короткий пропуск не попадает в среднюю."]];
   openSheet(`<div class="sh-title">Правила Hunty</div><div class="sh-sub">Коротко и по делу</div>
     <div class="rules-list">${R0.map(([b, p], i) => `<div class="rule"><span class="rn">${i + 1}</span><div><b>${b}</b><p>${p}</p></div></div>`).join("")}</div>
     <div class="rate-note">Ограничение поиска: 30 жалоб за 24 часа — пауза на 10 часов. Низкие оценки никогда не ограничивают. После таймера можно снова пользоваться; ещё 30 жалоб за сутки — снова 10 часов.</div>`);
@@ -834,10 +846,15 @@ function simulateRatings() {
   const pool = window.HuntyMock.PROFILES;
   for (let i = 0; i < 5; i++) {
     const p = pool[(Math.random() * pool.length) | 0];
-    state.ratingsReceived.push({ from: p.id + "_" + i + "_" + Date.now(), score: 6 + ((Math.random() * 5) | 0), dur: 90 + ((Math.random() * 400) | 0), ts: Date.now() });
+    const id = p.id + "_" + i + "_" + Date.now();
+    const score = 6 + ((Math.random() * 5) | 0);
+    const tags = ["Интересно", "Смешно", "Вежливо", "Глубоко"].filter(() => Math.random() < 0.5).slice(0, 2);
+    const dur = 90 + ((Math.random() * 400) | 0);
+    state.ratingsReceived.push({ from: id, score, dur, ts: Date.now() });
+    state.raters.push({ id, name: p.name, hue: p.hue, photos: p.photos, score, dur, tags, ts: Date.now() });
   }
   state.totals.chats += 5; state.totals.sec += 5 * 240;
-  save(); renderProfile(); toast("Добавлено 5 тестовых оценок");
+  save(); refresh(); toast("Добавлено 5 тестовых оценок");
 }
 function resetAll() {
   const body = openSheet(`<div class="sh-title">Сбросить всё?</div><div class="sh-sub">Профиль, история, оценки и PRO удалятся с этого устройства.</div>
@@ -845,7 +862,7 @@ function resetAll() {
   body.querySelector("#rst-no").onclick = () => closeSheet(true);
   body.querySelector("#rst-yes").onclick = () => { localStorage.removeItem(KEY); location.reload(); };
 }
-function refresh() { if (current === "home") renderHome(); if (current === "profile") renderProfile(); }
+function refresh() { if (current === "home") renderHome(); if (current === "profile") renderProfile(); if (current === "ratings") renderRatings(); }
 
 /* ---------- backend events ---------- */
 function bindBackend() {
@@ -865,10 +882,10 @@ function bindBackend() {
     await endChat();
     addSys(`${chat.partner.name} вышел(а) из чата`, "warn"); showEnded(); haptic("warning");
   });
-  backend.on("ratedByPartner", ({ sessionId, score, dur, partnerId }) => {
+  backend.on("ratedByPartner", ({ sessionId, score, dur, partnerId, tags }) => {
     const rec = recent.get(sessionId);
-    state.ratingsReceived.push({ from: partnerId, score, dur, ts: Date.now() });
-    if (rec && rec.partner) state.raters.push({ id: partnerId, name: rec.partner.name, hue: rec.partner.hue, photos: rec.partner.photos, score, dur, ts: Date.now() });
+    state.ratingsReceived.push({ from: partnerId, score, dur, ts: Date.now(), tags: tags || [] });
+    if (rec && rec.partner) state.raters.push({ id: partnerId, name: rec.partner.name, hue: rec.partner.hue, photos: rec.partner.photos, score, dur, tags: tags || [], ts: Date.now() });
     save(); refresh();
   });
 }
@@ -946,6 +963,11 @@ function bind() {
   $("rs-lift").onclick = () => { state.ban = null; state.reportsAgainstMe = []; save(); showScreen("home"); toast("Ограничение снято (тест)"); };
 
   document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => { haptic("light"); showScreen(t.dataset.tab); }));
+  $("rater-list").onclick = (e) => {
+    const row = e.target.closest("[data-rid]");
+    if (!row || revealed(row.dataset.rid)) return;
+    revealRater(row.dataset.rid);
+  };
   $("sheet-backdrop").onclick = () => closeSheet();
   let sy = null;
   $("sheet").addEventListener("touchstart", (e) => { if ($("sheet-body").scrollTop <= 0) sy = e.touches[0].clientY; }, { passive: true });

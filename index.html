@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#F6F2EC" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=12" type="image/svg+xml" />
+  <link rel="icon" href="assets/mark.svg?v=13" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=12" />
+  <link rel="stylesheet" href="styles.css?v=13" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -173,7 +173,7 @@
         <button class="list-row danger" id="t-reset"><span class="lr-ic t-red" data-ic="trash"></span><span class="lr-label">Сбросить всё</span></button>
       </div>
       <div class="foot-note">Hunty · прототип v1 · @gohunty_bot</div>
-      <button class="btn btn-primary who-rated-bottom" id="who-rated-bottom" type="button">Кто меня оценил</button>
+      <button class="btn btn-primary who-rated-bottom" id="who-rated-bottom" type="button">Мои оценки</button>
       <div class="tab-spacer"></div>
     </div>
   </section>
@@ -246,9 +246,19 @@
     </div>
   </section>
 
+  <!-- RATINGS -->
+  <section class="screen hidden tabbed" data-screen="ratings">
+    <div class="scroll" id="ratings-scroll">
+      <header class="large-title center"><h1>Мои оценки</h1><p id="ratings-sub"></p></header>
+      <div class="list-group" id="rater-list"></div>
+      <div class="tab-spacer"></div>
+    </div>
+  </section>
+
   <!-- FLOATING TAB BAR -->
   <nav class="tabbar hidden" id="tabbar">
     <button class="tab on" data-tab="home"><span data-ic="search"></span><b>Поиск</b></button>
+    <button class="tab" data-tab="ratings"><span data-ic="starO"></span><b>Оценки</b></button>
     <button class="tab" data-tab="profile"><span data-ic="user"></span><b>Профиль</b></button>
   </nav>
 
@@ -258,8 +268,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=12"></script>
-<script src="mock.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="rules.js?v=13"></script>
+<script src="mock.js?v=13"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>

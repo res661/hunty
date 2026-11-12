@@ -341,18 +341,20 @@
         if (qualified) {
           const score = Math.max(1, Math.min(10, Math.round(6 + Math.min(3.5, s.mine * 0.5) + (Math.random() * 2 - 1))));
           partnerRatings.set(s.partner.id, score);
-          setTimeout(() => em.emit("ratedByPartner", { sessionId, partnerId: s.partner.id, score, dur }), 1200);
+          const allTags = ["Интересно", "Смешно", "Вежливо", "Глубоко", "Скучно", "Грубо"];
+          const tags = allTags.filter(() => Math.random() < 0.4).slice(0, 2);
+          setTimeout(() => em.emit("ratedByPartner", { sessionId, partnerId: s.partner.id, score, dur, tags }), 1200);
         }
         return { dur, canRate: qualified };
       },
 
-      async rate(sessionId, score) {
+      async rate(sessionId, score, tags) {
         const s = sessions.get(sessionId);
         if (!s) return { accepted: false, reason: "unknown" };
         if (!R.canRate(s.dur || 0, s.mine, s.theirs)) return { accepted: false, reason: "short" };
         if (s.rated) return { accepted: false, reason: "duplicate" };
         s.rated = true;
-        myRatings.set(s.partner.id, score);
+        myRatings.set(s.partner.id, { score, tags: tags || [] });
         return { accepted: true };
       },
 
