@@ -265,11 +265,22 @@
     }
     return { counts, avg: Math.round((sum / n) * 10) / 10 };
   }
+  const PORTRAIT_COLORS = ["#8FA6FF", "#5ED6BA", "#F0A3C2", "#E0B15A", "#7EC8F0", "#C3B1F0", "#F0B08A", "#9BB0C9"];
+  function portraitURI(i, salt) {
+    const a = PORTRAIT_COLORS[i % PORTRAIT_COLORS.length];
+    const b = PORTRAIT_COLORS[(i + 3 + salt) % PORTRAIT_COLORS.length];
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="480"><rect width="360" height="480" fill="${a}"/><circle cx="180" cy="186" r="74" fill="#fff"/><path d="M76 480c10-118 50-168 104-168s94 50 104 168" fill="#fff"/><circle cx="154" cy="176" r="8" fill="${b}"/><circle cx="208" cy="176" r="8" fill="${b}"/></svg>`;
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
   PROFILES.forEach((p, i) => {
     p.username = HANDLES[p.id];
+    p.photos = [portraitURI(i, 0), portraitURI(i, 1)];
     const bag = deriveFlags(p.stats.avg, p.stats.count, i + 3);
     p.flagCounts = bag.counts;
     p.stats.avg = bag.avg;
+    const chats = p.stats.chats | 0;
+    const frac = 0.28 + ((i * 17) % 5) * 0.07;
+    p.stats.matches = chats <= 1 ? 0 : Math.max(1, Math.min(chats - 1, Math.round(chats * frac)));
   });
 
   function publicProfile(p) {
@@ -342,8 +353,6 @@
       return s;
     }
 
-    const BOT_PHOTO = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect width="240" height="160" fill="#9FD0FF"/><circle cx="188" cy="40" r="16" fill="#FFE08A"/><path d="M0 112 L78 68 L128 98 L176 58 L240 118 V160 H0Z" fill="#7DA63A"/></svg>');
-
     function partnerSay(s, text, delay) {
       const typingAt = Math.max(250, delay - 700 - text.length * 25);
       s.timers.push(setTimeout(() => { if (s.alive) em.emit("typing", { sessionId: s.id, on: true }); }, typingAt));
@@ -352,10 +361,6 @@
         em.emit("typing", { sessionId: s.id, on: false });
         s.theirs++;
         em.emit("message", { sessionId: s.id, from: "them", text, ts: Date.now() });
-        if (Math.random() < 0.4) {
-          s.theirs++;
-          em.emit("message", { sessionId: s.id, from: "them", photo: BOT_PHOTO, ts: Date.now() });
-        }
       }, delay + text.length * 30));
     }
 

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
-  <meta name="theme-color" content="#F6F2EC" />
+  <meta name="theme-color" content="#F2F3F5" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=25" type="image/svg+xml" />
+  <link rel="icon" href="assets/mark.svg?v=26" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=25" />
+  <link rel="stylesheet" href="styles.css?v=26" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -22,12 +22,12 @@
     <div class="onboard-track" id="ob-track">
       <article class="ob-slide">
         <div class="ob-art art-cards">
-          <div class="mini-card c3"><span class="av sm" style="--h:6">Л</span><div><b>Лиза, 26</b><small>★ 9.4 · 301 чат</small></div></div>
-          <div class="mini-card c2"><span class="av sm" style="--h:3">Д</span><div><b>Даня, 27</b><small>★ 8.3 · 212 чатов</small></div></div>
-          <div class="mini-card c1"><span class="av sm" style="--h:0">А</span><div><b>Аня, 22</b><small>★ 8.7 · 124 чата</small></div><span class="live-dot"></span></div>
+          <div class="mini-card c3"><span class="av sm anon" data-anon></span><div><b>Лиза, 26</b><small>★ 9.4 · 301 чат</small></div></div>
+          <div class="mini-card c2"><span class="av sm anon" data-anon></span><div><b>Даня, 27</b><small>★ 8.3 · 212 чатов</small></div></div>
+          <div class="mini-card c1"><span class="av sm anon" data-anon></span><div><b>Аня, 22</b><small>★ 8.7 · 124 чата</small></div><span class="live-dot"></span></div>
         </div>
-        <h1>Один тап — и ты в разговоре</h1>
-        <p>Жми «Поиск», и Hunty сразу соединит тебя со случайным человеком. Не зашло — «Дальше».</p>
+        <h1>Сначала просто разговор</h1>
+        <p>Лица закрыты. Через две с половиной минуты фото открываются сами — это матч. Не хочешь — «Дальше» раньше, и лица так и не увидите.</p>
       </article>
       <article class="ob-slide">
         <div class="ob-art art-rating">
@@ -42,7 +42,7 @@
             <div class="safe-row"><span class="si coral" data-ic="flag"></span>Жалоба в один тап</div>
             <div class="safe-row"><span class="si ink" data-ic="block"></span>Блок навсегда</div>
             <div class="safe-row"><span class="si mint" data-ic="shield"></span>Жалобы проверяются</div>
-            <div class="safe-row"><span class="si gold" data-ic="link"></span>Ссылки и контакты в чате закрыты</div>
+            <div class="safe-row"><span class="si gold" data-ic="link"></span>Юзернейм пишут сами, если захотят</div>
           </div>
         </div>
         <h1>Безопасно по умолчанию</h1>
@@ -59,10 +59,10 @@
   <section class="screen hidden reg" data-screen="register">
     <header class="nav-bar"><button class="icon-btn" id="reg-back" data-ic="back" aria-label="Назад"></button><div class="nav-title" id="reg-title">Твой профиль</div><span class="icon-btn ghost"></span></header>
     <div class="scroll" id="reg-scroll">
-      <div class="reg-lead" id="reg-lead">Это увидят собеседники. Пол и кого искать — только для подбора.</div>
+      <div class="reg-lead" id="reg-lead">Имя видно сразу. Фото — через две с половиной минуты. Пол и кого искать — только для подбора.</div>
 
       <div class="group-title">Фото <span class="req">обязательно</span></div>
-      <p class="field-why">Так тебя увидят в поиске и в чате. Кружок на фото — как оно встанет в аватар.</p>
+      <p class="field-why">Их увидят, если разговор дойдёт до 2:30. Кружок — как фото встанет в аватар.</p>
       <div class="photo-slots" id="photo-slots"></div>
       <input type="file" id="photo-input" accept="image/*" hidden />
 
@@ -162,6 +162,7 @@
         <label class="field"><input id="p-city" maxlength="28" placeholder="Город" autocomplete="off" enterkeyhint="done" /></label>
       </div>
       <div class="card stats-card" id="me-stats"></div>
+      <div class="card" id="my-matches"></div>
       <div class="card premium-card" id="me-premium"></div>
       <div class="group-title pad">Оформление</div>
       <div class="list-group"><div class="list-row"><span class="lr-ic t-indigo" data-ic="moon"></span><span class="lr-label">Тема</span>
@@ -216,6 +217,7 @@
     <div class="messages" id="messages"></div>
     <div class="typing hidden" id="typing"><i></i><i></i><i></i></div>
     <footer class="composer" id="composer">
+      <div class="mask-note hidden" id="mask-note"></div>
       <div class="composer-row">
         <button class="attach-btn" id="chat-photo" type="button" data-ic="camera" aria-label="Фото"></button>
         <input type="file" id="chat-photo-input" accept="image/*" hidden />
@@ -271,8 +273,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=25"></script>
-<script src="mock.js?v=25"></script>
-<script src="app.js?v=25"></script>
+<script src="rules.js?v=26"></script>
+<script src="mock.js?v=26"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>

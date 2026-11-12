@@ -116,22 +116,21 @@
   }
 
   /**
-   * Outgoing message filter: links, @usernames, phone numbers, Telegram invites.
+   * Outgoing message filter. @usernames and Telegram links are ordinary text.
+   * Other links and phone numbers are still blocked.
    * Returns null if OK, otherwise { kind, message } — message is NOT sent.
-   * The server must run the same check (client copy can be bypassed).
    */
   const BLOCKERS = [
-    { kind: "invite", re: /(t\.me|telegram\.(me|dog)|tg:\/\/)\S*|joinchat|\+[a-z0-9_-]{10,}/i,
-      message: "Ссылки-приглашения в Telegram запрещены" },
     { kind: "link", re: /(https?:\/\/|www\.)\S+|\b[a-z0-9-]{2,}\.(com|ru|net|org|io|me|ua|pl|xyz|app|link|ly|gg|tv|info|site|online|shop|top|cc|co|by|kz|biz|de|eu)\b/i,
       message: "Ссылки в чате запрещены — так защищаемся от скама" },
-    { kind: "username", re: /(^|[^a-z0-9_])@[a-z0-9_]{4,}/i,
-      message: "Нельзя отправлять @юзернеймы" },
     { kind: "phone", re: /(\+?\d[\d\s().-]{7,}\d)/,
       message: "Номера телефонов отправлять нельзя" },
   ];
   function checkMessage(text) {
-    const t = String(text || "");
+    let t = String(text || "");
+    t = t.replace(/(?:https?:\/\/)?(?:t\.me|telegram\.(?:me|dog))\/\S*/gi, " ");
+    t = t.replace(/tg:\/\/\S*/gi, " ");
+    t = t.replace(/(^|[^a-z0-9_])@[a-z0-9_]{3,}/gi, " ");
     for (const b of BLOCKERS) {
       if (b.kind === "phone") {
         const m = t.match(b.re);
@@ -145,7 +144,7 @@
 
   const SAFETY_TIPS = [
     "Осторожно со скамом: никто из Hunty не просит деньги или «подтверждение»",
-    "Не переходи по чужим ссылкам — в чате они и так заблокированы",
+    "Не переходи по подозрительным ссылкам и не отправляй коды из SMS",
     "Не отправляй личные данные, адрес, коды из SMS и пароли",
     "Никогда не переводи деньги людям из чата",
     "Что-то не так? Жалоба и блок — в меню чата, в один тап",

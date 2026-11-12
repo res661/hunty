@@ -51,9 +51,13 @@ function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
 const MARK = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#FF5B3A"/><circle cx="25" cy="32" r="12" fill="#fff"/><circle cx="39" cy="32" r="12" fill="#fff" fill-opacity=".5"/><path d="M32 22.1a12 12 0 0 1 0 19.8a12 12 0 0 1 0-19.8z" fill="#16171D"/></svg>';
+const ANON_MARK = `<svg class="anon-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#E5484D"/><path fill="#9E2228" d="M32 13.5c6.8 0 12 5.1 12 12.4 0 4.4-1.8 7.6-3.8 9.6 5 2.4 9 6.6 10.2 13.2H13.6c1.2-6.6 5.2-10.8 10.2-13.2-2-2-3.8-5.2-3.8-9.6 0-7.3 5.2-12.4 12-12.4z"/><path fill="#E5484D" d="M14.5 29.5h35c-.2 5.2-4.2 8.8-9.2 8.8-2.4 0-4.2-1.5-8.3-1.5s-5.9 1.5-8.3 1.5c-5 0-9-3.6-9.2-8.8z"/><circle cx="24.2" cy="31.2" r="2.1" fill="#9E2228"/><circle cx="39.8" cy="31.2" r="2.1" fill="#9E2228"/></svg>`;
+function anonHTML(size) { return `<span class="av anon ${size || ""}">${ANON_MARK}</span>`; }
+function anonBlock() { return `<div class="anon-hero">${ANON_MARK}</div>`; }
 function paintIcons(root) {
   (root || document).querySelectorAll("[data-ic]").forEach((el) => { if (!el.firstElementChild) el.innerHTML = ic(el.dataset.ic); });
   (root || document).querySelectorAll("[data-mark]").forEach((el) => { if (!el.firstElementChild) el.innerHTML = MARK; });
+  (root || document).querySelectorAll("[data-anon]").forEach((el) => { if (!el.querySelector("svg")) el.innerHTML = ANON_MARK; });
 }
 const HUES = [["#FF8A6B", "#FF5B3A"], ["#8FA6FF", "#5570E8"], ["#5ED6BA", "#1FA88A"], ["#FFC866", "#F09A0E"], ["#FF9EB4", "#EC5F7F"], ["#6CCBF2", "#2591C6"], ["#B9A0FF", "#7E60E6"], ["#BCD970", "#7DA63A"], ["#FFB792", "#FF7E4F"], ["#A3AFC4", "#5E6B82"]];
 function avStyle(h) { const [a, b] = HUES[(h || 0) % HUES.length]; return `--a1:${a};--a2:${b}`; }
@@ -113,7 +117,7 @@ function defaultState() {
     premium: { active: false, until: 0, plan: null },
     boostUntil: 0,
     searches: { day: todayKey(), used: 0 },
-    ratingsReceived: [], raters: [], reportsAgainstMe: [],
+    ratingsReceived: [], raters: [], matches: [], reportsAgainstMe: [],
     ban: null, blocked: [], recentPartnerIds: [], activity: [], cooldown: null,
     reveals: { day: "", ids: [] },
     filters: { gender: "any", ageMin: null, ageMax: null, city: "" },
@@ -129,6 +133,7 @@ function load() {
     out.history = [];
     if (!Array.isArray(out.activity)) out.activity = [];
     if (!Array.isArray(out.raters)) out.raters = [];
+    if (!Array.isArray(out.matches)) out.matches = [];
     if (!Array.isArray(out.recentPartnerIds)) out.recentPartnerIds = [];
     if (!out.cooldown || typeof out.cooldown.until !== "number") out.cooldown = null;
     if (out.me.seeking !== "f" && out.me.seeking !== "m") out.me.seeking = "";
@@ -348,7 +353,7 @@ function applyTheme() {
   const theme = pref === "auto" ? systemTheme() : pref;
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
-  const color = theme === "dark" ? "#0E0F13" : "#F6F2EC";
+  const color = theme === "dark" ? "#0E0F13" : "#F2F3F5";
   const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute("content", color);
   try { if (tg && tg.setBackgroundColor) tg.setBackgroundColor(color); if (tg && tg.setHeaderColor) tg.setHeaderColor(color); } catch {}
 }
@@ -601,17 +606,18 @@ function fmtCooldown(until) {
 function fmtDur(sec) { sec = Math.max(0, Math.round(sec || 0)); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; }
 function plural(n, a, b, c) { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c; }
 function myRep() { return H.reputation(state.ratingsReceived); }
-function statsHTML(avg, isNew, count, avgSec, chats) {
+function statsHTML(avg, isNew, count, avgSec, chats, matches) {
   const ratingVal = isNew ? `<b class="new-tag">Новый</b><span>${count} из 5 оценок</span>` : `<b>${avg.toFixed(1)}</b><span>из ${count} ${plural(count, "оценки", "оценок", "оценок")}</span>`;
-  return `<div class="stat-grid">
+  const matchCell = matches == null ? "" : `<div class="stat"><b>${matches}</b><span>${plural(matches, "матч", "матча", "матчей")}</span></div>`;
+  return `<div class="stat-grid${matchCell ? " has-match" : ""}">
     <div class="stat hl">${ratingVal}</div>
     <div class="stat"><b>${fmtDur(avgSec)}</b><span>ср. разговор</span></div>
-    <div class="stat"><b>${chats}</b><span>${plural(chats, "чат", "чата", "чатов")}</span></div></div>`;
+    <div class="stat"><b>${chats}</b><span>${plural(chats, "чат", "чата", "чатов")}</span></div>${matchCell}</div>`;
 }
-function partnerStatsHTML(p) { const s = p.stats; return statsHTML(s.avg, s.count < RULES.NEW_UNTIL, s.count, s.avgSec, s.chats); }
+function partnerStatsHTML(p) { const s = p.stats; return statsHTML(s.avg, s.count < RULES.NEW_UNTIL, s.count, s.avgSec, s.chats, s.matches); }
 function myStatsHTML() {
   const r = myRep(); const t = state.totals;
-  return statsHTML(r.avg || 0, r.isNew, r.count, t.chats ? t.sec / t.chats : 0, t.chats);
+  return statsHTML(r.avg || 0, r.isNew, r.count, t.chats ? t.sec / t.chats : 0, t.chats, (state.matches || []).length);
 }
 function ratingChip(p) {
   if (p.stats.count < RULES.NEW_UNTIL) return `<span class="new-badge">Новый</span>`;
@@ -621,7 +627,7 @@ const proBadge = () => `<span class="pro-badge">${ic("crown")}PRO</span>`;
 
 /* ---------- home ---------- */
 let onlineCount = 0;
-const TIPS = ["Оценка 1–10 — после 3 сообщений в чате", "Средняя оценка учитывается после 5 разговоров, до этого ты «Новый»", "Короткий пропуск не меняет среднюю и не считается чатом", "Ссылки, @ники и номера в чате блокируются — это защита от скама"];
+const TIPS = ["Сначала разговор без лиц. Фото открываются через 2:30", "Средняя оценка учитывается после 5 разговоров, до этого ты «Новый»", "Короткий пропуск не меняет среднюю и не считается чатом", "Юзернейм можно написать в чат самим. Номера и чужие ссылки — нет"];
 const filtersActive = () => { const f = state.filters; return f.gender !== "any" || f.ageMin || f.ageMax || f.city; };
 function renderHome() {
   rollover();
@@ -660,7 +666,7 @@ function startSearch(opts) {
   if (banned()) return showScreen("restricted");
   if (syncCooldown()) { haptic("warning"); showScreen("home"); return; }
   haptic("medium");
-  $("radar-me").innerHTML = avatarHTML(state.me);
+  $("radar-me").innerHTML = anonHTML();
   $("srch-title").textContent = "Ищем собеседника…";
   $("srch-sub").textContent = "";
   $("srch-sub").classList.add("hidden");
@@ -709,7 +715,7 @@ function revealMatch(m, gen) {
   const el = $("match-reveal");
   const where = [p.city, p.country].map((s) => (s || "").trim()).filter(Boolean).map(esc).join(", ");
   const rate = p.stats && p.stats.count >= RULES.NEW_UNTIL ? ratingChip(p) : `<span class="rating-chip">новый</span>`;
-  el.innerHTML = `<button class="mr-person" type="button"><span class="mr-kicker">Нашли</span><b>${esc(p.name)}, ${p.age}</b>${where ? `<span class="mr-place">${where}</span>` : ""}${rate}</button>`;
+  el.innerHTML = `<button class="mr-person" type="button">${anonHTML("xl")}<span class="mr-kicker">Нашли</span><b>${esc(p.name)}, ${p.age}</b>${where ? `<span class="mr-place">${where}</span>` : ""}${rate}</button>`;
   el.classList.remove("hidden");
   haptic("success");
   const go = () => {
@@ -727,32 +733,88 @@ function revealMatch(m, gen) {
 
 /* ---------- chat ---------- */
 let chat = null, timerInt = null;
+const MASK_SEC = 150;
+function maskPhase(sec) {
+  if (sec >= MASK_SEC) return "open";
+  if (sec >= MASK_SEC - 10) return "soon";
+  return "wait";
+}
 function openChat(m) {
-  chat = { id: m.sessionId, partner: m.partner, startedAt: m.startedAt, ended: false, partnerGone: false, unlockedShown: false, mine: 0, theirs: 0, contact: null, entry: null, given: null };
-  const p = m.partner;
-  const crown = p.premium ? `<i class="name-crown">${ic("crown")}</i>` : "";
-  const stat = p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1);
-  $("chat-who").innerHTML = `${avatarHTML(p, "sm")}<span class="cw-info"><b>${esc(p.name)}${crown}</b><small>${stat}</small></span>`;
-  $("messages").innerHTML = `
-    <button class="chat-intro" id="chat-intro">${avatarHTML(p, "lg")}<b>${esc(p.name)}, ${p.age}</b>
-    <small>${ratingChip(p)} ${p.stats.chats} ${plural(p.stats.chats, "чат", "чата", "чатов")} · ср. ${fmtDur(p.stats.avgSec)}</small><span class="ci-more">Профиль</span></button>
-    `;
+  chat = { id: m.sessionId, partner: m.partner, startedAt: m.startedAt, ended: false, partnerGone: false, unlockedShown: false, masksOff: false, mine: 0, theirs: 0, contact: null, entry: null, given: null };
+  if (chat.partner) chat.partner.faceShown = false;
+  $("messages").innerHTML = `<button class="chat-intro" id="chat-intro"></button>`;
   $("chat-intro").onclick = (e) => {
     const img = e.target.closest(".av img");
-    if (img && img.getAttribute("src")) { openViewer([img.src], 0); return; }
-    openPartnerProfile(p);
+    if (img && img.getAttribute("src") && chat && chat.masksOff) { openViewer([img.src], 0); return; }
+    if (chat) openPartnerProfile(chat.partner);
   };
+  paintChatFace();
   $("composer").classList.remove("hidden"); $("composer-ended").classList.add("hidden");
   $("gone-rate").classList.add("hidden");
   $("typing").classList.add("hidden");
   $("msg-input").disabled = false; $("msg-input").placeholder = "Сообщение";
   $("msg-input").value = ""; updateSend();
   $("chat-timer").classList.remove("unlocked");
-  rememberPartner(p.id); save();
+  rememberPartner(chat.partner.id); save();
   showScreen("chat");
   clearInterval(timerInt); tickTimer(); timerInt = setInterval(tickTimer, 1000);
 }
 function chatDur() { return chat ? Math.floor(((chat.endedAt || Date.now()) - chat.startedAt) / 1000) : 0; }
+function paintChatFace() {
+  if (!chat) return;
+  const p = chat.partner;
+  const crown = p.premium ? `<i class="name-crown">${ic("crown")}</i>` : "";
+  const stat = p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1);
+  const av = chat.masksOff ? avatarHTML(p, "sm") : anonHTML("sm");
+  const avLg = chat.masksOff ? avatarHTML(p, "lg") : anonHTML("lg");
+  $("chat-who").innerHTML = `${av}<span class="cw-info"><b>${esc(p.name)}${crown}</b><small>${chat.partnerGone ? "вышел" : stat}</small></span>`;
+  const intro = $("chat-intro");
+  if (intro) intro.innerHTML = `${avLg}<b>${esc(p.name)}, ${p.age}</b><small>${ratingChip(p)} ${p.stats.chats} ${plural(p.stats.chats, "чат", "чата", "чатов")} · ср. ${fmtDur(p.stats.avgSec)}</small><span class="ci-more">Профиль</span>`;
+  paintIcons($("chat-who"));
+}
+function paintMaskNote() {
+  const el = $("mask-note");
+  if (!el) return;
+  if (!chat || chat.ended || chat.masksOff) { el.classList.add("hidden"); el.classList.remove("soon"); return; }
+  el.classList.remove("hidden");
+  if (chat.partnerGone) { el.textContent = "Фото так и не открылись"; el.classList.remove("soon"); return; }
+  if (maskPhase(chatDur()) === "soon") { el.textContent = "Сейчас откроются фото"; el.classList.add("soon"); return; }
+  el.textContent = "Фото откроются через " + fmtDur(MASK_SEC - chatDur());
+  el.classList.remove("soon");
+}
+function recordMatch() {
+  if (!chat || chat.matched) return;
+  chat.matched = true;
+  const p = chat.partner;
+  p.faceShown = true;
+  state.matches = state.matches || [];
+  state.matches.push({
+    sessionId: chat.id, id: p.id, name: p.name, age: p.age, hue: p.hue,
+    photos: p.photos || [], country: p.country, city: p.city, premium: p.premium,
+    stats: p.stats, flagCounts: p.flagCounts, faceShown: true,
+    dur: chatDur(), ts: Date.now(),
+  });
+  save();
+}
+function addMatchMoment() {
+  const box = $("messages");
+  if (!box) return;
+  const el = document.createElement("div");
+  el.className = "match-moment";
+  el.innerHTML = `<b>Матч</b><span>Вы увидели друг друга</span>`;
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+function tryUnmask() {
+  if (!chat || chat.masksOff || chat.ended || chat.partnerGone) return;
+  if (chatDur() < MASK_SEC) return;
+  chat.masksOff = true;
+  recordMatch();
+  paintChatFace();
+  paintMaskNote();
+  addMatchMoment();
+  haptic("light");
+}
 function tickTimer() {
   if (!chat) return;
   const d = chatDur();
@@ -760,6 +822,8 @@ function tickTimer() {
   const total = (chat.mine || 0) + (chat.theirs || 0);
   const frac = Math.min(1, total / RULES.MIN_RATE_MSGS);
   $("timer-ring").style.strokeDashoffset = String(50.27 * (1 - frac));
+  paintMaskNote();
+  tryUnmask();
   maybeUnlock();
 }
 function maybeUnlock() {
@@ -786,6 +850,7 @@ function openPhotoPaywall() {
 }
 async function sendChatPhoto(file) {
   if (!chat || chat.ended || !file) return;
+  if (!chat.masksOff) { toast("Фото откроются сами, чуть позже"); return; }
   if (!isPremium()) { openPhotoPaywall(); return; }
   try {
     const src = await resizeImage(file);
@@ -842,6 +907,10 @@ async function endChat() {
   const entry = { id: chat.id, partner: chat.partner, dur: res.dur, canRate: res.canRate, given: chat.given };
   chat.entry = entry;
   recent.set(chat.id, entry);
+  if (chat.matched) {
+    const row = (state.matches || []).find((x) => x.sessionId === chat.id);
+    if (row) row.dur = chatDur();
+  }
   if (res.canRate) { state.totals.chats++; state.totals.sec += res.dur; }
   state.activity.push({ ts: Date.now(), dur: res.dur });
   if (state.activity.length > 400) state.activity.splice(0, state.activity.length - 400);
@@ -936,8 +1005,14 @@ function bindPhotoDots(body) {
     body.querySelectorAll("#ps-dots i").forEach((d, k) => d.classList.toggle("on", k === i));
   }, { passive: true });
 }
+function partnerShown(p) {
+  if (!p) return false;
+  if (chat && chat.partner && chat.partner.id === p.id) return !!chat.masksOff;
+  return !!p.faceShown;
+}
 function openPartnerProfile(p) {
-  const body = openSheet(`${photosHTML(p)}
+  const shown = partnerShown(p);
+  const body = openSheet(`${shown ? photosHTML(p) : anonBlock()}
     <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
     <div class="ps-meta">${placeText(p)}</div>
     <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}${flagChips(p.flagCounts)}
@@ -951,9 +1026,10 @@ function scoreLine(score, label) {
   return `<div class="given-score"><b>${score}</b><span>${label}</span></div>${flag ? `<div class="flag-row">${flagWidget(flag, null, true)}</div>` : ""}`;
 }
 function openRaterProfile(h) {
-  const p = { name: h.name, age: h.age, hue: h.hue, photos: h.photos || [], country: h.country, city: h.city, premium: h.premium, about: "" };
+  const shown = !!h.faceShown;
+  const p = { name: h.name, age: h.age, hue: h.hue, photos: shown ? (h.photos || []) : [], country: h.country, city: h.city, premium: h.premium, about: "", faceShown: shown };
   const mine = h.given != null ? h.given : (state.givenByMe && state.givenByMe[h.id]);
-  const body = openSheet(`${photosHTML(p)}
+  const body = openSheet(`${shown ? photosHTML(p) : anonBlock()}
     <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
     <div class="ps-meta">${placeText(p)}</div>
     ${scoreLine(h.score, "Оценка мне")}
@@ -1025,6 +1101,16 @@ function finishProfileField(el) {
   if (document.activeElement === el) el.blur();
   } finally { profileLock = false; }
 }
+function renderMyMatches() {
+  const box = $("my-matches");
+  if (!box) return;
+  const rows = [...(state.matches || [])].reverse();
+  if (!rows.length) {
+    box.innerHTML = `<div class="card-head"><h3>Мои матчи</h3></div><p class="hint">Пока нет. Матч — если договорить до 2:30.</p>`;
+    return;
+  }
+  box.innerHTML = `<div class="card-head"><h3>Мои матчи</h3><small>${rows.length}</small></div>` + rows.map((m) => `<button class="match-row" type="button" data-mid="${esc(m.sessionId)}">${avatarHTML(m, "sm")}<span class="rater-main"><b>${esc(m.name)}${m.age ? ", " + m.age : ""}</b><span class="hint">${fmtDur(m.dur)}</span></span></button>`).join("");
+}
 function renderProfile() {
   const m = state.me, pro = isPremium(), rep = myRep();
   const set = (id, val) => { const el = $(id); if (el && document.activeElement !== el) el.value = val == null ? "" : val; };
@@ -1036,6 +1122,7 @@ function renderProfile() {
   renderSeek($("p-seek"), m.seeking);
   renderMyPhotos();
   $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML() + flagChips(myFlagCounts());
+  renderMyMatches();
   $("me-premium").className = "card premium-card" + (pro ? " on" : "");
   $("me-premium").innerHTML = pro
     ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</p>`
@@ -1098,10 +1185,11 @@ function renderRatings() {
     const open = isPremium() || revealed(id);
     const flag = flagFor(h.score);
     const flagHtml = open && flag ? `<div class="flag-row">${flagWidget(flag, null, true)}</div>` : "";
+    const face = h.faceShown ? avatarHTML(h, "sm") : anonHTML("sm");
     return `<div class="rated-row" data-rid="${esc(id)}">${open
-      ? `${avatarHTML(h, "sm")}<div class="rater-main"><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div>${flagHtml}</div><span class="score">${h.score}</span>`
-      : `<span class="av sm">?</span><div class="rater-main"><b>Скрыто</b><div class="hint" style="margin:0">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
-  }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Нужны 3 сообщения в чате.</span></div>`;
+      ? `${face}<div class="rater-main"><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div>${flagHtml}</div><span class="score">${h.score}</span>`
+      : `${anonHTML("sm")}<div class="rater-main"><b>Скрыто</b><div class="hint" style="margin:0">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
+  }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Оценка появится после разговора.</span></div>`;
 }
 function openRevealPaywall() {
   const body = openSheet(`<div class="sh-title">Лимит открытий</div><div class="sh-sub">Бесплатно ${FREE_REVEALS} в день. В PRO — без лимита.</div>
@@ -1130,7 +1218,7 @@ function openLimitSheet() {
 
 /* ---------- rules / restricted ---------- */
 function openRules() {
-  const R0 = [["Только 16+", "Возраст от 16. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 только после 3 сообщений в чате. Имя, фото и оценка видны в «Мои оценки». Короткий пропуск не попадает в среднюю."]];
+  const R0 = [["Только 16+", "Возраст от 16. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама", "Чужие ссылки и номера в чате не проходят. Юзернейм можно написать самим. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 — после разговора, если вы успели пообщаться. Фото в «Мои оценки» только если они успели открыться. Короткий пропуск не попадает в среднюю."]];
   openSheet(`<div class="sh-title">Правила Hunty</div><div class="sh-sub">Коротко и по делу</div>
     <div class="rules-list">${R0.map(([b, p], i) => `<div class="rule"><span class="rn">${i + 1}</span><div><b>${b}</b><p>${p}</p></div></div>`).join("")}</div>
     <div class="rate-note">30 жалоб за 24 часа закрывают поиск на 10 часов. Низкие оценки никогда не ограничивают. Ещё 30 жалоб за сутки — снова 10 часов.</div>`);
@@ -1197,7 +1285,7 @@ function bindBackend() {
   backend.on("message", ({ sessionId, text, photo }) => {
     if (!chat || chat.id !== sessionId || chat.ended) return;
     $("typing").classList.add("hidden"); chat.theirs++;
-    if (photo) addPhoto(photo, "them"); else addMsg(text, "them");
+    if (photo) { if (chat.masksOff) addPhoto(photo, "them"); } else addMsg(text, "them");
     maybeUnlock(); haptic("light");
   });
   backend.on("partnerLeft", ({ sessionId }) => {
@@ -1208,22 +1296,19 @@ function bindBackend() {
     const rec = recent.get(sessionId);
     const partner = rec && rec.partner;
     state.ratingsReceived.push({ from: partnerId, score, dur, ts: Date.now(), tags: tags || [] });
-    if (partner) state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: partner.photos, age: partner.age, country: partner.country, city: partner.city, premium: partner.premium, score, dur, ts: Date.now() });
+    if (partner) {
+      const shown = !!partner.faceShown || !!(chat && chat.id === sessionId && chat.masksOff);
+      state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: shown ? (partner.photos || []) : [], faceShown: shown, age: partner.age, country: partner.country, city: partner.city, premium: partner.premium, score, dur, ts: Date.now() });
+    }
     save(); refresh();
   });
 }
 
-/* ---------- colliding search avatars ---------- */
-const BUMP_FACES = [
-  { ch: "О", h: 2 }, { ch: "А", h: 5 }, { ch: "М", h: 8 },
-  { ch: "Л", h: 1 }, { ch: "Д", h: 4 }, { ch: "К", h: 7 },
-];
+/* ---------- masked search dance ---------- */
 let bumpRaf = 0;
-let bumpBalls = [];
 function stopBumps() {
   if (bumpRaf) cancelAnimationFrame(bumpRaf);
   bumpRaf = 0;
-  bumpBalls = [];
   const field = $("bump-field");
   if (field) field.innerHTML = "";
 }
@@ -1231,78 +1316,43 @@ function startBumps() {
   stopBumps();
   const field = $("bump-field");
   if (!field) return;
-  field.innerHTML = BUMP_FACES.map((f) => `<span class="bump-av av sm" style="${avStyle(f.h)}">${f.ch}</span>`).join("");
+  const n = 5;
+  field.innerHTML = Array.from({ length: n }, () => `<span class="mask-dancer">${ANON_MARK}</span>`).join("");
   const nodes = [...field.children];
-  const bootFrame = () => {
-    if (!searching || current !== "search") return;
-    const w0 = field.clientWidth, h0 = field.clientHeight;
-    if (w0 < 40 || h0 < 40) { bumpRaf = requestAnimationFrame(bootFrame); return; }
-    const R = 18;
-    bumpBalls = nodes.map((el, i) => {
-      const ang = (i / nodes.length) * Math.PI * 2 + 0.4;
-      const rad = Math.min(w0, h0) * 0.28;
-      return {
-        el, r: R,
-        x: w0 / 2 + Math.cos(ang) * rad,
-        y: h0 * 0.42 + Math.sin(ang) * rad * 0.55,
-        vx: Math.cos(ang + 1.1) * (90 + i * 18),
-        vy: Math.sin(ang + 0.4) * (80 + (6 - i) * 14),
-      };
+  const t0 = performance.now();
+  const step = (now) => {
+    const reveal = $("match-reveal");
+    if (!searching || current !== "search" || (reveal && !reveal.classList.contains("hidden"))) { bumpRaf = 0; return; }
+    const w = field.clientWidth, h = field.clientHeight;
+    if (w < 40 || h < 40) { bumpRaf = requestAnimationFrame(step); return; }
+    const cx = w / 2, cy = h * 0.40;
+    const rx = Math.min(w, h) * 0.30, ry = Math.min(w, h) * 0.20;
+    const t = (now - t0) / 1000;
+    const cycle = 4.4;
+    const u = (t % cycle) / cycle;
+    const pair = Math.floor(t / cycle) % n;
+    const mate = (pair + 2) % n;
+    let k = 0;
+    if (u > 0.36 && u < 0.54) k = (u - 0.36) / 0.18;
+    else if (u >= 0.54 && u < 0.74) k = 1;
+    else if (u >= 0.74 && u < 0.90) k = 1 - (u - 0.74) / 0.16;
+    k = Math.max(0, Math.min(1, k));
+    const e = k * k * (3 - 2 * k);
+    nodes.forEach((el, i) => {
+      const ang = (i / n) * Math.PI * 2 - Math.PI / 2 + t * 0.18;
+      let x = cx + Math.cos(ang) * rx;
+      let y = cy + Math.sin(ang) * ry;
+      if (i === pair || i === mate) {
+        x += (cx - x) * 0.46 * e;
+        y += (cy - y) * 0.46 * e;
+      }
+      const sc = (i === pair || i === mate) ? 1 + 0.14 * e : 0.92;
+      el.style.transform = `translate(${(x - 22).toFixed(1)}px, ${(y - 22).toFixed(1)}px) scale(${sc.toFixed(3)})`;
+      el.classList.add("go");
     });
-    let last = performance.now();
-    const step = (now) => {
-      const reveal = $("match-reveal");
-      if (!searching || current !== "search" || (reveal && !reveal.classList.contains("hidden"))) { bumpRaf = 0; return; }
-      const dt = Math.min(0.034, (now - last) / 1000) || 0.016;
-      last = now;
-      const w = field.clientWidth, h = field.clientHeight;
-      const me = $("radar-me");
-      let cx = w / 2, cy = h * 0.42, cr = 58;
-      if (me && me.getBoundingClientRect) {
-        const mr = me.getBoundingClientRect();
-        const fr = field.getBoundingClientRect();
-        cx = mr.left + mr.width / 2 - fr.left;
-        cy = mr.top + mr.height / 2 - fr.top;
-        cr = mr.width / 2 + 2;
-      }
-      for (const b of bumpBalls) {
-        b.x += b.vx * dt; b.y += b.vy * dt;
-        if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
-        if (b.x > w - b.r) { b.x = w - b.r; b.vx = -Math.abs(b.vx); }
-        if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); }
-        if (b.y > h - b.r) { b.y = h - b.r; b.vy = -Math.abs(b.vy); }
-        const dx = b.x - cx, dy = b.y - cy, dist = Math.hypot(dx, dy) || 0.01, min = cr + b.r;
-        if (dist < min) {
-          const nx = dx / dist, ny = dy / dist;
-          b.x = cx + nx * min; b.y = cy + ny * min;
-          const vn = b.vx * nx + b.vy * ny;
-          if (vn < 0) { b.vx -= 1.8 * vn * nx; b.vy -= 1.8 * vn * ny; }
-        }
-      }
-      for (let i = 0; i < bumpBalls.length; i++) {
-        for (let j = i + 1; j < bumpBalls.length; j++) {
-          const a = bumpBalls[i], c = bumpBalls[j];
-          const dx = c.x - a.x, dy = c.y - a.y, dist = Math.hypot(dx, dy) || 0.01, min = a.r + c.r;
-          if (dist >= min) continue;
-          const nx = dx / dist, ny = dy / dist, overlap = (min - dist) / 2;
-          a.x -= nx * overlap; a.y -= ny * overlap;
-          c.x += nx * overlap; c.y += ny * overlap;
-          const dvn = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
-          if (dvn < 0) { a.vx += dvn * nx; a.vy += dvn * ny; c.vx -= dvn * nx; c.vy -= dvn * ny; }
-        }
-      }
-      for (const b of bumpBalls) {
-        const sp = Math.hypot(b.vx, b.vy) || 1;
-        if (sp > 240) { b.vx *= 240 / sp; b.vy *= 240 / sp; }
-        else if (sp < 70) { b.vx *= 70 / sp; b.vy *= 70 / sp; }
-        b.el.style.transform = `translate(${(b.x - b.r).toFixed(1)}px, ${(b.y - b.r).toFixed(1)}px)`;
-        b.el.classList.add("go");
-      }
-      bumpRaf = requestAnimationFrame(step);
-    };
     bumpRaf = requestAnimationFrame(step);
   };
-  bumpRaf = requestAnimationFrame(bootFrame);
+  bumpRaf = requestAnimationFrame(step);
 }
 
 /* ---------- photo viewer ---------- */
@@ -1569,7 +1619,10 @@ function bind() {
   $("msg-send").addEventListener("pointerdown", (e) => e.preventDefault());
   $("msg-send").addEventListener("mousedown", (e) => e.preventDefault());
   $("msg-send").onclick = sendMsg;
-  $("chat-photo").onclick = () => { if (!isPremium()) openPhotoPaywall(); else $("chat-photo-input").click(); };
+  $("chat-photo").onclick = () => {
+    if (!chat || !chat.masksOff) { toast("Фото откроются сами, чуть позже"); return; }
+    if (!isPremium()) openPhotoPaywall(); else $("chat-photo-input").click();
+  };
   $("chat-photo-input").onchange = () => { const f = $("chat-photo-input").files[0]; $("chat-photo-input").value = ""; sendChatPhoto(f); };
   $("ended-home").onclick = () => leaveChat("home");
   $("ended-next").onclick = () => leaveChat("next");
@@ -1589,6 +1642,13 @@ function bind() {
   $("rs-appeal").onclick = () => toast("Обжалование появится вместе с сервером");
   $("rs-lift").onclick = () => { state.ban = null; state.reportsAgainstMe = []; save(); showScreen("home"); toast("Ограничение снято (тест)"); };
 
+  const mm = $("my-matches");
+  if (mm) mm.onclick = (e) => {
+    const b = e.target.closest("[data-mid]");
+    if (!b) return;
+    const m = (state.matches || []).find((x) => x.sessionId === b.dataset.mid);
+    if (m) openPartnerProfile(Object.assign({}, m, { faceShown: true }));
+  };
   document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => { haptic("light"); showScreen(t.dataset.tab); }));
   $("rater-list").onclick = (e) => {
     const row = e.target.closest("[data-rid]");
