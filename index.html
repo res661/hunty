@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#F6F2EC" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=15" type="image/svg+xml" />
+  <link rel="icon" href="assets/mark.svg?v=16" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="styles.css?v=16" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -142,10 +142,10 @@
       <div class="card edit-card" id="edit-card">
         <div class="photo-slots" id="p-photos"></div>
         <input type="file" id="p-photo-input" accept="image/*" hidden />
-        <label class="field"><input id="p-name" maxlength="20" placeholder="Имя" autocomplete="off" /></label>
+        <label class="field"><input id="p-name" maxlength="20" placeholder="Имя" autocomplete="off" enterkeyhint="done" /></label>
         <div class="age-row">
           <button class="step-btn" id="p-age-minus" type="button" aria-label="Меньше">−</button>
-          <label class="field age-field"><input id="p-age" inputmode="numeric" maxlength="2" placeholder="18" /></label>
+          <label class="field age-field"><input id="p-age" inputmode="numeric" enterkeyhint="done" maxlength="2" placeholder="18" /></label>
           <button class="step-btn" id="p-age-plus" type="button" aria-label="Больше">+</button>
         </div>
         <div class="group-title">Пол</div>
@@ -156,8 +156,8 @@
         <div class="segment" id="p-seek">
           <button type="button" data-v="f">Девушек</button><button type="button" data-v="m">Парней</button>
         </div>
-        <label class="field"><input id="p-country" maxlength="28" placeholder="Страна" autocomplete="off" /></label>
-        <label class="field"><input id="p-city" maxlength="28" placeholder="Город" autocomplete="off" /></label>
+        <label class="field"><input id="p-country" maxlength="28" placeholder="Страна" autocomplete="off" enterkeyhint="done" /></label>
+        <label class="field"><input id="p-city" maxlength="28" placeholder="Город" autocomplete="off" enterkeyhint="done" /></label>
       </div>
       <div class="card stats-card" id="me-stats"></div>
       <div class="card premium-card" id="me-premium"></div>
@@ -272,8 +272,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=15"></script>
-<script src="mock.js?v=15"></script>
-<script src="app.js?v=15"></script>
+<script src="rules.js?v=16"></script>
+<script src="mock.js?v=16"></script>
+<script src="app.js?v=16"></script>
 </body>
 </html>

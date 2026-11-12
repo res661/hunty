@@ -132,31 +132,47 @@ function haptic(kind) {
     else hf.impactOccurred(kind || "light");
   } catch {}
 }
+let chromeRaf = 0;
+let lastChrome = "";
+function scheduleChrome() {
+  if (chromeRaf) return;
+  chromeRaf = requestAnimationFrame(() => { chromeRaf = 0; applyChrome(); });
+}
 function applyChrome() {
   const root = document.documentElement;
-  let top = 0, bot = 0, left = 0, right = 0, h = 0;
+  let top = 0, bot = 0, left = 0, right = 0, h = 0, kb = 0;
   try {
     if (tg) {
       const sa = tg.safeAreaInset || {}, csa = tg.contentSafeAreaInset || {};
       top = (+sa.top || 0) + (+csa.top || 0); bot = (+sa.bottom || 0) + (+csa.bottom || 0);
       left = (+sa.left || 0) + (+csa.left || 0); right = (+sa.right || 0) + (+csa.right || 0);
       if (tg.viewportStableHeight) h = tg.viewportStableHeight;
+      if (tg.viewportHeight && tg.viewportStableHeight) kb = Math.max(0, Math.round(tg.viewportStableHeight - tg.viewportHeight));
     }
   } catch {}
-  if (!h) h = (window.visualViewport && visualViewport.height) || window.innerHeight;
+  if (!h) h = window.innerHeight;
   const vv = window.visualViewport;
   if (vv) {
-    h = vv.height;
-    const app = document.getElementById("app");
-    if (app) app.style.transform = `translateY(${Math.round(vv.offsetTop)}px)`;
+    const overlap = Math.round(window.innerHeight - vv.offsetTop - vv.height);
+    if (overlap > kb) kb = Math.max(0, overlap);
   }
+  const key = [top, bot, left, right, Math.round(h), kb].join("|");
+  if (key === lastChrome) return;
+  const kbChanged = String(kb) !== (lastChrome.split("|")[5] || "");
+  lastChrome = key;
+  const app = document.getElementById("app");
+  if (app && app.style.transform) app.style.transform = "";
   root.style.setProperty("--tg-safe-t", top + "px");
   root.style.setProperty("--tg-safe-b", bot + "px");
   root.style.setProperty("--tg-safe-l", left + "px");
   root.style.setProperty("--tg-safe-r", right + "px");
   root.style.setProperty("--app-h", Math.round(h) + "px");
-  const box = document.getElementById("messages");
-  if (box && document.querySelector('[data-screen="chat"]') && !document.querySelector('[data-screen="chat"]').classList.contains("hidden")) box.scrollTop = box.scrollHeight;
+  root.style.setProperty("--kb", kb + "px");
+  if (kbChanged) {
+    const chatOn = document.querySelector('[data-screen="chat"]');
+    const box = document.getElementById("messages");
+    if (box && chatOn && !chatOn.classList.contains("hidden")) box.scrollTop = box.scrollHeight;
+  }
 }
 function systemTheme() {
   if (tg && tg.initData && tg.colorScheme) return tg.colorScheme === "dark" ? "dark" : "light";
@@ -185,10 +201,10 @@ function initTelegram() {
     let fullscreenRetryArmed = false;
     try {
       tg.onEvent("themeChanged", applyTheme);
-      tg.onEvent("viewportChanged", () => { try { if (!tg.isExpanded) tg.expand(); } catch {} applyChrome(); });
-      tg.onEvent("safeAreaChanged", applyChrome);
-      tg.onEvent("contentSafeAreaChanged", applyChrome);
-      tg.onEvent("fullscreenChanged", applyChrome);
+      tg.onEvent("viewportChanged", () => { try { if (!tg.isExpanded) tg.expand(); } catch {} scheduleChrome(); });
+      tg.onEvent("safeAreaChanged", scheduleChrome);
+      tg.onEvent("contentSafeAreaChanged", scheduleChrome);
+      tg.onEvent("fullscreenChanged", scheduleChrome);
       tg.onEvent("fullscreenFailed", (e) => {
         const code = String((e && e.error) || "").toUpperCase();
         if (code === "ALREADY_FULLSCREEN" || fullscreenRetryArmed) return;
@@ -203,10 +219,10 @@ function initTelegram() {
     } catch {}
   }
   applyChrome(); applyTheme();
-  window.addEventListener("resize", applyChrome);
+  window.addEventListener("resize", scheduleChrome);
   if (window.visualViewport) {
-    visualViewport.addEventListener("resize", applyChrome);
-    visualViewport.addEventListener("scroll", applyChrome);
+    visualViewport.addEventListener("resize", scheduleChrome);
+    visualViewport.addEventListener("scroll", scheduleChrome);
   }
   try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme); } catch {}
 }
@@ -232,7 +248,10 @@ function showScreen(name) {
 }
 function goBack() {
   if (!$("sheet").classList.contains("hidden")) return closeSheet();
-  if (current === "chat") return confirmEndChat();
+  if (current === "chat") {
+    if (!chat || chat.ended || (chat.mine || 0) + (chat.theirs || 0) < RULES.MIN_RATE_MSGS) return leaveChat("home");
+    return confirmEndChat();
+  }
   if (current === "search") return cancelSearch();
   if (current === "register") return showScreen(state.registered ? "profile" : "onboard");
   if (current !== "home" && TABS.includes(current)) return showScreen("home");
@@ -500,8 +519,9 @@ let revealTimer = null;
 function revealMatch(m) {
   const p = m.partner;
   const el = $("match-reveal");
+  const where = [p.city, p.country].map((s) => (s || "").trim()).filter(Boolean).map(esc).join(", ");
   const rate = p.stats && p.stats.count >= RULES.NEW_UNTIL ? ratingChip(p) : `<span class="rating-chip">новый</span>`;
-  el.innerHTML = `<button class="mr-person" type="button">${avatarHTML(p, "hero")}<b>${esc(p.name)}, ${p.age}</b>${rate}</button>`;
+  el.innerHTML = `<button class="mr-person" type="button">${avatarHTML(p, "hero")}<b>${esc(p.name)}, ${p.age}</b>${where ? `<span class="mr-place">${where}</span>` : ""}${rate}</button>`;
   el.classList.remove("hidden");
   haptic("success");
   const go = () => {
@@ -773,18 +793,28 @@ function renderMyPhotos() {
     return `<button class="photo-slot ${i === 0 ? "main" : ""}" type="button" data-add="${i}">${ic(i === 0 ? "camera" : "plus")}<span class="ps-label">${i === 0 ? "Главное" : "Ещё"}</span></button>`;
   }).join("");
 }
-function commitProfile() {
-  const name = $("p-name").value.trim();
-  const age = parseInt($("p-age").value, 10);
-  if (name.length >= 2) state.me.name = name.slice(0, 20);
-  if (age >= RULES.MIN_AGE && age <= 99) {
-    if (state.me.age && H.agePool(state.me.age) !== H.agePool(age)) { toast("Так возраст не меняется", "warn"); $("p-age").value = state.me.age; }
-    else state.me.age = age;
-  }
-  state.me.country = $("p-country").value.trim().slice(0, 28);
-  state.me.city = $("p-city").value.trim().slice(0, 28);
+let profileLock = false;
+function finishProfileField(el) {
+  if (!el || profileLock) return;
+  profileLock = true;
+  try {
+  const id = el.id;
+  if (id === "p-name") {
+    const name = el.value.trim();
+    if (name.length < 2) { toast("Напиши имя — хотя бы 2 буквы", "warn"); el.value = state.me.name || ""; haptic("error"); el.blur(); return; }
+    state.me.name = name.slice(0, 20);
+  } else if (id === "p-age") {
+    const age = parseInt(el.value, 10);
+    if (!age || age < RULES.MIN_AGE || age > 99) { toast(age && age < 16 ? "Hunty доступен с 16 лет" : "Укажи возраст", "warn"); el.value = state.me.age || ""; haptic("error"); el.blur(); return; }
+    if (state.me.age && H.agePool(state.me.age) !== H.agePool(age)) { toast("Так возраст не меняется", "warn"); el.value = state.me.age; haptic("error"); el.blur(); return; }
+    state.me.age = age;
+  } else if (id === "p-country") state.me.country = el.value.trim().slice(0, 28);
+  else if (id === "p-city") state.me.city = el.value.trim().slice(0, 28);
+  else return;
   state.me.about = "";
   save(); backend.updateMe(publicMe());
+  if (document.activeElement === el) el.blur();
+  } finally { profileLock = false; }
 }
 function renderProfile() {
   const m = state.me, pro = isPremium(), rep = myRep();
@@ -1072,13 +1102,21 @@ function bind() {
     const f = $("p-photo-input").files[0]; if (!f) return;
     try { state.me.photos[pSlot] = await resizeImage(f); state.me.photos = state.me.photos.filter(Boolean).slice(0, 3); save(); renderMyPhotos(); backend.updateMe(publicMe()); } catch { toast("Не удалось загрузить фото", "warn"); }
   };
-  ["p-name", "p-country", "p-city"].forEach((id) => $(id).addEventListener("change", commitProfile));
-  $("p-age").addEventListener("change", commitProfile);
-  const pageStep = (d) => { const a = parseInt($("p-age").value, 10) || state.me.age || 18; $("p-age").value = Math.max(16, Math.min(99, a + d)); commitProfile(); haptic("select"); };
+  ["p-name", "p-country", "p-city", "p-age"].forEach((id) => {
+    const el = $(id);
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); finishProfileField(el); } });
+    el.addEventListener("blur", () => finishProfileField(el));
+  });
+  const pageStep = (d) => { const a = parseInt($("p-age").value, 10) || state.me.age || 18; $("p-age").value = Math.max(16, Math.min(99, a + d)); finishProfileField($("p-age")); haptic("select"); };
   $("p-age-minus").onclick = () => pageStep(-1);
   $("p-age-plus").onclick = () => pageStep(1);
   $("p-gender").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; state.me.gender = b.dataset.v; save(); backend.updateMe(publicMe()); renderSeek($("p-gender"), state.me.gender); haptic("select"); };
   $("p-seek").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; state.me.seeking = b.dataset.v; save(); backend.updateMe(publicMe()); renderSeek($("p-seek"), state.me.seeking); haptic("select"); };
+  document.querySelector('[data-screen="profile"]').addEventListener("pointerdown", (e) => {
+    if (e.target.closest("input, textarea, button, a")) return;
+    const a = document.activeElement;
+    if (a && a.closest && a.closest("#edit-card")) a.blur();
+  });
   $("sheet-backdrop").onclick = () => closeSheet();
   let sy = null;
   $("sheet").addEventListener("touchstart", (e) => { if ($("sheet-body").scrollTop <= 0) sy = e.touches[0].clientY; }, { passive: true });

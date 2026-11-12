@@ -25,7 +25,6 @@
       { id: "spam", label: "Спам или реклама" },
       { id: "insult", label: "Оскорбления" },
       { id: "nsfw", label: "Контент 18+" },
-      { id: "minor", label: "Несовершеннолетний среди 18+" },
       { id: "scam", label: "Мошенничество" },
       { id: "other", label: "Другое" },
     ],
