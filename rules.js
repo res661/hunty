@@ -5,7 +5,7 @@
  */
 (function () {
   const RULES = {
-    MIN_AGE: 16,
+    MIN_AGE: 18,
     ADULT_AGE: 18,
     MIN_RATE_MSGS: 3,          // rating after 3 messages total, no time gate
     NEW_UNTIL: 5,              // show "Новый" until 5 counted ratings
@@ -30,21 +30,17 @@
     ],
   };
 
-  /** Age pool: 16–17 → "teen", 18+ → "adult". Pools never mix. */
+  /** Single pool: 18+ only. Under 18 is not a pool and never matches. */
   function agePool(age) {
-    return Number(age) >= RULES.ADULT_AGE ? "adult" : "teen";
+    const n = Number(age);
+    return n >= RULES.MIN_AGE ? "adult" : "";
   }
 
-  /**
-   * Hard age gate. 16–17 match only 16–17. Anyone 18+ matches only 18+.
-   * 20 and older have a hard floor of 18 — never 16 or 17.
-   */
+  /** Both people must be 18 or older. There is no under-18 pool. */
   function canMatchAges(a, b) {
     const x = Number(a), y = Number(b);
     if (!(x >= RULES.MIN_AGE) || !(y >= RULES.MIN_AGE)) return false;
-    if (agePool(x) !== agePool(y)) return false;
-    if ((x >= 20 && y < RULES.ADULT_AGE) || (y >= 20 && x < RULES.ADULT_AGE)) return false;
-    return true;
+    return agePool(x) === agePool(y);
   }
 
   function median(xs) {
