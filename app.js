@@ -98,7 +98,9 @@ function load() {
     if (!Array.isArray(out.raters)) out.raters = [];
     if (!Array.isArray(out.recentPartnerIds)) out.recentPartnerIds = [];
     if (!out.cooldown || typeof out.cooldown.until !== "number") out.cooldown = null;
-    if (!out.me.seeking) out.me.seeking = "any";
+    if (out.me.seeking !== "f" && out.me.seeking !== "m") out.me.seeking = "";
+    if (out.me.gender !== "f" && out.me.gender !== "m") out.me.gender = "";
+    if (!Array.isArray(out.met)) out.met = (out.recentPartnerIds || []).filter(Boolean).map((id) => ({ id, ts: Date.now() }));
     if (!out.reveals || !Array.isArray(out.reveals.ids)) out.reveals = { day: "", ids: [] };
     return out;
   } catch { return defaultState(); }
@@ -142,11 +144,19 @@ function applyChrome() {
     }
   } catch {}
   if (!h) h = (window.visualViewport && visualViewport.height) || window.innerHeight;
+  const vv = window.visualViewport;
+  if (vv) {
+    h = vv.height;
+    const app = document.getElementById("app");
+    if (app) app.style.transform = `translateY(${Math.round(vv.offsetTop)}px)`;
+  }
   root.style.setProperty("--tg-safe-t", top + "px");
   root.style.setProperty("--tg-safe-b", bot + "px");
   root.style.setProperty("--tg-safe-l", left + "px");
   root.style.setProperty("--tg-safe-r", right + "px");
-  root.style.setProperty("--app-h", h + "px");
+  root.style.setProperty("--app-h", Math.round(h) + "px");
+  const box = document.getElementById("messages");
+  if (box && document.querySelector('[data-screen="chat"]') && !document.querySelector('[data-screen="chat"]').classList.contains("hidden")) box.scrollTop = box.scrollHeight;
 }
 function systemTheme() {
   if (tg && tg.initData && tg.colorScheme) return tg.colorScheme === "dark" ? "dark" : "light";
@@ -176,7 +186,10 @@ function initTelegram() {
   }
   applyChrome(); applyTheme();
   window.addEventListener("resize", applyChrome);
-  if (window.visualViewport) visualViewport.addEventListener("resize", applyChrome);
+  if (window.visualViewport) {
+    visualViewport.addEventListener("resize", applyChrome);
+    visualViewport.addEventListener("scroll", applyChrome);
+  }
   try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme); } catch {}
 }
 
@@ -256,14 +269,13 @@ function openRegister(edit) {
   $("f-age").value = draft.age || "";
   $("f-country").value = draft.country || "";
   $("f-city").value = draft.city || "";
-  $("f-about").value = draft.about || "";
   $("f-rules").checked = !!edit;
-  renderGender(); renderSeek($("f-seek"), draft.seeking || "any"); renderPhotos(); renderAgeHint();
+  renderGender(); renderSeek($("f-seek"), draft.seeking || ""); renderPhotos(); renderAgeHint();
   showScreen("register");
   $("reg-scroll").scrollTop = 0;
 }
 function renderGender() { [...$("f-gender").children].forEach((b) => b.classList.toggle("on", b.dataset.v === (draft.gender || ""))); }
-function renderSeek(root, value) { [...root.children].forEach((b) => b.classList.toggle("on", b.dataset.v === (value || "any"))); }
+function renderSeek(root, value) { if (!root) return; [...root.children].forEach((b) => b.classList.toggle("on", b.dataset.v === (value || ""))); }
 function renderPhotos() {
   const slots = [0, 1, 2].map((i) => {
     const src = draft.photos[i];
@@ -275,11 +287,9 @@ function renderPhotos() {
 function renderAgeHint() {
   const a = parseInt($("f-age").value, 10);
   const el = $("age-hint");
-  if (a && a < RULES.MIN_AGE) { el.textContent = "Hunty доступен с 16 лет"; el.classList.add("err"); return; }
-  el.classList.remove("err");
-  if (a >= 16 && a < 18) el.textContent = "Ты будешь общаться только с 16–17. Это нельзя обойти.";
-  else if (a >= 18) el.textContent = "Ты будешь общаться только с 18+.";
-  else el.textContent = "16–17 общаются только с 16–17, 18+ — только с 18+.";
+  if (!el) return;
+  if (a && a < RULES.MIN_AGE) { el.textContent = "Hunty доступен с 16 лет"; el.classList.add("err"); el.classList.remove("hidden"); return; }
+  el.textContent = ""; el.classList.add("hidden"); el.classList.remove("err");
 }
 function resizeImage(file) {
   return new Promise((resolve, reject) => {
@@ -305,15 +315,16 @@ function saveRegister() {
   if (name.length < 2) { flagErr($("f-name").parentElement); toast("Напиши имя — хотя бы 2 буквы", "warn"); haptic("error"); return; }
   if (!age || age < RULES.MIN_AGE || age > 99) { flagErr($("f-age").parentElement); toast(age && age < 16 ? "Hunty доступен с 16 лет" : "Укажи возраст", "warn"); haptic("error"); return; }
   if (!state.registered && !$("f-rules").checked) { flagErr($("rules-row")); toast("Нужно принять правила", "warn"); haptic("error"); return; }
+  if (draft.gender !== "f" && draft.gender !== "m") { flagErr($("f-gender")); toast("Укажи пол", "warn"); haptic("error"); return; }
+  if (draft.seeking !== "f" && draft.seeking !== "m") { flagErr($("f-seek")); toast("Выбери, кого искать", "warn"); haptic("error"); return; }
   if (state.registered && state.me.age && H.agePool(state.me.age) !== H.agePool(age)) {
-    toast("Возраст между 16–17 и 18+ меняется только через поддержку", "warn"); haptic("error"); return;
+    toast("Так возраст не меняется", "warn"); haptic("error"); return;
   }
   draft.name = name.slice(0, 20); draft.age = age;
-  draft.seeking = draft.seeking || "any";
   draft.country = $("f-country").value.trim().slice(0, 28);
   draft.city = $("f-city").value.trim().slice(0, 28);
   draft.username = myUsername();
-  draft.about = $("f-about").value.trim().slice(0, 140);
+  draft.about = "";
   draft.hue = draft.hue || Math.floor(Math.random() * HUES.length);
   const first = !state.registered;
   state.me = draft; state.registered = true; state.onboarded = true;
@@ -322,7 +333,18 @@ function saveRegister() {
   showScreen(first ? "home" : "profile");
   toast(first ? `Привет, ${state.me.name}! Жми «Поиск»` : "Профиль сохранён");
 }
-function publicMe() { const m = state.me; return { id: m.id, name: m.name, age: m.age, gender: m.gender, seeking: m.seeking || "any", country: m.country, city: m.city, premium: isPremium() }; }
+function publicMe() { const m = state.me; return { id: m.id, name: m.name, age: m.age, gender: m.gender, seeking: m.seeking === "f" || m.seeking === "m" ? m.seeking : "", country: m.country, city: m.city, premium: isPremium() }; }
+const REMATCH_MS = 3 * 24 * 3600e3;
+function metIds() {
+  const now = Date.now();
+  state.met = (state.met || []).filter((x) => x && x.id && now - x.ts < REMATCH_MS);
+  return state.met.map((x) => x.id);
+}
+function rememberPartner(id) {
+  if (!id) return;
+  state.met = (state.met || []).filter((x) => x && x.id !== id);
+  state.met.push({ id, ts: Date.now() });
+}
 const FREE_REVEALS = 5;
 function revealBag() {
   const day = todayKey();
@@ -391,13 +413,13 @@ function renderHome() {
   const paused = !!cd && !banned();
   const btn = $("btn-search");
   btn.classList.toggle("off", paused || banned());
-  btn.querySelector(".sb-label").textContent = banned() ? "Ограничено" : paused ? "Пауза" : "Поиск";
+  btn.querySelector(".sb-label").textContent = banned() ? "Ограничено" : "Поиск";
   $("cooldown-box").classList.toggle("hidden", !paused);
   $("search-hero").querySelector(".sh-rings").classList.remove("hidden");
   if (paused) {
     $("cd-time").textContent = fmtCooldown(cd.until);
     $("cd-sub").textContent = cd.rapid ? "Много быстрых пропусков. Поиск откроется сам." : "Слишком плотный поток чатов. После таймера всё сбросится.";
-    $("cd-skip").textContent = isPremium() ? "Снять паузу" : "Короче с PRO";
+    $("cd-skip").textContent = isPremium() ? "Продолжить" : "Быстрее с PRO";
   }
   clearInterval(cdInt);
   if (paused) cdInt = setInterval(() => { if (current === "home") renderHome(); }, 1000);
@@ -405,8 +427,8 @@ function renderHome() {
   $("my-stats").innerHTML = `<div class="card-head"><h3>Твоя репутация</h3><small>${state.totals.chats ? "по оценкам собеседников" : "появится после чатов"}</small></div>` + myStatsHTML();
   $("home-premium").className = "card premium-card" + (pro ? " on" : "");
   $("home-premium").innerHTML = pro
-    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} Hunty PRO</h3><p>Активен до ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Паузы короче, оценки без лимита и буст.</p>`
-    : `<span class="pc-star">${ic("star")}</span><h3>Hunty PRO</h3><p>Снимает паузу, открывает все оценки и включает буст.</p><button class="btn" id="home-pro-btn">Подробнее · от 99 ★</button>`;
+    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</p>`
+    : `<span class="pc-star">${ic("star")}</span><h3>PRO подписка</h3><p>Все оценки, фото в чате и поиск быстрее.</p><button class="btn" id="home-pro-btn">Подробнее · от 99 ★</button>`;
   const b = $("home-pro-btn"); if (b) b.onclick = openPremium;
   $("home-tip").innerHTML = `<span class="si coral">${ic("info")}</span><div>${TIPS[Math.floor(Date.now() / 60000) % TIPS.length]}</div>`;
   paintIcons($("home-tip"));
@@ -424,7 +446,8 @@ function startSearch(opts) {
   haptic("medium");
   $("radar-me").innerHTML = avatarHTML(state.me);
   $("srch-title").textContent = "Ищем собеседника…";
-  $("srch-sub").textContent = (myPool() === "teen" ? "в пуле 16–17" : "в пуле 18+") + (filtersActive() ? " · фильтры включены" : "");
+  $("srch-sub").textContent = "";
+  $("srch-sub").classList.add("hidden");
   $("match-reveal").classList.add("hidden");
   showScreen("search");
   let tip = Math.floor(Math.random() * H.SAFETY_TIPS.length);
@@ -435,9 +458,9 @@ function startSearch(opts) {
     setTimeout(() => { p.textContent = H.SAFETY_TIPS[tip++ % H.SAFETY_TIPS.length]; p.classList.remove("swap"); }, 250);
   }, 2600);
   searching = true;
-  const exclude = state.recentPartnerIds.concat(state.blocked);
+  const exclude = metIds().concat(state.blocked);
   const filters = null;
-  backend.findMatch({ filters, exclude, boost: state.boostUntil > Date.now() }).then((m) => {
+  backend.findMatch({ filters, exclude, fast: isPremium() }).then((m) => {
     if (!searching) return;
     searching = false;
     save();
@@ -451,38 +474,50 @@ function startSearch(opts) {
 }
 function cancelSearch() {
   clearInterval(tipTimer);
+  clearTimeout(revealTimer); revealTimer = null;
   if (searching) backend.cancelSearch();
   searching = false; showScreen("home");
 }
+let revealTimer = null;
 function revealMatch(m) {
   const p = m.partner;
   const el = $("match-reveal");
-  el.innerHTML = `<div class="mr-pair">${avatarHTML(state.me, "xl")}${avatarHTML(p, "xl")}</div>
-    <div class="mr-title">Есть контакт!</div>
-    <div class="mr-card"><b>${esc(p.name)}, ${p.age}</b>${placeText(p) ? " · " + placeText(p) : ""} ${ratingChip(p)}</div>`;
+  const rate = p.stats && p.stats.count >= RULES.NEW_UNTIL ? ratingChip(p) : `<span class="rating-chip">новый</span>`;
+  el.innerHTML = `<button class="mr-person" type="button">${avatarHTML(p, "hero")}<b>${esc(p.name)}, ${p.age}</b>${rate}</button>`;
   el.classList.remove("hidden");
   haptic("success");
-  setTimeout(() => { clearInterval(tipTimer); if (current === "search") openChat(m); }, 1300);
+  const go = () => {
+    if (revealTimer == null && el.classList.contains("hidden")) return;
+    clearTimeout(revealTimer); revealTimer = null;
+    el.classList.add("hidden");
+    clearInterval(tipTimer);
+    if (current === "search") openChat(m);
+  };
+  clearTimeout(revealTimer);
+  revealTimer = setTimeout(go, 1400);
+  el.onclick = go;
 }
 
 /* ---------- chat ---------- */
 let chat = null, timerInt = null;
 function openChat(m) {
-  chat = { id: m.sessionId, partner: m.partner, startedAt: m.startedAt, ended: false, unlockedShown: false, mine: 0, theirs: 0, contact: null, entry: null };
+  chat = { id: m.sessionId, partner: m.partner, startedAt: m.startedAt, ended: false, partnerGone: false, unlockedShown: false, mine: 0, theirs: 0, contact: null, entry: null, given: null };
   const p = m.partner;
-  const where = placeText(p);
-  $("chat-who").innerHTML = `${avatarHTML(p, "sm")}<span class="cw-info"><b>${esc(p.name)}${p.premium ? " " + proBadge() : ""}</b><small>${p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1)} · ${p.age}</small></span>`;
-  $("chat-place").textContent = where;
-  $("chat-place").classList.toggle("hidden", !where);
+  const crown = p.premium ? `<i class="name-crown">${ic("crown")}</i>` : "";
+  const stat = p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1);
+  $("chat-who").innerHTML = `${avatarHTML(p, "sm")}<span class="cw-info"><b>${esc(p.name)}${crown}</b><small>${stat}</small></span>`;
   $("messages").innerHTML = `
-    <button class="chat-intro" id="chat-intro">${avatarHTML(p, "lg")}<b>${esc(p.name)}, ${p.age}${where ? " · " + where : ""}</b>
+    <button class="chat-intro" id="chat-intro">${avatarHTML(p, "lg")}<b>${esc(p.name)}, ${p.age}</b>
     <small>${ratingChip(p)} ${p.stats.chats} ${plural(p.stats.chats, "чат", "чата", "чатов")} · ср. ${fmtDur(p.stats.avgSec)}</small><span class="ci-more">Профиль</span></button>
     `;
   $("chat-intro").onclick = () => openPartnerProfile(p);
   $("composer").classList.remove("hidden"); $("composer-ended").classList.add("hidden");
+  $("gone-rate").classList.add("hidden");
   $("typing").classList.add("hidden");
+  $("msg-input").disabled = false; $("msg-input").placeholder = "Сообщение";
   $("msg-input").value = ""; updateSend();
   $("chat-timer").classList.remove("unlocked");
+  rememberPartner(p.id); save();
   showScreen("chat");
   clearInterval(timerInt); tickTimer(); timerInt = setInterval(tickTimer, 1000);
 }
@@ -533,11 +568,25 @@ function addSys(text, kind) {
   const el = document.createElement("div"); el.className = "sys" + (kind ? " " + kind : ""); el.textContent = text;
   box.appendChild(el); box.scrollTop = box.scrollHeight;
 }
-function updateSend() { $("msg-send").disabled = !$("msg-input").value.trim() || !chat || chat.ended; }
+function updateSend() { $("msg-send").disabled = !$("msg-input").value.trim() || !chat || chat.ended || chat.partnerGone; }
+function markPartnerGone() {
+  if (!chat || chat.partnerGone) return;
+  chat.partnerGone = true;
+  $("typing").classList.add("hidden");
+  addSys(chat.partner.name + " вышел");
+  const small = $("chat-who") && $("chat-who").querySelector("small");
+  if (small) small.textContent = "вышел";
+  $("msg-input").disabled = true;
+  $("msg-input").placeholder = "Собеседник вышел";
+  $("msg-input").blur();
+  updateSend();
+  const can = H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0) && chat.given == null;
+  $("gone-rate").classList.toggle("hidden", !can);
+}
 function shakeField(el) { el.classList.remove("blocked"); void el.offsetWidth; el.classList.add("blocked"); setTimeout(() => el.classList.remove("blocked"), 900); }
 function sendMsg() {
   const input = $("msg-input"); const text = input.value.trim();
-  if (!text || !chat || chat.ended) return;
+  if (!text || !chat || chat.ended || chat.partnerGone) return;
   const bad = H.checkMessage(text);
   if (bad) { toast(bad.message, "warn"); shakeField(input.parentElement); haptic("error"); return; }
   addMsg(text, "me"); chat.mine++;
@@ -559,13 +608,13 @@ async function endChat() {
   chat.ended = true; chat.endedAt = Date.now();
   clearInterval(timerInt);
   const res = await backend.leave(chat.id);
-  const entry = { id: chat.id, partner: chat.partner, dur: res.dur, canRate: res.canRate, given: null };
+  const entry = { id: chat.id, partner: chat.partner, dur: res.dur, canRate: res.canRate, given: chat.given };
   chat.entry = entry;
   recent.set(chat.id, entry);
   if (res.canRate) { state.totals.chats++; state.totals.sec += res.dur; }
   state.activity.push({ ts: Date.now(), dur: res.dur });
   if (state.activity.length > 400) state.activity.splice(0, state.activity.length - 400);
-  state.recentPartnerIds = state.recentPartnerIds.filter((id) => id !== chat.partner.id).concat(chat.partner.id).slice(-3);
+  rememberPartner(chat.partner.id);
   syncCooldown();
   save();
   if ($("messages") && current !== "chat") $("messages").innerHTML = "";
@@ -589,22 +638,22 @@ function openRateSheet(entry, after) {
   let score = null;
   const tags = ["Интересно", "Смешно", "Вежливо", "Глубоко", "Скучно", "Грубо"];
   const picked = new Set();
+  const stay = after === "stay";
   const body = openSheet(`
     <div class="sh-title">Как прошёл разговор?</div>
     <div class="sh-sub">с ${esc(entry.partner.name)} · ${fmtDur(entry.dur)}</div>
     <div class="rate-big empty" id="rate-big"><b>–</b><span>Выбери от 1 до 10</span></div>
     <div class="rate-grid" id="rate-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button class="rate-btn" data-n="${n}">${n}</button>`).join("")}</div>
     <div class="rate-tags" id="rate-tags">${tags.map((t) => `<button class="chip" data-t="${t}">${t}</button>`).join("")}</div>
-    <div class="sh-actions row"><button class="btn btn-soft rate-act" id="rate-home">${after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary rate-act" id="rate-send" disabled>${after === "next" ? "Оценить и дальше" : "Оценить"}</button></div>
-    <div class="rate-note">Имя и фото видны в «Мои оценки». После 3 сообщений.</div>`, () => afterChat(after));
+    <div class="sh-actions row"><button class="btn btn-soft rate-act" id="rate-home">${stay ? "Не сейчас" : after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary rate-act" id="rate-send" disabled>${stay || after !== "next" ? "Оценить" : "Оценить и дальше"}</button></div>
+    <div class="rate-note">Имя и фото видны в «Мои оценки». После 3 сообщений.</div>`, () => { if (!stay) afterChat(after); });
   body.querySelector("#rate-grid").onclick = (e) => {
     const b = e.target.closest("[data-n]"); if (!b) return;
     score = +b.dataset.n; haptic("select");
     body.querySelectorAll(".rate-btn").forEach((x) => { x.className = "rate-btn"; });
     b.classList.add("on", score <= 3 ? "lo" : score <= 6 ? "mid" : score <= 8 ? "hi" : "top");
     const big = body.querySelector("#rate-big"); big.classList.remove("empty");
-    big.innerHTML = `<b class="bump">${score}</b><span>${RATE_LABEL[score]}</span>`;
-    setTimeout(() => { const n = big.querySelector("b"); if (n) n.classList.remove("bump"); }, 200);
+    big.innerHTML = `<b>${score}</b><span>${RATE_LABEL[score]}</span>`;
     body.querySelector("#rate-send").disabled = false;
   };
   body.querySelector("#rate-tags").onclick = (e) => {
@@ -616,7 +665,12 @@ function openRateSheet(entry, after) {
   body.querySelector("#rate-send").onclick = async () => {
     if (!score) return;
     const r = await backend.rate(entry.id, score, [...picked]);
-    if (r.accepted) { entry.given = score; save(); haptic("success"); toast("Спасибо! Оценка учтена"); }
+    if (r.accepted) {
+      entry.given = score;
+      if (chat) { chat.given = score; chat.entry = entry; }
+      $("gone-rate").classList.add("hidden");
+      save(); haptic("success"); toast("Спасибо! Оценка учтена");
+    }
     else toast(r.reason === "duplicate" ? "Ты уже оценил этот разговор" : "Оценка недоступна", "warn");
     closeSheet();
   };
@@ -641,25 +695,23 @@ function bindPhotoDots(body) {
 }
 function openPartnerProfile(p) {
   const body = openSheet(`${photosHTML(p)}
-    <div class="ps-name"><h2>${esc(p.name)}, ${p.age}</h2>${p.premium ? proBadge() : ""}</div>
-    <div class="ps-meta">${placeText(p) ? placeText(p) + " · " : ""}${p.gender === "f" ? "девушка" : p.gender === "m" ? "парень" : "пол не указан"}</div>
-    <div class="ps-about">${esc(p.about)}</div>
+    <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
+    <div class="ps-meta">${[placeText(p), p.gender === "f" ? "девушка" : p.gender === "m" ? "парень" : ""].filter(Boolean).join(" · ")}</div>
     <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}
     <div class="sh-actions row"><button class="btn btn-soft" id="pp-report">${ic("flag")}Жалоба</button><button class="btn btn-soft" id="pp-block">${ic("block")}Блок</button></div>`);
   bindPhotoDots(body);
   body.querySelector("#pp-report").onclick = () => openReport(p);
   body.querySelector("#pp-block").onclick = () => confirmBlock(p);
 }
-function openChatMenu() {
-  if (!chat) return;
-  const p = chat.partner;
-  const body = openSheet(`<div class="menu-list">
-    <button class="menu-item" id="m-prof"><span class="lr-ic t-blue">${ic("user")}</span>Профиль: ${esc(p.name)}</button>
-    <button class="menu-item danger" id="m-report"><span class="lr-ic t-red">${ic("flag")}</span>Пожаловаться</button>
-    <button class="menu-item danger" id="m-block"><span class="lr-ic t-gray">${ic("block")}</span>Заблокировать</button></div>`);
-  body.querySelector("#m-prof").onclick = () => openPartnerProfile(p);
-  body.querySelector("#m-report").onclick = () => openReport(p);
-  body.querySelector("#m-block").onclick = () => confirmBlock(p);
+function openRaterProfile(h) {
+  const p = { name: h.name, age: h.age, hue: h.hue, photos: h.photos || [], gender: h.gender, country: h.country, city: h.city, premium: h.premium, about: "" };
+  const tags = (h.tags || []).map((t) => `<span class="chip static">${esc(t)}</span>`).join("");
+  const body = openSheet(`${photosHTML(p)}
+    <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
+    <div class="ps-meta">${placeText(p)}</div>
+    <div class="given-score"><b>${h.score}</b><span>оценка тебе</span></div>
+    ${tags ? `<div class="chips" style="margin-top:10px">${tags}</div>` : ""}`);
+  bindPhotoDots(body);
 }
 function openReport(p) {
   let reason = null;
@@ -680,7 +732,6 @@ function openReport(p) {
     if (alsoBlock) await doBlock(p);
     haptic("success"); closeSheet(true);
     toast(r.urgent ? "Жалоба отправлена на срочную проверку" : "Жалоба отправлена. Спасибо!");
-    if (chat && chat.partner.id === p.id && !chat.ended) { await endChat(); addSys("Чат завершён после жалобы", "warn"); showEnded(); }
   };
 }
 function confirmBlock(p) {
@@ -689,7 +740,6 @@ function confirmBlock(p) {
   body.querySelector("#blk-no").onclick = () => closeSheet(true);
   body.querySelector("#blk-yes").onclick = async () => {
     await doBlock(p); closeSheet(true); toast(`${p.name} в блоке`); haptic("success");
-    if (chat && chat.partner.id === p.id && !chat.ended) { await endChat(); addSys("Ты заблокировал собеседника", "warn"); showEnded(); }
     refresh();
   };
 }
@@ -697,24 +747,46 @@ async function doBlock(p) { if (!state.blocked.includes(p.id)) state.blocked.pus
 function showEnded() { $("composer").classList.add("hidden"); $("composer-ended").classList.remove("hidden"); $("typing").classList.add("hidden"); }
 
 /* ---------- profile tab ---------- */
+function renderMyPhotos() {
+  const photos = state.me.photos || [];
+  $("p-photos").innerHTML = [0, 1, 2].map((i) => {
+    const src = photos[i];
+    if (src) return `<div class="photo-slot ${i === 0 ? "main" : ""}"><img src="${src}" alt=""><button class="ps-x" data-del="${i}" type="button" aria-label="Удалить">${ic("close")}</button></div>`;
+    return `<button class="photo-slot ${i === 0 ? "main" : ""}" type="button" data-add="${i}">${ic(i === 0 ? "camera" : "plus")}<span class="ps-label">${i === 0 ? "Главное" : "Ещё"}</span></button>`;
+  }).join("");
+}
+function commitProfile() {
+  const name = $("p-name").value.trim();
+  const age = parseInt($("p-age").value, 10);
+  if (name.length >= 2) state.me.name = name.slice(0, 20);
+  if (age >= RULES.MIN_AGE && age <= 99) {
+    if (state.me.age && H.agePool(state.me.age) !== H.agePool(age)) { toast("Так возраст не меняется", "warn"); $("p-age").value = state.me.age; }
+    else state.me.age = age;
+  }
+  state.me.country = $("p-country").value.trim().slice(0, 28);
+  state.me.city = $("p-city").value.trim().slice(0, 28);
+  state.me.about = "";
+  save(); backend.updateMe(publicMe());
+}
 function renderProfile() {
   const m = state.me, pro = isPremium(), rep = myRep();
-  $("me-card").innerHTML = `${avatarHTML(m, "lg")}<div class="mc-info"><h2>${esc(m.name || "Без имени")}${m.age ? ", " + m.age : ""} ${pro ? proBadge() : ""}</h2><p>${[m.country, m.city, m.age ? (myPool() === "teen" ? "пул 16–17" : "пул 18+") : ""].filter(Boolean).map(esc).join(" · ")}</p></div><button class="btn btn-edit" id="me-edit">${ic("edit")}Изменить</button>`;
-  $("me-edit").onclick = () => openRegister(true);
+  const set = (id, val) => { const el = $(id); if (el && document.activeElement !== el) el.value = val == null ? "" : val; };
+  set("p-name", m.name || "");
+  set("p-age", m.age || "");
+  set("p-country", m.country || "");
+  set("p-city", m.city || "");
+  renderSeek($("p-gender"), m.gender);
+  renderSeek($("p-seek"), m.seeking);
+  renderMyPhotos();
   $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML();
   $("me-premium").className = "card premium-card" + (pro ? " on" : "");
   $("me-premium").innerHTML = pro
-    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO активен</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")} · паузы короче, оценки без лимита и буст</p>`
-    : `<span class="pc-star">${ic("star")}</span><h3>Hunty PRO</h3><p>Снимает паузу, все оценки и буст.</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
+    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</p>`
+    : `<span class="pc-star">${ic("star")}</span><h3>PRO подписка</h3><p>Все оценки, фото в чате и поиск быстрее.</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
   const pb = $("me-pro-btn"); if (pb) pb.onclick = openPremium;
-  const lockOr = pro ? `<span class="chev">${ic("chev")}</span>` : `<span class="chev">${ic("lock")}</span>`;
-  const boostLeft = state.boostUntil > Date.now() ? ` · ${Math.ceil((state.boostUntil - Date.now()) / 60000)} мин` : "";
-  $("me-premium-tools").innerHTML = `<button class="list-row" id="pt-boost"><span class="lr-ic t-coral">${ic("bolt")}</span><span class="lr-label">Буст${boostLeft}</span>${lockOr}</button>`;
-  $("pt-boost").onclick = doBoost;
   const wr = $("who-rated-bottom");
   wr.textContent = pro ? "Мои оценки" : `Мои оценки · ${revealsLeft()} из ${FREE_REVEALS}`;
   wr.onclick = () => showScreen("ratings");
-  renderSeek($("seek-seg"), state.me.seeking || "any");
   [...$("theme-seg").children].forEach((b) => b.classList.toggle("on", b.dataset.v === state.settings.theme));
   const N = [["match", "Найден собеседник", "search", "t-coral"], ["messages", "Сообщения", "chat", "t-green"], ["ratings", "Новые оценки", "star", "t-yellow"], ["news", "Новости Hunty", "bell", "t-red"]];
   $("notif-list").innerHTML = N.map(([k, l, i, c]) => `<div class="list-row"><span class="lr-ic ${c}">${ic(i)}</span><span class="lr-label">${l}</span><button class="toggle ${state.settings.notif[k] ? "on" : ""}" data-n="${k}" aria-label="${l}"></button></div>`).join("");
@@ -725,8 +797,8 @@ function renderProfile() {
 const PLANS = [{ id: "week", name: "Неделя", stars: 99, note: "7 дней" }, { id: "month", name: "Месяц", stars: 299, note: "30 дней", save: "−30%" }];
 function openPremium() {
   let plan = "month";
-  const feats = [["clock", "Пауза короче", "снять текущую и укоротить следующие"], ["eye", "Кто тебя оценил", "без дневного лимита"], ["bolt", "Буст профиля", "30 минут быстрее в поиске"], ["crown", "Значок PRO", "в профиле и в чате"]];
-  const body = openSheet(`<div class="prem-hero"><div class="prem-badge-big">${ic("crown")}</div><div class="sh-title">Hunty PRO</div><div class="sh-sub">Оплата через Telegram Stars</div></div>
+  const feats = [["eye", "Все оценки", "кто оценил — без лимита"], ["search", "Быстрее в поиске", "собеседник находится раньше"], ["crown", "Корона PRO", "маленький значок у имени"], ["camera", "Фото в чате", "можно отправлять снимки"], ["clock", "Без ожидания", "частые «Дальше» не останавливают поиск"]];
+  const body = openSheet(`<div class="prem-hero"><div class="prem-orb">${ic("crown")}</div><div class="sh-title">PRO подписка</div><div class="sh-sub">Оплата через Telegram Stars</div></div>
     <div class="feat-list">${feats.map(([i, b, s]) => `<div class="feat"><span class="lr-ic">${ic(i)}</span><div><b>${b}</b><small>${s}</small></div></div>`).join("")}</div>
     <div class="plans" id="plans">${PLANS.map((p) => `<button class="plan ${p.id === plan ? "on" : ""}" data-p="${p.id}">${p.save ? `<span class="save">${p.save}</span>` : ""}<b>${p.name}</b><span class="price">${ic("star")}${p.stars}</span><small>${p.note}</small></button>`).join("")}</div>
     <div class="sh-actions"><button class="btn btn-primary btn-lg" id="buy">Оплатить ${PLANS[1].stars} ★</button></div>
@@ -752,7 +824,7 @@ function payFlow(plan) {
     if (state.cooldown) clearCooldown();
     save(); backend.updateMe(publicMe());
     haptic("success");
-    body.innerHTML = `<div class="pay-box"><div class="success-ic">${ic("check")}</div><div class="sh-title">PRO подключён!</div><div class="sh-sub">До ${new Date(r.until).toLocaleDateString("ru-RU")}. Текущая пауза снята, следующие короче.</div><div class="sh-actions"><button class="btn btn-primary btn-lg" id="pay-done">Круто</button></div></div>`;
+    body.innerHTML = `<div class="pay-box"><div class="success-ic">${ic("check")}</div><div class="sh-title">PRO подключён!</div><div class="sh-sub">До ${new Date(r.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</div><div class="sh-actions"><button class="btn btn-primary btn-lg" id="pay-done">Круто</button></div></div>`;
     body.querySelector("#pay-done").onclick = () => closeSheet(true);
     refresh();
   };
@@ -788,13 +860,8 @@ function revealRater(id) {
   renderRatings();
   if (current === "profile") renderProfile();
 }
-const doBoost = requirePro(() => {
-  if (state.boostUntil > Date.now()) return toast("Буст уже работает");
-  state.boostUntil = Date.now() + 30 * 60e3; save(); haptic("success"); toast("Буст на 30 минут включён");
-  if (current === "profile") renderProfile();
-});
 function onCooldownAction() {
-  if (isPremium()) { clearCooldown(); haptic("success"); toast("Пауза снята"); renderHome(); return; }
+  if (isPremium()) { clearCooldown(); haptic("success"); toast("Поиск снова открыт"); renderHome(); return; }
   openPremium();
 }
 function openLimitSheet() {
@@ -806,10 +873,10 @@ function openLimitSheet() {
 
 /* ---------- rules / restricted ---------- */
 function openRules() {
-  const R0 = [["Только 16+", "Возраст обязателен. 16–17 и 18+ — отдельные пулы, они никогда не пересекаются. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 только после 3 сообщений в чате. Имя, фото и метки того, кто оценил, видны в «Мои оценки». Короткий пропуск не попадает в среднюю."]];
+  const R0 = [["Только 16+", "Возраст от 16. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 только после 3 сообщений в чате. Имя, фото и метки того, кто оценил, видны в «Мои оценки». Короткий пропуск не попадает в среднюю."]];
   openSheet(`<div class="sh-title">Правила Hunty</div><div class="sh-sub">Коротко и по делу</div>
     <div class="rules-list">${R0.map(([b, p], i) => `<div class="rule"><span class="rn">${i + 1}</span><div><b>${b}</b><p>${p}</p></div></div>`).join("")}</div>
-    <div class="rate-note">Ограничение поиска: 30 жалоб за 24 часа — пауза на 10 часов. Низкие оценки никогда не ограничивают. После таймера можно снова пользоваться; ещё 30 жалоб за сутки — снова 10 часов.</div>`);
+    <div class="rate-note">30 жалоб за 24 часа закрывают поиск на 10 часов. Низкие оценки никогда не ограничивают. Ещё 30 жалоб за сутки — снова 10 часов.</div>`);
 }
 let rsInt = null;
 function renderRestricted() {
@@ -851,7 +918,7 @@ function simulateRatings() {
     const tags = ["Интересно", "Смешно", "Вежливо", "Глубоко"].filter(() => Math.random() < 0.5).slice(0, 2);
     const dur = 90 + ((Math.random() * 400) | 0);
     state.ratingsReceived.push({ from: id, score, dur, ts: Date.now() });
-    state.raters.push({ id, name: p.name, hue: p.hue, photos: p.photos, score, dur, tags, ts: Date.now() });
+    state.raters.push({ id, name: p.name, age: p.age, gender: p.gender, country: p.country, city: p.city, premium: p.premium, hue: p.hue, photos: p.photos, score, dur, tags, ts: Date.now() });
   }
   state.totals.chats += 5; state.totals.sec += 5 * 240;
   save(); refresh(); toast("Добавлено 5 тестовых оценок");
@@ -877,15 +944,15 @@ function bindBackend() {
     if (photo) addPhoto(photo, "them"); else addMsg(text, "them");
     maybeUnlock(); haptic("light");
   });
-  backend.on("partnerLeft", async ({ sessionId }) => {
-    if (!chat || chat.id !== sessionId || chat.ended) return;
-    await endChat();
-    addSys(`${chat.partner.name} вышел(а) из чата`, "warn"); showEnded(); haptic("warning");
+  backend.on("partnerLeft", ({ sessionId }) => {
+    if (!chat || chat.id !== sessionId || chat.ended || chat.partnerGone) return;
+    markPartnerGone();
   });
   backend.on("ratedByPartner", ({ sessionId, score, dur, partnerId, tags }) => {
     const rec = recent.get(sessionId);
+    const partner = rec && rec.partner;
     state.ratingsReceived.push({ from: partnerId, score, dur, ts: Date.now(), tags: tags || [] });
-    if (rec && rec.partner) state.raters.push({ id: partnerId, name: rec.partner.name, hue: rec.partner.hue, photos: rec.partner.photos, score, dur, tags: tags || [], ts: Date.now() });
+    if (partner) state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: partner.photos, age: partner.age, gender: partner.gender, country: partner.country, city: partner.city, premium: partner.premium, score, dur, tags: tags || [], ts: Date.now() });
     save(); refresh();
   });
 }
@@ -902,10 +969,6 @@ function bind() {
   $("reg-back").onclick = goBack;
   $("f-gender").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; draft.gender = b.dataset.v; renderGender(); haptic("select"); };
   $("f-seek").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; draft.seeking = b.dataset.v; renderSeek($("f-seek"), draft.seeking); haptic("select"); };
-  $("seek-seg").onclick = (e) => {
-    const b = e.target.closest("[data-v]"); if (!b) return;
-    state.me.seeking = b.dataset.v; save(); backend.updateMe(publicMe()); renderSeek($("seek-seg"), state.me.seeking); haptic("select");
-  };
   $("f-age").addEventListener("input", () => { $("f-age").value = $("f-age").value.replace(/\D/g, ""); renderAgeHint(); });
   const step = (d) => { const a = parseInt($("f-age").value, 10) || (d > 0 ? 17 : 19); $("f-age").value = Math.max(16, Math.min(99, a + d)); renderAgeHint(); haptic("select"); };
   $("age-minus").onclick = () => step(-1); $("age-plus").onclick = () => step(1);
@@ -927,10 +990,15 @@ function bind() {
   $("cd-skip").onclick = onCooldownAction;
   $("srch-cancel").onclick = cancelSearch;
 
-  $("chat-back").onclick = () => confirmEndChat();
   $("chat-skip").onclick = () => { haptic("medium"); leaveChat("next"); };
   $("chat-report").onclick = () => { if (chat) openReport(chat.partner); };
-  $("chat-more").onclick = openChatMenu;
+  $("gone-rate").onclick = () => {
+    if (!chat || chat.given != null) return;
+    if (!H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0)) return;
+    const entry = chat.entry || { id: chat.id, partner: chat.partner, dur: chatDur(), canRate: true, given: null };
+    chat.entry = entry;
+    openRateSheet(entry, "stay");
+  };
   $("chat-who").onclick = () => chat && openPartnerProfile(chat.partner);
   $("messages").addEventListener("pointerdown", (e) => {
     if (e.target.closest("button, a, input, textarea")) return;
@@ -938,6 +1006,7 @@ function bind() {
     if (document.activeElement === input) input.blur();
   });
   $("msg-input").addEventListener("input", updateSend);
+  $("msg-input").addEventListener("focus", () => { const b = $("messages"); if (b) requestAnimationFrame(() => { b.scrollTop = b.scrollHeight; }); });
   $("msg-input").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendMsg(); } });
   $("msg-send").addEventListener("pointerdown", (e) => e.preventDefault());
   $("msg-send").addEventListener("mousedown", (e) => e.preventDefault());
@@ -965,9 +1034,33 @@ function bind() {
   document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => { haptic("light"); showScreen(t.dataset.tab); }));
   $("rater-list").onclick = (e) => {
     const row = e.target.closest("[data-rid]");
-    if (!row || revealed(row.dataset.rid)) return;
-    revealRater(row.dataset.rid);
+    if (!row) return;
+    const id = row.dataset.rid;
+    if (!revealed(id)) {
+      if (!isPremium() && revealsLeft() <= 0) return openRevealPaywall();
+      revealRater(id);
+    }
+    const h = state.raters.find((r) => (r.id || (r.name + ":" + r.ts)) === id);
+    if (h && revealed(id)) openRaterProfile(h);
   };
+  let pSlot = 0;
+  $("p-photos").onclick = (e) => {
+    const del = e.target.closest("[data-del]");
+    if (del) { state.me.photos.splice(+del.dataset.del, 1); save(); renderMyPhotos(); return; }
+    const add = e.target.closest("[data-add]");
+    if (add) { pSlot = Math.min(+add.dataset.add, (state.me.photos || []).length); $("p-photo-input").value = ""; $("p-photo-input").click(); }
+  };
+  $("p-photo-input").onchange = async () => {
+    const f = $("p-photo-input").files[0]; if (!f) return;
+    try { state.me.photos[pSlot] = await resizeImage(f); state.me.photos = state.me.photos.filter(Boolean).slice(0, 3); save(); renderMyPhotos(); backend.updateMe(publicMe()); } catch { toast("Не удалось загрузить фото", "warn"); }
+  };
+  ["p-name", "p-country", "p-city"].forEach((id) => $(id).addEventListener("change", commitProfile));
+  $("p-age").addEventListener("change", commitProfile);
+  const pageStep = (d) => { const a = parseInt($("p-age").value, 10) || state.me.age || 18; $("p-age").value = Math.max(16, Math.min(99, a + d)); commitProfile(); haptic("select"); };
+  $("p-age-minus").onclick = () => pageStep(-1);
+  $("p-age-plus").onclick = () => pageStep(1);
+  $("p-gender").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; state.me.gender = b.dataset.v; save(); backend.updateMe(publicMe()); renderSeek($("p-gender"), state.me.gender); haptic("select"); };
+  $("p-seek").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; state.me.seeking = b.dataset.v; save(); backend.updateMe(publicMe()); renderSeek($("p-seek"), state.me.seeking); haptic("select"); };
   $("sheet-backdrop").onclick = () => closeSheet();
   let sy = null;
   $("sheet").addEventListener("touchstart", (e) => { if ($("sheet-body").scrollTop <= 0) sy = e.touches[0].clientY; }, { passive: true });
@@ -989,5 +1082,31 @@ function boot() {
   if (next === "register") openRegister(false);
   else showScreen(next);
   if (next === "onboard") syncOb();
+  if (next === "home") ensurePrefs();
+}
+function ensurePrefs() {
+  if (!state.registered) return;
+  const okG = state.me.gender === "f" || state.me.gender === "m";
+  const okS = state.me.seeking === "f" || state.me.seeking === "m";
+  if (okG && okS) return;
+  let g = okG ? state.me.gender : "", s = okS ? state.me.seeking : "";
+  const body = openSheet(`<div class="sh-title">Пара деталей</div><div class="sh-sub">Нужны пол и кого искать.</div>
+    <div class="group-title">Пол</div><div class="segment" id="need-gender"><button type="button" data-v="f">Девушка</button><button type="button" data-v="m">Парень</button></div>
+    <div class="group-title">Кого искать</div><div class="segment" id="need-seek"><button type="button" data-v="f">Девушек</button><button type="button" data-v="m">Парней</button></div>
+    <div class="sh-actions"><button class="btn btn-primary btn-lg" id="need-save">Сохранить</button></div>`);
+  const paint = () => {
+    body.querySelectorAll("#need-gender button").forEach((b) => b.classList.toggle("on", b.dataset.v === g));
+    body.querySelectorAll("#need-seek button").forEach((b) => b.classList.toggle("on", b.dataset.v === s));
+  };
+  paint();
+  body.querySelector("#need-gender").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; g = b.dataset.v; paint(); };
+  body.querySelector("#need-seek").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; s = b.dataset.v; paint(); };
+  body.querySelector("#need-save").onclick = () => {
+    if (g !== "f" && g !== "m") return toast("Укажи пол", "warn");
+    if (s !== "f" && s !== "m") return toast("Выбери, кого искать", "warn");
+    state.me.gender = g; state.me.seeking = s; save(); backend.updateMe(publicMe());
+    closeSheet(true); if (current === "profile") renderProfile();
+  };
 }
 boot();
+window.__huntyTest = { leavePartner() { if (chat) backend.debugPartnerLeft(chat.id); } };

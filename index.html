@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#F6F2EC" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=13" type="image/svg+xml" />
+  <link rel="icon" href="assets/mark.svg?v=14" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=14" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -46,7 +46,7 @@
           <div class="safe-widget">
             <div class="safe-row"><span class="si coral" data-ic="flag"></span>Жалоба в один тап</div>
             <div class="safe-row"><span class="si ink" data-ic="block"></span>Блок навсегда</div>
-            <div class="safe-row"><span class="si mint" data-ic="shield"></span>16–17 и 18+ не пересекаются</div>
+            <div class="safe-row"><span class="si mint" data-ic="shield"></span>Жалобы проверяются</div>
             <div class="safe-row"><span class="si gold" data-ic="link"></span>Ссылки и контакты в чате закрыты</div>
           </div>
         </div>
@@ -64,7 +64,7 @@
   <section class="screen hidden reg" data-screen="register">
     <header class="nav-bar"><button class="icon-btn" id="reg-back" data-ic="back" aria-label="Назад"></button><div class="nav-title" id="reg-title">Твой профиль</div><span class="icon-btn ghost"></span></header>
     <div class="scroll" id="reg-scroll">
-      <div class="reg-lead" id="reg-lead">Четыре поля — и можно искать. Обязательны фото, имя и возраст.</div>
+      <div class="reg-lead" id="reg-lead">Фото, имя, возраст, пол и кого искать.</div>
 
       <div class="group-title">Фото <span class="req">обязательно, хотя бы одно своё</span></div>
       <div class="photo-slots" id="photo-slots"></div>
@@ -79,16 +79,16 @@
         <label class="field age-field"><input id="f-age" inputmode="numeric" maxlength="2" placeholder="18" /></label>
         <button class="step-btn" id="age-plus" aria-label="Больше">+</button>
       </div>
-      <div class="hint" id="age-hint">16–17 общаются только с 16–17, 18+ — только с 18+.</div>
+      <div class="hint err hidden" id="age-hint"></div>
 
-      <div class="group-title">Пол <span class="opt">необязательно</span></div>
+      <div class="group-title">Пол <span class="req">обязательно</span></div>
       <div class="segment" id="f-gender">
-        <button data-v="">Не указывать</button><button data-v="f">Девушка</button><button data-v="m">Парень</button>
+        <button data-v="f">Девушка</button><button data-v="m">Парень</button>
       </div>
 
-      <div class="group-title">Кого искать</div>
+      <div class="group-title">Кого искать <span class="req">обязательно</span></div>
       <div class="segment" id="f-seek">
-        <button data-v="f">Девушек</button><button data-v="m">Парней</button><button data-v="any">Без разницы</button>
+        <button data-v="f">Девушек</button><button data-v="m">Парней</button>
       </div>
 
       <div class="group-title">Страна <span class="opt">необязательно</span></div>
@@ -96,9 +96,6 @@
 
       <div class="group-title">Город <span class="opt">необязательно</span></div>
       <label class="field"><input id="f-city" maxlength="28" placeholder="Например, Варшава" autocomplete="off" /></label>
-
-      <div class="group-title">О себе <span class="opt">необязательно</span></div>
-      <label class="field area"><textarea id="f-about" maxlength="140" rows="2" placeholder="Пара слов, о чём с тобой интересно поговорить"></textarea></label>
 
       <label class="check-row" id="rules-row">
         <input type="checkbox" id="f-rules" /><span class="check"></span>
@@ -126,7 +123,7 @@
             <div class="cd-kicker">Поиск снова через</div>
             <div class="cd-time" id="cd-time">1:00:00</div>
             <p class="cd-sub" id="cd-sub"></p>
-            <button class="btn" id="cd-skip" type="button">Снять паузу</button>
+            <button class="btn" id="cd-skip" type="button">Продолжить</button>
           </div>
         </div>
       </div>
@@ -142,15 +139,28 @@
   <section class="screen hidden tabbed" data-screen="profile">
     <div class="scroll">
       <header class="large-title center"><h1>Профиль</h1></header>
-      <div class="card me-card" id="me-card"></div>
+      <div class="card edit-card" id="edit-card">
+        <div class="photo-slots" id="p-photos"></div>
+        <input type="file" id="p-photo-input" accept="image/*" hidden />
+        <label class="field"><input id="p-name" maxlength="20" placeholder="Имя" autocomplete="off" /></label>
+        <div class="age-row">
+          <button class="step-btn" id="p-age-minus" type="button" aria-label="Меньше">−</button>
+          <label class="field age-field"><input id="p-age" inputmode="numeric" maxlength="2" placeholder="18" /></label>
+          <button class="step-btn" id="p-age-plus" type="button" aria-label="Больше">+</button>
+        </div>
+        <div class="group-title">Пол</div>
+        <div class="segment" id="p-gender">
+          <button type="button" data-v="f">Девушка</button><button type="button" data-v="m">Парень</button>
+        </div>
+        <div class="group-title">Кого искать</div>
+        <div class="segment" id="p-seek">
+          <button type="button" data-v="f">Девушек</button><button type="button" data-v="m">Парней</button>
+        </div>
+        <label class="field"><input id="p-country" maxlength="28" placeholder="Страна" autocomplete="off" /></label>
+        <label class="field"><input id="p-city" maxlength="28" placeholder="Город" autocomplete="off" /></label>
+      </div>
       <div class="card stats-card" id="me-stats"></div>
       <div class="card premium-card" id="me-premium"></div>
-      <div class="list-group" id="me-premium-tools"></div>
-
-      <div class="group-title pad">Кого искать</div>
-      <div class="segment seek-seg" id="seek-seg">
-        <button data-v="f">Девушек</button><button data-v="m">Парней</button><button data-v="any">Без разницы</button>
-      </div>
       <div class="group-title pad">Оформление</div>
       <div class="list-group"><div class="list-row"><span class="lr-ic t-indigo" data-ic="moon"></span><span class="lr-label">Тема</span>
         <div class="segment small" id="theme-seg"><button data-v="auto">Авто</button><button data-v="light">Светлая</button><button data-v="dark">Тёмная</button></div></div></div>
@@ -167,7 +177,7 @@
       <div class="group-title pad">Тестовый режим</div>
       <div class="list-group">
         <div class="list-row static"><span class="lr-ic t-orange" data-ic="flask"></span><span class="lr-label">Тестовый режим<small>Сервера пока нет: собеседники — 14 тестовых профилей со скриптами</small></span></div>
-        <button class="list-row" id="t-pause"><span class="lr-ic t-indigo" data-ic="clock"></span><span class="lr-label">Симулировать паузу поиска</span></button>
+        <button class="list-row" id="t-pause"><span class="lr-ic t-indigo" data-ic="clock"></span><span class="lr-label">Симулировать ожидание поиска</span></button>
         <button class="list-row" id="t-reports"><span class="lr-ic t-pink" data-ic="flag"></span><span class="lr-label">Симулировать 30 жалоб (бан на 10 ч)</span></button>
         <button class="list-row" id="t-ratings"><span class="lr-ic t-yellow" data-ic="star"></span><span class="lr-label">Добавить 5 тестовых оценок мне</span></button>
         <button class="list-row danger" id="t-reset"><span class="lr-ic t-red" data-ic="trash"></span><span class="lr-label">Сбросить всё</span></button>
@@ -189,7 +199,7 @@
         <div class="radar-me" id="radar-me"></div>
       </div>
       <div class="srch-title" id="srch-title">Ищем собеседника…</div>
-      <div class="srch-sub" id="srch-sub">в пуле 18+</div>
+      <div class="srch-sub hidden" id="srch-sub"></div>
     </div>
     <div class="match-reveal hidden" id="match-reveal"></div>
     <div class="safety-tip" id="safety-tip"><span class="st-ic" data-ic="shield"></span><div><b>Совет безопасности</b><p id="safety-text"></p></div></div>
@@ -199,17 +209,10 @@
   <!-- CHAT -->
   <section class="screen hidden chat" data-screen="chat">
     <header class="chat-head">
-      <div class="chat-head-top">
-        <button class="icon-btn" id="chat-back" data-ic="back" aria-label="Выйти"></button>
-        <button class="chat-who" id="chat-who"></button>
-        <div class="timer" id="chat-timer"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" class="tr-bg"/><circle cx="10" cy="10" r="8" class="tr-fg" id="timer-ring"/></svg><span id="timer-text">0:00</span></div>
-        <button class="icon-btn more-btn" id="chat-more" data-ic="more" aria-label="Ещё"></button>
-      </div>
-      <div class="chat-head-actions">
-        <span class="cw-place" id="chat-place"></span>
-        <button class="chat-pill report" id="chat-report" type="button">Жалоба</button>
-        <button class="chat-pill skip" id="chat-skip" type="button">Дальше</button>
-      </div>
+      <button class="chat-pill report" id="chat-report" type="button">Жалоба</button>
+      <button class="chat-who" id="chat-who"></button>
+      <div class="timer" id="chat-timer"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" class="tr-bg"/><circle cx="10" cy="10" r="8" class="tr-fg" id="timer-ring"/></svg><span id="timer-text">0:00</span></div>
+      <button class="chat-pill skip" id="chat-skip" type="button">Дальше</button>
     </header>
     <div class="messages" id="messages"></div>
     <div class="typing hidden" id="typing"><i></i><i></i><i></i></div>
@@ -218,6 +221,7 @@
         <button class="attach-btn" id="chat-photo" type="button" data-ic="camera" aria-label="Фото"></button>
         <input type="file" id="chat-photo-input" accept="image/*" hidden />
         <label class="msg-field"><input id="msg-input" placeholder="Сообщение" autocomplete="off" maxlength="500" enterkeyhint="send" /></label>
+        <button class="gone-rate hidden" id="gone-rate" type="button">Оценить</button>
         <button class="send-btn" id="msg-send" data-ic="send" aria-label="Отправить"></button>
       </div>
     </footer>
@@ -268,8 +272,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=13"></script>
-<script src="mock.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="rules.js?v=14"></script>
+<script src="mock.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>

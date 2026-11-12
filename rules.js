@@ -176,7 +176,7 @@
     else if (meanGap < 45000 || short > 0.4) minutes = 90;
     else if (meanGap < 90000) minutes = 75;
     if (recent.length >= 300) minutes = Math.min(120, minutes + 10);
-    if (isPremium) minutes = Math.max(30, Math.round(minutes / 2));
+    if (isPremium) return null;
     return { minutes, until: now + minutes * 60e3, rapid: minutes >= 100 };
   }
 

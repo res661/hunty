@@ -156,7 +156,7 @@
     [/чем занимаешься|работаешь|учишься/i, (p) => p.about.split(".")[0].toLowerCase() + "."],
     [/музык|слушаешь/i, () => pick(["сейчас в плейлисте много инди и старого рока", "всё подряд, от джаза до фонка", "последнее время Radiohead на повторе"])],
     [/фильм|кино|сериал/i, () => pick(["обожаю Вечное сияние чистого разума", "сейчас смотрю Медведя, очень советую", "лучше всего — старые фильмы Миядзаки"])],
-    [/телеграм|инст|номер|контакт/i, () => "давай пока тут поболтаем 🙂 контактами можно обменяться только кнопкой"],
+    [/телеграм|инст|номер|контакт/i, () => "давай пока тут поболтаем 🙂"],
     [/\?$/, () => pick(["хм, хороший вопрос", "дай подумать... скорее да, чем нет", "сложно сказать, а ты как думаешь?"])],
   ];
 
@@ -216,13 +216,13 @@
       const city = String((me && me.city) || "").trim().toLowerCase();
       const scored = list.map((p) => {
         const diff = Math.abs(p.age - myAge);
-        let s = diff <= 1 ? 48 : diff <= 2 ? 34 : diff <= 4 ? 10 : 1;
+        let s = diff <= 1 ? 48 : diff <= 2 ? 36 : diff <= 3 ? 24 : diff <= 5 ? 8 : 1;
         if (country && String(p.country || "").toLowerCase() === country) s += 6;
         if (city && String(p.city || "").toLowerCase() === city) s += 4;
         s += Math.random() * 3;
         return { p, s };
       }).sort((a, b) => b.s - a.s);
-      const near = scored.filter((x) => Math.abs(x.p.age - myAge) <= 2);
+      const near = scored.filter((x) => Math.abs(x.p.age - myAge) <= 3);
       const bag = near.length && Math.random() < 0.85 ? near : scored;
       const total = bag.reduce((sum, x) => sum + x.s, 0);
       let roll = Math.random() * total;
@@ -294,7 +294,7 @@
       },
       updateMe(profile) { me = profile; },
 
-      findMatch({ filters, exclude, boost } = {}) {
+      findMatch({ filters, exclude, fast } = {}) {
         if (searchCtl) searchCtl.cancel();
         return new Promise((resolve, reject) => {
           let done = false;
@@ -306,11 +306,18 @@
             const p = rankPick(list);
             const s = startSession(p);
             resolve({ sessionId: s.id, partner: publicProfile(p), startedAt: s.startedAt });
-          }, (boost ? 900 : 1700) + Math.random() * 1500);
+          }, (fast ? 700 : 1700) + Math.random() * 1500);
           searchCtl = { cancel() { if (!done) { clearTimeout(t); searchCtl = null; reject({ code: "cancelled" }); } } };
         });
       },
-      cancelSearch() { if (searchCtl) searchCtl.cancel(); },
+      debugPartnerLeft(sessionId) {
+        const s = sessions.get(sessionId);
+        if (!s || !s.alive) return;
+        s.alive = false;
+        s.timers.forEach(clearTimeout);
+        clearTimeout(s.idleTimer);
+        em.emit("partnerLeft", { sessionId: s.id, reason: "skip" });
+      },
 
       async sendPhoto(sessionId) {
         const s = sessions.get(sessionId);
