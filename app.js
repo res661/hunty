@@ -134,31 +134,43 @@ function haptic(kind) {
 }
 let chromeRaf = 0;
 let lastChrome = "";
+let scrollSettle = 0;
+function scrollMessagesNow() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const box = document.getElementById("messages");
+      const chatOn = document.querySelector('[data-screen="chat"]');
+      if (box && chatOn && !chatOn.classList.contains("hidden")) box.scrollTop = box.scrollHeight;
+    });
+  });
+}
+function scrollMessagesSettled() {
+  clearTimeout(scrollSettle);
+  scrollSettle = setTimeout(scrollMessagesNow, 100);
+}
 function scheduleChrome() {
   if (chromeRaf) return;
   chromeRaf = requestAnimationFrame(() => { chromeRaf = 0; applyChrome(); });
 }
 function applyChrome() {
   const root = document.documentElement;
-  let top = 0, bot = 0, left = 0, right = 0, h = 0, kb = 0;
+  let top = 0, bot = 0, left = 0, right = 0, stable = window.innerHeight;
   try {
     if (tg) {
       const sa = tg.safeAreaInset || {}, csa = tg.contentSafeAreaInset || {};
       top = (+sa.top || 0) + (+csa.top || 0); bot = (+sa.bottom || 0) + (+csa.bottom || 0);
       left = (+sa.left || 0) + (+csa.left || 0); right = (+sa.right || 0) + (+csa.right || 0);
-      if (tg.viewportStableHeight) h = tg.viewportStableHeight;
-      if (tg.viewportHeight && tg.viewportStableHeight) kb = Math.max(0, Math.round(tg.viewportStableHeight - tg.viewportHeight));
+      if (tg.viewportStableHeight) stable = tg.viewportStableHeight;
     }
   } catch {}
-  if (!h) h = window.innerHeight;
   const vv = window.visualViewport;
-  if (vv) {
-    const overlap = Math.round(window.innerHeight - vv.offsetTop - vv.height);
-    if (overlap > kb) kb = Math.max(0, overlap);
-  }
-  const key = [top, bot, left, right, Math.round(h), kb].join("|");
+  const vvTop = vv ? Math.round(vv.offsetTop) : 0;
+  const vvH = vv ? Math.round(vv.height) : Math.round(stable);
+  const kbOpen = Math.round(stable) - vvH > 80;
+  const key = [top, bot, left, right, vvTop, vvH, kbOpen ? 1 : 0].join("|");
   if (key === lastChrome) return;
-  const kbChanged = String(kb) !== (lastChrome.split("|")[5] || "");
+  const prev = lastChrome.split("|");
+  const viewChanged = prev.length > 5 && (prev[4] !== String(vvTop) || prev[5] !== String(vvH));
   lastChrome = key;
   const app = document.getElementById("app");
   if (app && app.style.transform) app.style.transform = "";
@@ -166,13 +178,11 @@ function applyChrome() {
   root.style.setProperty("--tg-safe-b", bot + "px");
   root.style.setProperty("--tg-safe-l", left + "px");
   root.style.setProperty("--tg-safe-r", right + "px");
-  root.style.setProperty("--app-h", Math.round(h) + "px");
-  root.style.setProperty("--kb", kb + "px");
-  if (kbChanged) {
-    const chatOn = document.querySelector('[data-screen="chat"]');
-    const box = document.getElementById("messages");
-    if (box && chatOn && !chatOn.classList.contains("hidden")) box.scrollTop = box.scrollHeight;
-  }
+  root.style.setProperty("--vv-top", vvTop + "px");
+  root.style.setProperty("--vv-h", vvH + "px");
+  root.style.setProperty("--app-h", vvH + "px");
+  root.dataset.kb = kbOpen ? "1" : "0";
+  if (viewChanged) scrollMessagesSettled();
 }
 function systemTheme() {
   if (tg && tg.initData && tg.colorScheme) return tg.colorScheme === "dark" ? "dark" : "light";
@@ -1071,7 +1081,7 @@ function bind() {
     if (document.activeElement === input) input.blur();
   });
   $("msg-input").addEventListener("input", updateSend);
-  $("msg-input").addEventListener("focus", () => { const b = $("messages"); if (b) requestAnimationFrame(() => { b.scrollTop = b.scrollHeight; }); });
+  $("msg-input").addEventListener("focus", () => scrollMessagesNow());
   $("msg-input").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendMsg(); } });
   $("msg-send").addEventListener("pointerdown", (e) => e.preventDefault());
   $("msg-send").addEventListener("mousedown", (e) => e.preventDefault());
