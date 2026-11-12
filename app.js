@@ -50,7 +50,7 @@ const P = {
 function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
-const MASCOT_SRC = "assets/cupion-mascot.png?v=33";
+const MASCOT_SRC = "assets/cupion-mascot.png?v=34";
 function mascotImg(cls) { return `<img class="${cls || "mascot"}" src="${MASCOT_SRC}" alt="" draggable="false">`; }
 function maskArt(bg) {
   const ink = "#FFF7F6";
@@ -181,16 +181,15 @@ function haptic(kind) {
   } catch {}
 }
 let chromeRaf = 0;
-let chromeLoop = false;
+let pinRaf = 0;
 let pinUntil = 0;
-let kbAnim = null;
 let renderedH = null;
 let renderedTop = 0;
+let lastKbSafe = null;
 let lastKbHeight = 0;
 let stableGuess = 0;
-let lastSampleAt = 0;
-let lastSampleH = null;
 let insetBot = 0;
+let insetKey = "";
 function pinMessages() {
   const box = document.getElementById("messages");
   const chatOn = document.querySelector('[data-screen="chat"]');
@@ -198,19 +197,6 @@ function pinMessages() {
 }
 function scrollMessagesNow() {
   requestAnimationFrame(() => requestAnimationFrame(pinMessages));
-}
-function easeKb(t) {
-  const x1 = 0.22, y1 = 1, x2 = 0.36, y2 = 1;
-  let u = t;
-  for (let i = 0; i < 5; i++) {
-    const a = 1 - u;
-    const x = 3 * a * a * u * x1 + 3 * a * u * u * x2 + u * u * u;
-    const dx = 3 * a * a * x1 + 6 * a * u * (x2 - x1) + 3 * u * u * (1 - x2);
-    if (Math.abs(dx) < 1e-4) break;
-    u = Math.max(0, Math.min(1, u - (x - t) / dx));
-  }
-  const a = 1 - u;
-  return 3 * a * a * u * y1 + 3 * a * u * u * y2 + u * u * u;
 }
 function readFrame() {
   const vv = window.visualViewport;
@@ -237,13 +223,16 @@ function paintInsets() {
       left = (+sa.left || 0) + (+csa.left || 0); right = (+sa.right || 0) + (+csa.right || 0);
     }
   } catch {}
+  const app = document.getElementById("app");
+  if (app && app.style.transform) app.style.transform = "";
+  const key = top + "," + bot + "," + left + "," + right;
+  if (key === insetKey) return;
+  insetKey = key;
   insetBot = bot;
   root.style.setProperty("--tg-safe-t", top + "px");
   root.style.setProperty("--tg-safe-b", bot + "px");
   root.style.setProperty("--tg-safe-l", left + "px");
   root.style.setProperty("--tg-safe-r", right + "px");
-  const app = document.getElementById("app");
-  if (app && app.style.transform) app.style.transform = "";
 }
 function paintChrome() {
   const root = document.documentElement;
@@ -257,102 +246,38 @@ function paintChrome() {
   root.style.setProperty("--kb-safe", (insetBot * (1 - open)) + "px");
   root.dataset.kb = open > 0.55 ? "1" : "0";
 }
-function armPin() { pinUntil = Math.max(pinUntil, performance.now() + 220); }
-function kickChrome() {
-  if (chromeLoop) return;
-  chromeLoop = true;
-  requestAnimationFrame(chromeFrame);
+function armPin() {
+  pinUntil = Math.max(pinUntil, performance.now() + 420);
+  if (pinRaf) return;
+  const loop = () => {
+    pinMessages();
+    if (performance.now() < pinUntil) pinRaf = requestAnimationFrame(loop);
+    else pinRaf = 0;
+  };
+  pinRaf = requestAnimationFrame(loop);
 }
-function chromeFrame(now) {
-  chromeLoop = false;
-  if (kbAnim) {
-    const t = Math.min(1, (now - kbAnim.t0) / kbAnim.dur);
-    const e = easeKb(t);
-    renderedH = kbAnim.fromH + (kbAnim.toH - kbAnim.fromH) * e;
-    renderedTop = kbAnim.fromTop + (kbAnim.toTop - kbAnim.fromTop) * e;
-    if (t >= 1) {
-      renderedH = kbAnim.toH;
-      renderedTop = kbAnim.toTop;
-      kbAnim = null;
-    }
-    paintChrome();
-  }
-  if (now < pinUntil || kbAnim) pinMessages();
-  if (kbAnim || performance.now() < pinUntil) kickChrome();
-}
-function beginTween(toH, toTop) {
-  kbAnim = { fromH: renderedH, fromTop: renderedTop, toH, toTop, t0: performance.now(), dur: 300 };
-  armPin();
-  kickChrome();
-}
-function sampleViewport() {
+function applyFrame() {
   paintInsets();
   const f = readFrame();
-  const targetH = f.vvH;
-  const targetTop = f.vvTop;
-  const now = performance.now();
-  const step = lastSampleH == null ? 0 : Math.abs(targetH - lastSampleH);
-  const dt = now - lastSampleAt;
-  const streaming = lastSampleH != null && dt < 90 && step > 0.5 && step < 72;
-  lastSampleAt = now;
-  lastSampleH = targetH;
   const kbPx = Math.round(f.stable - f.vvH);
   if (kbPx > 80) lastKbHeight = kbPx;
-  if (renderedH == null) {
-    renderedH = targetH;
-    renderedTop = targetTop;
-    paintChrome();
-    return;
-  }
-  if (streaming) {
-    kbAnim = null;
-    renderedH = targetH;
-    renderedTop = targetTop;
-    paintChrome();
-    armPin();
-    kickChrome();
-    return;
-  }
-  const abs = Math.abs(targetH - renderedH);
-  const topDelta = Math.abs(targetTop - renderedTop);
-  if (abs < 1.5 && topDelta < 1) { paintChrome(); return; }
-  if (kbAnim && Math.abs(targetH - kbAnim.toH) < 64) {
-    const dir0 = Math.sign(kbAnim.toH - kbAnim.fromH);
-    const dir1 = Math.sign(targetH - renderedH) || dir0;
-    if (dir0 === dir1 || Math.abs(targetH - renderedH) < 24) {
-      kbAnim.toH = targetH;
-      kbAnim.toTop = targetTop;
-      armPin();
-      kickChrome();
-      return;
-    }
-  }
-  if (abs >= 48 || topDelta >= 40) { beginTween(targetH, targetTop); return; }
-  kbAnim = null;
-  renderedH = targetH;
-  renderedTop = targetTop;
-  paintChrome();
-  armPin();
-  kickChrome();
+  const span = Math.max(160, lastKbHeight || 280);
+  const open = Math.max(0, Math.min(1, (f.stable - f.vvH) / span));
+  const kbSafe = insetBot * (1 - open);
+  const moved = renderedH !== f.vvH || renderedTop !== f.vvTop;
+  const same = !moved && lastKbSafe === kbSafe;
+  renderedH = f.vvH;
+  renderedTop = f.vvTop;
+  lastKbSafe = kbSafe;
+  if (!same) paintChrome();
+  if (moved) armPin();
 }
-function predictKb(opening) {
-  if (renderedH == null) return;
-  const f = readFrame();
-  if (opening) {
-    if (lastKbHeight < 80) { armPin(); kickChrome(); return; }
-    const target = f.stable - lastKbHeight;
-    if (renderedH - target < 48) { armPin(); kickChrome(); return; }
-    beginTween(target, renderedTop);
-    return;
-  }
-  if (f.stable - renderedH < 48) { armPin(); kickChrome(); return; }
-  beginTween(f.stable, 0);
-}
+function predictKb() { armPin(); }
 function scheduleChrome() {
   if (chromeRaf) return;
-  chromeRaf = requestAnimationFrame(() => { chromeRaf = 0; sampleViewport(); });
+  chromeRaf = requestAnimationFrame(() => { chromeRaf = 0; applyFrame(); });
 }
-function applyChrome() { sampleViewport(); }
+function applyChrome() { applyFrame(); }
 function systemTheme() {
   if (tg && tg.initData && tg.colorScheme) return tg.colorScheme === "dark" ? "dark" : "light";
   return window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -711,7 +636,7 @@ function renderHome() {
   const paused = !!cd && !banned();
   const btn = $("btn-search");
   btn.classList.toggle("off", paused || banned());
-  btn.querySelector(".sb-label").textContent = banned() ? "Ограничено" : paused ? "Поиск на паузе" : "Найти собеседника";
+  btn.querySelector(".sb-label").textContent = banned() ? "Закрыт" : "Поиск";
   $("cooldown-box").classList.toggle("hidden", !paused);
   if (paused) {
     $("cd-time").textContent = fmtCooldown(cd.until);

@@ -2,9 +2,9 @@
 :root {
   --font-ui: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   --font-display: Onest, Inter, -apple-system, sans-serif;
-  --coral: #E0567A;
-  --coral-deep: #C44566;
-  --coral-soft: rgba(224, 86, 122, 0.14);
+  --coral: #E9487C;
+  --coral-deep: #D13368;
+  --coral-soft: rgba(233, 72, 124, 0.14);
   --apricot: #FFB04D;
   --ink: #1C1D22;
   --mint: #1FB98F;
@@ -21,8 +21,8 @@
   --bubble-them: #E6E8EC;
   --bubble-me: #DDE0E6;
   --bubble-me-text: #1C1D22;
-  --ring: rgba(224, 86, 122, 0.45);
-  --ring-soft: rgba(224, 86, 122, 0.16);
+  --ring: rgba(233, 72, 124, 0.42);
+  --ring-soft: rgba(233, 72, 124, 0.16);
   --shadow: 0 1px 2px rgba(22, 23, 29, 0.04), 0 8px 24px rgba(22, 23, 29, 0.06);
   --shadow-lg: 0 18px 48px rgba(22, 23, 29, 0.16);
   --safe-t: max(env(safe-area-inset-top, 0px), var(--tg-safe-t, 0px));
@@ -47,13 +47,13 @@ html[data-theme="dark"] {
   --faint: #66656D;
   --line: rgba(255, 255, 255, 0.07);
   --bubble-them: #23242B;
-  --coral: #F08AA3;
-  --coral-deep: #D46A86;
-  --coral-soft: rgba(240, 138, 163, 0.22);
+  --coral: #FF8AAB;
+  --coral-deep: #F06A90;
+  --coral-soft: rgba(255, 138, 171, 0.22);
   --bubble-me: #2C2E36;
   --bubble-me-text: #F5F2EE;
-  --ring: rgba(240, 138, 163, 0.5);
-  --ring-soft: rgba(240, 138, 163, 0.18);
+  --ring: rgba(255, 138, 171, 0.5);
+  --ring-soft: rgba(255, 138, 171, 0.18);
   --ink: #16171D;
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 28px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
@@ -86,12 +86,12 @@ svg { display: block; }
 }
 html.desk, html.desk body {
   background:
-    radial-gradient(1100px 640px at 50% 28%, rgba(224, 86, 122, 0.18), transparent 58%),
+    radial-gradient(1100px 640px at 50% 28%, rgba(233, 72, 124, 0.16), transparent 58%),
     #E8E4E6;
 }
 html[data-theme="dark"].desk, html[data-theme="dark"].desk body {
   background:
-    radial-gradient(1100px 640px at 50% 26%, rgba(240, 138, 163, 0.16), transparent 60%),
+    radial-gradient(1100px 640px at 50% 26%, rgba(255, 138, 171, 0.14), transparent 60%),
     #141218;
 }
 html.desk #app {
@@ -330,8 +330,8 @@ html[data-theme="dark"] .segment button.on { background: #383943; }
 .online-pill { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .online-pill span:not(.live-dot) { color: var(--text); font-variant-numeric: tabular-nums; }
 .search-hero {
-  position: relative; margin-top: 8px; padding: 8px 0 4px; border-radius: 0;
-  background: transparent; color: var(--text); display: flex; flex-direction: column; align-items: stretch; box-shadow: none;
+  position: relative; margin-top: 10px; padding: 18px 0 6px; border-radius: 0;
+  background: transparent; color: var(--text); display: flex; flex-direction: column; align-items: center; box-shadow: none;
 }
 .sh-rings { position: absolute; top: 30px; left: 50%; width: 168px; height: 168px; transform: translateX(-50%); pointer-events: none; }
 .sh-rings i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--ring); animation: ring 2.8s infinite var(--spring); }
@@ -342,16 +342,18 @@ html[data-theme="dark"] .segment button.on { background: #383943; }
 .hero-orbit.o3 { bottom: 18px; left: 36px; animation-delay: 2.8s; }
 @keyframes ring { from { transform: scale(.9); opacity: .9; } to { transform: scale(1.9); opacity: 0; } }
 .search-btn {
-  position: relative; width: 100%; height: 54px; border-radius: 16px;
+  position: relative; width: 172px; height: 172px; border-radius: 48px;
   background: var(--coral); color: #fff;
   display: flex; align-items: center; justify-content: center;
-  animation: searchPulse 2.8s ease-in-out infinite;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.28), 0 14px 28px rgba(209, 51, 104, .22);
+  animation: searchPulse 3.2s ease-in-out infinite;
 }
-.search-btn:active { background: var(--coral-deep); }
-.sb-label { font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: -0.3px; }
-.search-btn.off { background: var(--surface-2); color: var(--muted); animation: none; }
-.sh-meta { width: 100%; margin-top: 16px; }
-@keyframes searchPulse { 50% { box-shadow: 0 0 0 6px rgba(224, 86, 122, .12); } }
+.search-btn:active { background: var(--coral-deep); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2), 0 6px 14px rgba(209, 51, 104, .18); }
+.sb-label { font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.8px; }
+.search-btn.off { background: var(--surface-2); color: var(--muted); animation: none; box-shadow: none; }
+.search-btn.off .sb-label { font-size: 20px; }
+.sh-meta { width: 100%; margin-top: 18px; }
+@keyframes searchPulse { 50% { box-shadow: inset 0 0 0 1px rgba(255,255,255,.28), 0 14px 28px rgba(209, 51, 104, .22), 0 0 0 10px rgba(233, 72, 124, .10); } }
 .sh-left { font-size: 14px; color: rgba(255,255,255,.7); text-align: center; }
 .sh-left b { color: #fff; }
 .sh-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); margin-top: 10px; overflow: hidden; }
