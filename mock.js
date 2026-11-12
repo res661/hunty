@@ -231,7 +231,16 @@
     t18: "lera_test", t19: "kira_test", t20: "alina_test", t21: "polina_test", t22: "nika_test",
     t23: "sasha_test", t24: "mark_test", t25: "denis_test", t26: "gleb_test", t27: "stepan_test",
   };
-  PROFILES.forEach((p) => { p.username = HANDLES[p.id]; });
+  PROFILES.forEach((p, i) => {
+    p.username = HANDLES[p.id];
+    const names = ["Смешно", "Интересно", "Приятно", "Легко"];
+    const counts = {};
+    names.forEach((t, k) => {
+      const n = [8, 3, 5, 1, 12, 0, 4, 9, 2, 6, 7][(i * 3 + k) % 11];
+      if (n) counts[t] = n;
+    });
+    p.tagCounts = counts;
+  });
 
   function publicProfile(p) {
     if (!p) return null;
@@ -408,8 +417,8 @@
         if (qualified) {
           const score = Math.max(1, Math.min(10, Math.round(6 + Math.min(3.5, s.mine * 0.5) + (Math.random() * 2 - 1))));
           partnerRatings.set(s.partner.id, score);
-          const allTags = ["Интересно", "Смешно", "Вежливо", "Глубоко", "Скучно", "Грубо"];
-          const tags = allTags.filter(() => Math.random() < 0.4).slice(0, 2);
+          const names = ["Смешно", "Интересно", "Приятно", "Легко"];
+          const tags = Math.random() < 0.75 ? [names[(Math.random() * names.length) | 0]] : [];
           setTimeout(() => em.emit("ratedByPartner", { sessionId, partnerId: s.partner.id, score, dur, tags }), 1200);
         }
         return { dur, canRate: qualified };
@@ -421,7 +430,12 @@
         if (!R.canRate(s.dur || 0, s.mine, s.theirs)) return { accepted: false, reason: "short" };
         if (s.rated) return { accepted: false, reason: "duplicate" };
         s.rated = true;
-        myRatings.set(s.partner.id, { score, tags: tags || [] });
+        const picked = (tags || []).find((t) => ["Смешно", "Интересно", "Приятно", "Легко"].includes(t));
+        if (picked) {
+          s.partner.tagCounts = s.partner.tagCounts || {};
+          s.partner.tagCounts[picked] = (s.partner.tagCounts[picked] | 0) + 1;
+        }
+        myRatings.set(s.partner.id, { score, tags: picked ? [picked] : [] });
         return { accepted: true };
       },
 

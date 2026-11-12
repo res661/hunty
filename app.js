@@ -63,6 +63,17 @@ function paintStaticAvatars() {
     el.setAttribute("style", avStyle(h));
   });
 }
+const CONV_TAGS = ["Смешно", "Интересно", "Приятно", "Легко"];
+function tagChips(counts) {
+  const rows = CONV_TAGS.map((t) => [t, counts && counts[t] ? counts[t] | 0 : 0]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || CONV_TAGS.indexOf(a[0]) - CONV_TAGS.indexOf(b[0]));
+  if (!rows.length) return "";
+  return `<div class="tag-counts">${rows.map(([t, n]) => `<span class="chip static">${esc(t)} ${n}</span>`).join("")}</div>`;
+}
+function myTagCounts() {
+  const counts = {};
+  for (const r of state.ratingsReceived || []) for (const t of r.tags || []) if (CONV_TAGS.includes(t)) counts[t] = (counts[t] || 0) + 1;
+  return counts;
+}
 function avatarHTML(p, size) {
   const cls = "av " + (size || "");
   if (p && p.photos && p.photos[0]) return `<span class="${cls}"><img src="${p.photos[0]}" alt=""></span>`;
@@ -326,7 +337,7 @@ function renderSeek(root, value) { if (!root) return; [...root.children].forEach
 function renderPhotos() {
   const slots = [0, 1, 2].map((i) => {
     const src = draft.photos[i];
-    if (src) return `<div class="photo-slot ${i === 0 ? "main" : ""}" data-i="${i}"><img src="${src}" alt=""><button class="ps-x" data-del="${i}" aria-label="Удалить">${ic("close")}</button></div>`;
+    if (src) return `<div class="photo-slot ${i === 0 ? "main" : ""}" data-i="${i}"><img src="${src}" alt="">${i === 0 ? `<span class="av-preview"><img src="${src}" alt=""></span>` : ""}<button class="ps-x" data-del="${i}" aria-label="Удалить">${ic("close")}</button></div>`;
     return `<button class="photo-slot ${i === 0 ? "main" : ""}" data-add="${i}">${ic(i === 0 ? "camera" : "plus")}<span class="ps-label">${i === 0 ? "Главное" : "Ещё"}</span></button>`;
   });
   $("photo-slots").innerHTML = slots.join("");
@@ -695,8 +706,8 @@ function afterChat(after) {
 const RATE_LABEL = ["", "Ужасно", "Очень плохо", "Плохо", "Так себе", "Нормально", "Неплохо", "Хорошо", "Отлично", "Супер", "Лучший разговор"];
 function openRateSheet(entry, after) {
   let score = null;
-  const tags = ["Интересно", "Смешно", "Вежливо", "Глубоко", "Скучно", "Грубо"];
-  const picked = new Set();
+  const tags = CONV_TAGS;
+  let tag = null;
   const stay = after === "stay";
   const body = openSheet(`
     <div class="sh-title">Как прошёл разговор?</div>
@@ -717,15 +728,20 @@ function openRateSheet(entry, after) {
   };
   body.querySelector("#rate-tags").onclick = (e) => {
     const b = e.target.closest("[data-t]"); if (!b) return;
-    if (picked.has(b.dataset.t)) picked.delete(b.dataset.t); else picked.add(b.dataset.t);
-    b.classList.toggle("on"); haptic("select");
+    tag = tag === b.dataset.t ? null : b.dataset.t;
+    body.querySelectorAll("#rate-tags .chip").forEach((x) => x.classList.toggle("on", x.dataset.t === tag));
+    haptic("select");
   };
   body.querySelector("#rate-home").onclick = () => closeSheet();
   body.querySelector("#rate-send").onclick = async () => {
     if (!score) return;
-    const r = await backend.rate(entry.id, score, [...picked]);
+    const r = await backend.rate(entry.id, score, tag ? [tag] : []);
     if (r.accepted) {
       entry.given = score;
+      if (chat && chat.partner && tag) {
+        const bag = chat.partner.tagCounts || (chat.partner.tagCounts = {});
+        bag[tag] = (bag[tag] | 0) + 1;
+      }
       if (chat) { chat.given = score; chat.entry = entry; }
       $("gone-rate").classList.add("hidden");
       save(); haptic("success"); toast("Спасибо! Оценка учтена");
@@ -755,7 +771,8 @@ function bindPhotoDots(body) {
 function openPartnerProfile(p) {
   const body = openSheet(`${photosHTML(p)}
     <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
-    <div class="ps-meta">${[placeText(p), p.gender === "f" ? "девушка" : p.gender === "m" ? "парень" : ""].filter(Boolean).join(" · ")}</div>
+    <div class="ps-meta">${placeText(p)}</div>
+    ${tagChips(p.tagCounts)}
     <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}
     <div class="sh-actions row"><button class="btn btn-soft flat" id="pp-report">${ic("flag")}Жалоба</button><button class="btn btn-soft flat" id="pp-block">${ic("block")}Блок</button></div>`);
   bindPhotoDots(body);
@@ -763,13 +780,12 @@ function openPartnerProfile(p) {
   body.querySelector("#pp-block").onclick = () => confirmBlock(p);
 }
 function openRaterProfile(h) {
-  const p = { name: h.name, age: h.age, hue: h.hue, photos: h.photos || [], gender: h.gender, country: h.country, city: h.city, premium: h.premium, about: "" };
-  const tags = (h.tags || []).map((t) => `<span class="chip static">${esc(t)}</span>`).join("");
+  const p = { name: h.name, age: h.age, hue: h.hue, photos: h.photos || [], country: h.country, city: h.city, premium: h.premium, tagCounts: h.tagCounts, about: "" };
   const body = openSheet(`${photosHTML(p)}
     <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
     <div class="ps-meta">${placeText(p)}</div>
     <div class="given-score"><b>${h.score}</b><span>оценка тебе</span></div>
-    ${tags ? `<div class="chips" style="margin-top:10px">${tags}</div>` : ""}`);
+    ${tagChips(p.tagCounts)}`);
   bindPhotoDots(body);
 }
 function openReport(p) {
@@ -810,7 +826,7 @@ function renderMyPhotos() {
   const photos = state.me.photos || [];
   $("p-photos").innerHTML = [0, 1, 2].map((i) => {
     const src = photos[i];
-    if (src) return `<div class="photo-slot ${i === 0 ? "main" : ""}"><img src="${src}" alt=""><button class="ps-x" data-del="${i}" type="button" aria-label="Удалить">${ic("close")}</button></div>`;
+    if (src) return `<div class="photo-slot ${i === 0 ? "main" : ""}"><img src="${src}" alt="">${i === 0 ? `<span class="av-preview"><img src="${src}" alt=""></span>` : ""}<button class="ps-x" data-del="${i}" type="button" aria-label="Удалить">${ic("close")}</button></div>`;
     return `<button class="photo-slot ${i === 0 ? "main" : ""}" type="button" data-add="${i}">${ic(i === 0 ? "camera" : "plus")}<span class="ps-label">${i === 0 ? "Главное" : "Ещё"}</span></button>`;
   }).join("");
 }
@@ -847,7 +863,7 @@ function renderProfile() {
   renderSeek($("p-gender"), m.gender);
   renderSeek($("p-seek"), m.seeking);
   renderMyPhotos();
-  $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML();
+  $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML() + tagChips(myTagCounts());
   $("me-premium").className = "card premium-card" + (pro ? " on" : "");
   $("me-premium").innerHTML = pro
     ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</p>`
@@ -984,10 +1000,10 @@ function simulateRatings() {
     const p = pool[(Math.random() * pool.length) | 0];
     const id = p.id + "_" + i + "_" + Date.now();
     const score = 6 + ((Math.random() * 5) | 0);
-    const tags = ["Интересно", "Смешно", "Вежливо", "Глубоко"].filter(() => Math.random() < 0.5).slice(0, 2);
+    const tag = CONV_TAGS[(Math.random() * CONV_TAGS.length) | 0];
     const dur = 90 + ((Math.random() * 400) | 0);
-    state.ratingsReceived.push({ from: id, score, dur, ts: Date.now() });
-    state.raters.push({ id, name: p.name, age: p.age, gender: p.gender, country: p.country, city: p.city, premium: p.premium, hue: p.hue, photos: p.photos, score, dur, tags, ts: Date.now() });
+    state.ratingsReceived.push({ from: id, score, dur, tags: [tag], ts: Date.now() });
+    state.raters.push({ id, name: p.name, age: p.age, country: p.country, city: p.city, premium: p.premium, hue: p.hue, photos: p.photos, tagCounts: p.tagCounts, score, dur, tags: [tag], ts: Date.now() });
   }
   state.totals.chats += 5; state.totals.sec += 5 * 240;
   save(); refresh(); toast("Добавлено 5 тестовых оценок");
@@ -1021,7 +1037,7 @@ function bindBackend() {
     const rec = recent.get(sessionId);
     const partner = rec && rec.partner;
     state.ratingsReceived.push({ from: partnerId, score, dur, ts: Date.now(), tags: tags || [] });
-    if (partner) state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: partner.photos, age: partner.age, gender: partner.gender, country: partner.country, city: partner.city, premium: partner.premium, score, dur, tags: tags || [], ts: Date.now() });
+    if (partner) state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: partner.photos, age: partner.age, country: partner.country, city: partner.city, premium: partner.premium, tagCounts: partner.tagCounts, score, dur, tags: tags || [], ts: Date.now() });
     save(); refresh();
   });
 }

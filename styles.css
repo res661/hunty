@@ -108,7 +108,12 @@ html[data-theme="dark"] .brand-mark svg rect { stroke: rgba(255,255,255,.1); str
 .av.sm { width: 36px; height: 36px; font-size: 15px; }
 .av.lg { width: 64px; height: 64px; font-size: 25px; }
 .av.xl { width: 92px; height: 92px; font-size: 36px; }
-.av img { width: 100%; height: 100%; object-fit: cover; }
+.av { position: relative; }
+.av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center center; }
+.av-preview { position: absolute; z-index: 2; left: 8px; bottom: 8px; width: 46px; height: 46px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px #fff; pointer-events: none; }
+.av-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center center; }
+.tag-counts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag-counts .chip { height: 28px; padding: 0 10px; font-size: 13px; }
 
 /* ---------- buttons ---------- */
 .btn {
@@ -241,7 +246,8 @@ html[data-theme="dark"] .segment button.on { background: #383943; }
 .photo-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
 .photo-slot { position: relative; aspect-ratio: 3/4; border-radius: 18px; background: var(--surface); box-shadow: 0 0 0 1.5px var(--line) inset; display: grid; place-items: center; color: var(--faint); overflow: hidden; }
 .photo-slot.main { box-shadow: 0 0 0 1.5px var(--coral) inset; color: var(--coral); }
-.photo-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.photo-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center center; }
+.av-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center center; }
 .photo-slot .ps-x { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; display: grid; place-items: center; }
 .photo-slot .ps-x svg { width: 14px; height: 14px; }
 .photo-slot .ps-label { position: absolute; bottom: 8px; font-size: 11px; font-weight: 600; }
