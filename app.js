@@ -637,6 +637,8 @@ function renderHome() {
   const btn = $("btn-search");
   btn.classList.toggle("off", paused || banned());
   btn.querySelector(".sb-label").textContent = banned() ? "Закрыт" : "Поиск";
+  const hintEl = btn.querySelector(".sb-hint");
+  if (hintEl) hintEl.textContent = banned() ? "Доступ ограничен" : "Найти собеседника";
   $("cooldown-box").classList.toggle("hidden", !paused);
   if (paused) {
     $("cd-time").textContent = fmtCooldown(cd.until);
@@ -646,14 +648,29 @@ function renderHome() {
   clearInterval(cdInt);
   if (paused) cdInt = setInterval(() => { if (current === "home") renderHome(); }, 1000);
   const pro = isPremium();
-  $("my-stats").innerHTML = `<div class="card-head"><h3>Твоя репутация</h3><small>${state.totals.chats ? "по оценкам собеседников" : "появится после чатов"}</small></div>` + myStatsHTML();
-  $("home-premium").className = "card premium-card" + (pro ? " on" : "");
-  $("home-premium").innerHTML = pro
-    ? `<div class="pro-kicker">${ic("crown")} Активна</div><h3>PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Фото после 2:30, 6 фото и «Ещё раз».</p>`
-    : `${mascotImg("prem-mascot")}<h3>PRO подписка</h3><p>Фото после 2:30, 6 фото, быстрее поиск и «Ещё раз».</p><button class="btn" id="home-pro-btn">Подробнее · от 30 ★</button>`;
-  const b = $("home-pro-btn"); if (b) b.onclick = openPremium;
+  const r = myRep(); const t = state.totals;
+  const avg = r.isNew ? "Новый" : r.avg.toFixed(1);
+  const avgSec = t.chats ? t.sec / t.chats : 0;
+  $("my-stats").innerHTML = [
+    `<div class="home-stat-pill hl"><b>${avg}</b><span>репутация</span></div>`,
+    `<div class="home-stat-pill"><b>${fmtDur(avgSec)}</b><span>ср. разговор</span></div>`,
+    `<div class="home-stat-pill"><b>${t.chats}</b><span>${plural(t.chats,"чат","чата","чатов")}</span></div>`,
+  ].join("");
+  const premEl = $("home-premium");
+  if (!pro) {
+    premEl.className = "home-pro-hint";
+    premEl.innerHTML = `<span class="hph-icon" data-ic="crown"></span><div class="hph-text"><b>PRO подписка</b><span>Фото после 2:30, 6 фото, быстрее поиск</span></div><span class="hph-chev" data-ic="chev"></span>`;
+    premEl.onclick = openPremium;
+    paintIcons(premEl);
+  } else {
+    premEl.className = "home-pro-hint active-pro";
+    premEl.innerHTML = `<span class="hph-icon" data-ic="crown"></span><div class="hph-text"><b>PRO активна</b><span>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}</span></div>`;
+    premEl.onclick = null;
+    paintIcons(premEl);
+  }
   $("home-tip").innerHTML = `<span class="si coral">${ic("info")}</span><div>${TIPS[Math.floor(Date.now() / 60000) % TIPS.length]}</div>`;
   paintIcons($("home-tip"));
+  paintIcons($("btn-search"));
   paintStaticAvatars();
 }
 

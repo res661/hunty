@@ -120,8 +120,11 @@
   <section class="screen hidden tabbed" data-screen="home">
     <div class="scroll" id="home-scroll">
       <div class="search-hero" id="search-hero">
+        <div class="sh-rings"><i></i><i></i><i></i></div>
         <button class="search-btn" id="btn-search" type="button">
+          <span class="sb-icon" data-ic="search"></span>
           <span class="sb-label">Поиск</span>
+          <span class="sb-hint">Найти собеседника</span>
         </button>
         <div class="sh-meta">
           <div class="cooldown hidden" id="cooldown-box">
@@ -133,8 +136,8 @@
         </div>
       </div>
 
-      <div class="card stats-card" id="my-stats"></div>
-      <div class="card premium-card" id="home-premium"></div>
+      <div class="home-stats-row" id="my-stats"></div>
+      <div class="home-pro-hint hidden" id="home-premium"></div>
       <div class="tip-card" id="home-tip"></div>
       <div class="tab-spacer"></div>
     </div>
