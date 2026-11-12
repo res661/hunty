@@ -2,7 +2,7 @@
 
 Random chat with real people: press **Поиск**, talk, press **Дальше** (one tap from the first second). Chats are not saved. A 1–10 rating is offered only after 30 seconds and 3 messages from each person; otherwise skip goes straight to the next search. Contacts are shared only if both tap **Обменяться контактами**. Profiles show avg rating, avg chat time, and number of chats. Search is unlimited until a heavy skip-farm triggers a 1–2 hour pause.
 
-Bot: [@gohunty_bot](https://t.me/gohunty_bot) · Hosting: `https://res661.github.io/hunty/`
+Bot: [@cupion_bot](https://t.me/cupion_bot) · Hosting: `https://res661.github.io/hunty/`
 
 ## Files
 - `index.html`, `styles.css`, `app.js` — UI
@@ -13,7 +13,7 @@ Bot: [@gohunty_bot](https://t.me/gohunty_bot) · Hosting: `https://res661.github
 ## Deploy
 1. Push to `main` of `github.com/res661/hunty`.
 2. Repo Settings → Pages → Source: **GitHub Actions**.
-3. BotFather → `/mybots` → @gohunty_bot → Bot Settings → Mini Apps → Main App + Menu Button → `https://res661.github.io/hunty/`.
+3. BotFather → `/mybots` → @cupion_bot → Bot Settings → Mini Apps → Main App + Menu Button → `https://res661.github.io/hunty/`.
 When updating, bump `?v=` in `index.html` to bust Telegram's cache.
 
 ## Test mode tools (Профиль → Тестовый режим)

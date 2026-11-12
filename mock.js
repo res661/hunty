@@ -281,6 +281,7 @@
     const chats = p.stats.chats | 0;
     const frac = 0.28 + ((i * 17) % 5) * 0.07;
     p.stats.matches = chats <= 1 ? 0 : Math.max(1, Math.min(chats - 1, Math.round(chats * frac)));
+    if (p.premium) p.maskId = ["cupid", "night", "pearl"][i % 3];
   });
 
   function publicProfile(p) {
@@ -399,17 +400,26 @@
       },
       updateMe(profile) { me = profile; },
 
-      findMatch({ filters, exclude, fast } = {}) {
+      findMatch({ filters, exclude, fast, preferId } = {}) {
         if (searchCtl) searchCtl.cancel();
         return new Promise((resolve, reject) => {
           let done = false;
           const t = setTimeout(() => {
             done = true; searchCtl = null;
-            let list = candidates(filters, exclude);
-            if (!list.length) return reject({ code: "empty" });
-            const p = rankPick(list);
+            let preferMiss = false;
+            let p = null;
+            if (preferId) {
+              const hit = legalList().find((x) => x.id === preferId && !blocked.has(x.id));
+              if (hit) p = hit;
+              else preferMiss = true;
+            }
+            if (!p) {
+              const list = candidates(filters, exclude);
+              if (!list.length) return reject({ code: "empty" });
+              p = rankPick(list);
+            }
             const s = startSession(p);
-            resolve({ sessionId: s.id, partner: publicProfile(p), startedAt: s.startedAt });
+            resolve({ sessionId: s.id, partner: publicProfile(p), startedAt: s.startedAt, preferMiss });
           }, (fast ? 700 : 1700) + Math.random() * 1500);
           searchCtl = { cancel() { if (!done) { clearTimeout(t); searchCtl = null; reject({ code: "cancelled" }); } } };
         });

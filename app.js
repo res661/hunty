@@ -50,14 +50,33 @@ const P = {
 function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
-const MARK = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#FF5B3A"/><circle cx="25" cy="32" r="12" fill="#fff"/><circle cx="39" cy="32" r="12" fill="#fff" fill-opacity=".5"/><path d="M32 22.1a12 12 0 0 1 0 19.8a12 12 0 0 1 0-19.8z" fill="#16171D"/></svg>';
-const ANON_MARK = `<svg class="anon-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#E5484D"/><path fill="#9E2228" d="M32 13.5c6.8 0 12 5.1 12 12.4 0 4.4-1.8 7.6-3.8 9.6 5 2.4 9 6.6 10.2 13.2H13.6c1.2-6.6 5.2-10.8 10.2-13.2-2-2-3.8-5.2-3.8-9.6 0-7.3 5.2-12.4 12-12.4z"/><path fill="#E5484D" d="M14.5 29.5h35c-.2 5.2-4.2 8.8-9.2 8.8-2.4 0-4.2-1.5-8.3-1.5s-5.9 1.5-8.3 1.5c-5 0-9-3.6-9.2-8.8z"/><circle cx="24.2" cy="31.2" r="2.1" fill="#9E2228"/><circle cx="39.8" cy="31.2" r="2.1" fill="#9E2228"/></svg>`;
-function anonHTML(size) { return `<span class="av anon ${size || ""}">${ANON_MARK}</span>`; }
-function anonBlock() { return `<div class="anon-hero">${ANON_MARK}</div>`; }
+const MASCOT_SRC = "assets/cupion-mascot.png?v=31";
+function mascotImg(cls) { return `<img class="${cls || "mascot"}" src="${MASCOT_SRC}" alt="" draggable="false">`; }
+function maskArt(bg, face, band, eye, wings) {
+  return `<svg class="anon-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="${bg}"/>${wings || ""}<path fill="${face}" d="M11.5 32c1.6-9.4 9.2-14.2 20.5-14.2S51 22.6 52.5 32c-1.6 9.4-9.2 14.2-20.5 14.2S13.1 41.4 11.5 32z"/><ellipse cx="23.6" cy="32" rx="5.5" ry="3.45" fill="${eye}"/><ellipse cx="40.4" cy="32" rx="5.5" ry="3.45" fill="${eye}"/><circle cx="24.7" cy="32" r="1.7" fill="${band}"/><circle cx="39.3" cy="32" r="1.7" fill="${band}"/><path d="M29.1 32.15c1.05-.85 4.75-.85 5.8 0" fill="none" stroke="${band}" stroke-width="1.45" stroke-linecap="round"/></svg>`;
+}
+const MASK_WINGS = `<ellipse cx="13.5" cy="27.5" rx="8.2" ry="4.3" fill="#F7D0DA" transform="rotate(-26 13.5 27.5)"/><ellipse cx="50.5" cy="27.5" rx="8.2" ry="4.3" fill="#F7D0DA" transform="rotate(26 50.5 27.5)"/>`;
+const MASK_ART = {
+  red: maskArt("#E5484D", "#D13B42", "#9E2228", "#F8E4E4"),
+  cupid: maskArt("#E0567A", "#C44566", "#8E3148", "#FDE8EE", MASK_WINGS),
+  night: maskArt("#8E3A4A", "#732E3C", "#4E1C28", "#F3D5DA"),
+  pearl: maskArt("#C94B5F", "#E7A0AE", "#8A3142", "#FFF6F7"),
+};
+function maskFor(p) {
+  const id = p && p.maskId;
+  const mine = p && state.me && p.id === state.me.id;
+  const pro = mine ? isPremium() : !!(p && p.premium);
+  return pro && MASK_ART[id] ? id : "red";
+}
+function anonHTML(size, who) {
+  const id = typeof who === "string" ? who : maskFor(who);
+  return `<span class="av anon ${size || ""}">${MASK_ART[id] || MASK_ART.red}</span>`;
+}
+function anonBlock(p) { return `<div class="anon-hero">${MASK_ART[maskFor(p)] || MASK_ART.red}</div>`; }
 function paintIcons(root) {
   (root || document).querySelectorAll("[data-ic]").forEach((el) => { if (!el.firstElementChild) el.innerHTML = ic(el.dataset.ic); });
-  (root || document).querySelectorAll("[data-mark]").forEach((el) => { if (!el.firstElementChild) el.innerHTML = MARK; });
-  (root || document).querySelectorAll("[data-anon]").forEach((el) => { if (!el.querySelector("svg")) el.innerHTML = ANON_MARK; });
+  (root || document).querySelectorAll("[data-mark], [data-cupid]").forEach((el) => { if (!el.querySelector("img")) el.innerHTML = mascotImg(); });
+  (root || document).querySelectorAll("[data-anon]").forEach((el) => { if (!el.querySelector("svg")) el.innerHTML = MASK_ART.red; });
 }
 const HUES = [["#FF8A6B", "#FF5B3A"], ["#8FA6FF", "#5570E8"], ["#5ED6BA", "#1FA88A"], ["#FFC866", "#F09A0E"], ["#FF9EB4", "#EC5F7F"], ["#6CCBF2", "#2591C6"], ["#B9A0FF", "#7E60E6"], ["#BCD970", "#7DA63A"], ["#FFB792", "#FF7E4F"], ["#A3AFC4", "#5E6B82"]];
 function avStyle(h) { const [a, b] = HUES[(h || 0) % HUES.length]; return `--a1:${a};--a2:${b}`; }
@@ -350,34 +369,80 @@ function systemTheme() {
   if (tg && tg.initData && tg.colorScheme) return tg.colorScheme === "dark" ? "dark" : "light";
   return window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
+const PHONE_PLATFORMS = { ios: 1, android: 1, android_x: 1 };
+const DESK_PLATFORMS = { tdesktop: 1, macos: 1, web: 1, weba: 1, webk: 1, unigram: 1 };
+function platformName() {
+  try { return tg && tg.platform ? String(tg.platform).toLowerCase() : ""; } catch { return ""; }
+}
+function shellIsDesk() {
+  const p = platformName();
+  if (PHONE_PLATFORMS[p]) return false;
+  if (DESK_PLATFORMS[p]) return true;
+  const w = window.innerWidth || 0;
+  let coarse = false;
+  try { coarse = matchMedia("(pointer: coarse)").matches; } catch {}
+  return w >= 720 || (w >= 520 && !coarse);
+}
+function deskFullscreenOn() {
+  try {
+    if (tg && tg.isFullscreen) return true;
+    if (document.fullscreenElement) return true;
+  } catch {}
+  return false;
+}
+function applyShell() {
+  const desk = shellIsDesk();
+  document.documentElement.classList.toggle("desk", desk);
+  const btn = $("desk-fs");
+  if (btn) {
+    const on = deskFullscreenOn();
+    btn.textContent = on ? "Окно" : "На весь экран";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+  return desk;
+}
+function toggleDeskFullscreen() {
+  try {
+    if (deskFullscreenOn()) {
+      if (tg && tg.isFullscreen && typeof tg.exitFullscreen === "function") tg.exitFullscreen();
+      else if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+    } else if (tg && typeof tg.requestFullscreen === "function") tg.requestFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+  } catch {}
+  setTimeout(() => { applyShell(); applyTheme(); }, 80);
+}
 function applyTheme() {
   const pref = state.settings.theme || "auto";
   const theme = pref === "auto" ? systemTheme() : pref;
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
-  const color = theme === "dark" ? "#0E0F13" : "#F2F3F5";
+  const desk = document.documentElement.classList.contains("desk");
+  const color = theme === "dark" ? (desk ? "#141218" : "#0E0F13") : (desk ? "#E8E4E6" : "#F2F3F5");
   const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute("content", color);
   try { if (tg && tg.setBackgroundColor) tg.setBackgroundColor(color); if (tg && tg.setHeaderColor) tg.setHeaderColor(color); } catch {}
 }
 function requestTgFullscreen() {
   try {
+    if (shellIsDesk()) return;
     if (tg && typeof tg.requestFullscreen === "function" && !tg.isFullscreen) tg.requestFullscreen();
   } catch {}
 }
 function initTelegram() {
+  const desk = applyShell();
   if (tg) {
     try { tg.ready(); } catch {}
     try { tg.expand(); } catch {}
     try { if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes(); } catch {}
-    requestTgFullscreen();
+    if (!desk) requestTgFullscreen();
     let fullscreenRetryArmed = false;
     try {
       tg.onEvent("themeChanged", applyTheme);
       tg.onEvent("viewportChanged", () => { try { if (!tg.isExpanded) tg.expand(); } catch {} scheduleChrome(); });
       tg.onEvent("safeAreaChanged", scheduleChrome);
       tg.onEvent("contentSafeAreaChanged", scheduleChrome);
-      tg.onEvent("fullscreenChanged", scheduleChrome);
+      tg.onEvent("fullscreenChanged", () => { applyShell(); applyTheme(); scheduleChrome(); });
       tg.onEvent("fullscreenFailed", (e) => {
+        if (shellIsDesk()) return;
         const code = String((e && e.error) || "").toUpperCase();
         if (code === "ALREADY_FULLSCREEN" || fullscreenRetryArmed) return;
         fullscreenRetryArmed = true;
@@ -391,7 +456,8 @@ function initTelegram() {
     } catch {}
   }
   applyChrome(); applyTheme();
-  window.addEventListener("resize", scheduleChrome);
+  window.addEventListener("resize", () => { applyShell(); applyTheme(); scheduleChrome(); });
+  document.addEventListener("fullscreenchange", () => { applyShell(); applyTheme(); });
   if (window.visualViewport) {
     visualViewport.addEventListener("resize", scheduleChrome);
     visualViewport.addEventListener("scroll", scheduleChrome);
@@ -657,9 +723,9 @@ function renderHome() {
   const pro = isPremium();
   $("my-stats").innerHTML = `<div class="card-head"><h3>Твоя репутация</h3><small>${state.totals.chats ? "по оценкам собеседников" : "появится после чатов"}</small></div>` + myStatsHTML();
   $("home-premium").className = "card premium-card" + (pro ? " on" : "");
-  $("home-premium").innerHTML = pro
-    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Все оценки, фото после встречи, до 6 фото в профиле.</p>`
-    : `<span class="pc-star">${ic("star")}</span><h3>PRO подписка</h3><p>Все оценки, фото после встречи, до 6 фото в профиле и поиск быстрее.</p><button class="btn" id="home-pro-btn">Подробнее · от 30 ★</button>`;
+  $("home-premium").innerHTML = mascotImg("prem-mascot") + (pro
+    ? `<h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки, фото после встречи, 6 фото, своя маска и «Ещё раз».</p>`
+    : `<h3>PRO подписка</h3><p>Оценки, фото после встречи, 6 фото, своя маска, сброс статистики и «Ещё раз».</p><button class="btn" id="home-pro-btn">Подробнее · от 30 ★</button>`);
   const b = $("home-pro-btn"); if (b) b.onclick = openPremium;
   $("home-tip").innerHTML = `<span class="si coral">${ic("info")}</span><div>${TIPS[Math.floor(Date.now() / 60000) % TIPS.length]}</div>`;
   paintIcons($("home-tip"));
@@ -675,7 +741,7 @@ function startSearch(opts) {
   if (banned()) return showScreen("restricted");
   if (syncCooldown()) { haptic("warning"); showScreen("home"); return; }
   haptic("medium");
-  $("radar-me").innerHTML = anonHTML();
+  $("radar-me").innerHTML = anonHTML("", state.me);
   $("srch-title").textContent = "Ищем собеседника…";
   $("srch-sub").textContent = "";
   $("srch-sub").classList.add("hidden");
@@ -693,10 +759,11 @@ function startSearch(opts) {
   startBumps();
   const exclude = metIds().concat(state.blocked);
   const filters = null;
-  backend.findMatch({ filters, exclude, fast: isPremium() }).then((m) => {
+  backend.findMatch({ filters, exclude, fast: isPremium(), preferId: opts.preferId || "" }).then((m) => {
     if (gen !== searchGen || !searching) return;
     searching = false;
     save();
+    if (m.preferMiss) toast("Сейчас не на связи. Ищем кого-то ещё");
     revealMatch(m, gen);
   }).catch((e) => {
     if (gen !== searchGen) return;
@@ -722,7 +789,7 @@ function revealMatch(m, gen) {
   stopBumps();
   const p = m.partner;
   const el = $("match-reveal");
-  el.innerHTML = `<button class="mr-person" type="button">${anonHTML("xl")}<span class="mr-kicker">Нашли</span></button>`;
+  el.innerHTML = `<div class="found-scene"><div class="found-glow"></div>${mascotImg("found-mascot")}<div class="found-meet"><span class="found-side a">${anonHTML("", state.me)}</span><span class="found-side b">${anonHTML("", p)}</span></div><div class="found-word">Нашли</div></div>`;
   el.classList.remove("hidden");
   haptic("success");
   const go = () => {
@@ -734,7 +801,7 @@ function revealMatch(m, gen) {
     openChat(m);
   };
   clearTimeout(revealTimer);
-  revealTimer = setTimeout(go, 1400);
+  revealTimer = setTimeout(go, 2000);
   el.onclick = (e) => { if (e.target.closest("#srch-cancel")) return; go(); };
 }
 
@@ -765,9 +832,8 @@ function paintChatFace() {
   if (!chat) return;
   const p = chat.partner;
   const crown = p.premium ? `<i class="name-crown">${ic("crown")}</i>` : "";
-  const av = chat.masksOff ? avatarHTML(p, "sm") : anonHTML("sm");
-  const rate = p.stats.count < RULES.NEW_UNTIL ? `<span class="cw-rate">новый</span>` : ratingChip(p);
-  $("chat-who").innerHTML = `<span class="who-av">${av}${crown}</span>${rate}`;
+  const av = chat.masksOff ? avatarHTML(p, "sm") : anonHTML("sm", p);
+  $("chat-who").innerHTML = `<span class="who-av">${av}${crown}</span>`;
   const photoBtn = $("chat-photo");
   if (photoBtn) photoBtn.classList.toggle("hidden", !chat.masksOff);
   paintIcons($("chat-who"));
@@ -1014,7 +1080,7 @@ function partnerShown(p) {
 function openPartnerProfile(p, opts) {
   const fromChat = !!(opts && opts.lean);
   const shown = partnerShown(p);
-  const photos = shown ? photosHTML(p) : anonBlock();
+  const photos = shown ? photosHTML(p) : anonBlock(p);
   const who = fromChat ? "" : `<div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
     <div class="ps-meta">${placeText(p)}</div>`;
   const body = openSheet(`${photos}
@@ -1104,6 +1170,40 @@ function finishProfileField(el) {
   if (document.activeElement === el) el.blur();
   } finally { profileLock = false; }
 }
+function confirmResetActivity() {
+  if (!isPremium()) { haptic("warning"); return openPremium(); }
+  const body = openSheet(`<div class="sh-title">Сбросить статистику?</div><div class="sh-sub">Чаты, среднее время и список встреч. Оценки и «Мои оценки» останутся.</div>
+    <div class="sh-actions"><button class="btn btn-primary btn-lg" id="rst-act">Сбросить</button><button class="btn btn-ghost" id="rst-act-no">Отмена</button></div>`);
+  body.querySelector("#rst-act-no").onclick = () => closeSheet(true);
+  body.querySelector("#rst-act").onclick = () => {
+    state.totals = { chats: 0, sec: 0 };
+    state.matches = [];
+    save();
+    closeSheet(true);
+    toast("Статистика общения сброшена");
+    renderProfile();
+    if (current === "home") renderHome();
+  };
+}
+function renderProTools() {
+  const box = $("pro-tools");
+  if (!box) return;
+  const saved = state.me.maskId || "red";
+  const ids = [["red", "Красная"], ["cupid", "Купион"], ["night", "Ночная"], ["pearl", "Тихая"]];
+  box.innerHTML = `<div class="card mask-card"><div class="card-head"><h3>Маска</h3><small>${isPremium() ? "видна другим до 2:30" : "в PRO"}</small></div>
+    <div class="mask-pick">${ids.map(([id, name]) => `<button type="button" data-mask="${id}" class="${saved === id ? "on" : ""}" aria-label="${name}">${anonHTML("sm", id)}</button>`).join("")}</div>
+    <button class="btn btn-soft" id="reset-activity" type="button">Сбросить статистику</button></div>`;
+  box.querySelector("#reset-activity").onclick = confirmResetActivity;
+  box.querySelectorAll("[data-mask]").forEach((b) => {
+    b.onclick = () => {
+      if (!isPremium()) { haptic("warning"); return openPremium(); }
+      state.me.maskId = b.dataset.mask;
+      save();
+      renderProTools();
+      toast("Маска сохранена");
+    };
+  });
+}
 function renderMyMatches() {
   const box = $("my-matches");
   if (!box) return;
@@ -1117,7 +1217,7 @@ function renderMyMatches() {
     const got = m.theirScore == null
       ? `<span class="match-wait">Пока без оценки</span>`
       : `<span class="match-got"><b>${m.theirScore}</b></span>`;
-    return `<button class="match-row" type="button" data-mid="${esc(m.sessionId)}">${avatarHTML(m, "sm")}<span class="rater-main"><b>${esc(m.name)}${m.age ? ", " + m.age : ""}</b><span class="hint">${fmtDur(m.dur)}</span></span>${got}</button>`;
+    return `<div class="match-row"><button class="match-main" type="button" data-mid="${esc(m.sessionId)}">${avatarHTML(m, "sm")}<span class="rater-main"><b>${esc(m.name)}${m.age ? ", " + m.age : ""}</b><span class="hint">${fmtDur(m.dur)}</span></span>${got}</button><button class="match-again" type="button" data-again="${esc(m.id)}">Ещё раз</button></div>`;
   }).join("");
 }
 function renderProfile() {
@@ -1134,9 +1234,10 @@ function renderProfile() {
   renderMyMatches();
   $("me-premium").className = "card premium-card" + (pro ? " on" : "");
   $("me-premium").innerHTML = pro
-    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Все оценки, фото после встречи, до 6 фото в профиле.</p>`
-    : `<span class="pc-star">${ic("star")}</span><h3>PRO подписка</h3><p>Все оценки, фото после встречи, до 6 фото в профиле и поиск быстрее.</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
+    ? `${mascotImg("prem-mascot")}<h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки, фото после встречи, 6 фото, своя маска и «Ещё раз».</p>`
+    : `${mascotImg("prem-mascot")}<h3>PRO подписка</h3><p>Оценки, фото после встречи, 6 фото, своя маска, сброс статистики и «Ещё раз».</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
   const pb = $("me-pro-btn"); if (pb) pb.onclick = openPremium;
+  renderProTools();
   const wr = $("who-rated-bottom");
   wr.textContent = pro ? "Мои оценки" : `Мои оценки · ${revealsLeft()} из ${FREE_REVEALS}`;
   wr.onclick = () => showScreen("ratings");
@@ -1154,8 +1255,8 @@ const PLANS = [
 ];
 function openPremium() {
   let plan = "week";
-  const feats = [["camera", "Фото в чате", "после встречи в 2:30"], ["eye", "Все оценки", "кто оценил — без лимита"], ["search", "Быстрее в поиске", "собеседник находится раньше"], ["clock", "Без ожидания", "частые «Дальше» не останавливают поиск"], ["crown", "Корона PRO", "на аватаре"], ["plus", "6 фото", "в профиле, у бесплатных — 3"]];
-  const body = openSheet(`<div class="prem-hero"><div class="prem-orb">${ic("crown")}</div><div class="sh-title">PRO подписка</div><div class="sh-sub">Оплата через Telegram Stars</div></div>
+  const feats = [["camera", "Фото в чате", "после встречи в 2:30"], ["eye", "Все оценки", "кто оценил — без лимита"], ["search", "Быстрее в поиске", "собеседник находится раньше"], ["clock", "Без ожидания", "частые «Дальше» не останавливают поиск"], ["crown", "Корона PRO", "на аватаре"], ["plus", "6 фото", "в профиле, у бесплатных — 3"], ["trash", "Сбросить статистику", "чаты и встречи, не оценки"], ["moon", "Своя маска", "её видят до 2:30"], ["rewind", "Ещё раз", "найти того же человека"]];
+  const body = openSheet(`<div class="prem-hero">${mascotImg("prem-hero-mascot")}<div class="sh-title">PRO подписка</div><div class="sh-sub">Оплата через Telegram Stars</div></div>
     <div class="feat-list">${feats.map(([i, b, s]) => `<div class="feat"><span class="lr-ic">${ic(i)}</span><div><b>${b}</b><small>${s}</small></div></div>`).join("")}</div>
     <div class="plans" id="plans">${PLANS.map((p) => `<button class="plan ${p.id === plan ? "on" : ""}" data-p="${p.id}">${p.save ? `<span class="save">${p.save}</span>` : ""}<b>${p.name}</b><span class="price">${ic("star")}${p.stars}</span><small>${p.note}</small></button>`).join("")}</div>
     <div class="sh-actions"><button class="btn btn-primary btn-lg" id="buy">Оплатить ${PLANS[1].stars} ★</button></div>
@@ -1181,7 +1282,7 @@ function payFlow(plan) {
     if (state.cooldown) clearCooldown();
     save(); backend.updateMe(publicMe());
     haptic("success");
-    body.innerHTML = `<div class="pay-box"><div class="success-ic">${ic("check")}</div><div class="sh-title">PRO подключён!</div><div class="sh-sub">До ${new Date(r.until).toLocaleDateString("ru-RU")}. Все оценки, фото после встречи, до 6 фото в профиле.</div><div class="sh-actions"><button class="btn btn-primary btn-lg" id="pay-done">Круто</button></div></div>`;
+    body.innerHTML = `<div class="pay-box"><div class="success-ic">${ic("check")}</div><div class="sh-title">PRO подключён!</div><div class="sh-sub">До ${new Date(r.until).toLocaleDateString("ru-RU")}. Оценки, фото после встречи, 6 фото, своя маска и «Ещё раз».</div><div class="sh-actions"><button class="btn btn-primary btn-lg" id="pay-done">Круто</button></div></div>`;
     body.querySelector("#pay-done").onclick = () => closeSheet(true);
     refresh();
   };
@@ -1331,7 +1432,7 @@ function startBumps() {
   stopBumps();
   const field = $("bump-field");
   if (!field) return;
-  field.innerHTML = `<div class="veil"></div><span class="guest">${ANON_MARK}</span><span class="guest">${ANON_MARK}</span>`;
+  field.innerHTML = `<div class="veil"></div><span class="guest">${MASK_ART.red}</span><span class="guest">${MASK_ART.red}</span>`;
   const guests = [...field.querySelectorAll(".guest")];
   const veil = field.querySelector(".veil");
   const t0 = performance.now();
@@ -1558,6 +1659,8 @@ function paintObFlags() {}
 
 /* ---------- bindings ---------- */
 function bind() {
+  const fsBtn = $("desk-fs");
+  if (fsBtn) fsBtn.onclick = toggleDeskFullscreen;
   $("ob-track").addEventListener("scroll", syncOb, { passive: true });
   $("ob-next").onclick = () => {
     const i = obIndex(); if (i >= 2) return finishOnboarding();
@@ -1662,6 +1765,12 @@ function bind() {
 
   const mm = $("my-matches");
   if (mm) mm.onclick = (e) => {
+    const again = e.target.closest("[data-again]");
+    if (again) {
+      if (!isPremium()) { haptic("warning"); return openPremium(); }
+      startSearch({ preferId: again.dataset.again });
+      return;
+    }
     const b = e.target.closest("[data-mid]");
     if (!b) return;
     const m = (state.matches || []).find((x) => x.sessionId === b.dataset.mid);
