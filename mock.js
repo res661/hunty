@@ -233,7 +233,7 @@
   };
   PROFILES.forEach((p, i) => {
     p.username = HANDLES[p.id];
-    const names = ["Смешно", "Интересно", "Приятно", "Легко"];
+    const names = ["Смешно", "Интересно", "Приятно", "Легко", "Скучно", "Грубо", "Сухо", "Тяжело"];
     const counts = {};
     names.forEach((t, k) => {
       const n = [8, 3, 5, 1, 12, 0, 4, 9, 2, 6, 7][(i * 3 + k) % 11];
@@ -417,8 +417,13 @@
         if (qualified) {
           const score = Math.max(1, Math.min(10, Math.round(6 + Math.min(3.5, s.mine * 0.5) + (Math.random() * 2 - 1))));
           partnerRatings.set(s.partner.id, score);
-          const names = ["Смешно", "Интересно", "Приятно", "Легко"];
-          const tags = Math.random() < 0.75 ? [names[(Math.random() * names.length) | 0]] : [];
+          const names = ["Смешно", "Интересно", "Приятно", "Легко", "Скучно", "Грубо", "Сухо", "Тяжело"];
+          const tags = [];
+          const n = Math.random() < 0.2 ? 0 : Math.random() < 0.65 ? 1 : 2;
+          while (tags.length < n) {
+            const t = names[(Math.random() * names.length) | 0];
+            if (!tags.includes(t)) tags.push(t);
+          }
           setTimeout(() => em.emit("ratedByPartner", { sessionId, partnerId: s.partner.id, score, dur, tags }), 1200);
         }
         return { dur, canRate: qualified };
@@ -430,12 +435,11 @@
         if (!R.canRate(s.dur || 0, s.mine, s.theirs)) return { accepted: false, reason: "short" };
         if (s.rated) return { accepted: false, reason: "duplicate" };
         s.rated = true;
-        const picked = (tags || []).find((t) => ["Смешно", "Интересно", "Приятно", "Легко"].includes(t));
-        if (picked) {
-          s.partner.tagCounts = s.partner.tagCounts || {};
-          s.partner.tagCounts[picked] = (s.partner.tagCounts[picked] | 0) + 1;
-        }
-        myRatings.set(s.partner.id, { score, tags: picked ? [picked] : [] });
+        const allowed = ["Смешно", "Интересно", "Приятно", "Легко", "Скучно", "Грубо", "Сухо", "Тяжело"];
+        const chosen = (tags || []).filter((t) => allowed.includes(t));
+        s.partner.tagCounts = s.partner.tagCounts || {};
+        for (const t of chosen) s.partner.tagCounts[t] = (s.partner.tagCounts[t] | 0) + 1;
+        myRatings.set(s.partner.id, { score, tags: chosen });
         return { accepted: true };
       },
 

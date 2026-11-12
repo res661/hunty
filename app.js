@@ -63,7 +63,7 @@ function paintStaticAvatars() {
     el.setAttribute("style", avStyle(h));
   });
 }
-const CONV_TAGS = ["Смешно", "Интересно", "Приятно", "Легко"];
+const CONV_TAGS = ["Смешно", "Интересно", "Приятно", "Легко", "Скучно", "Грубо", "Сухо", "Тяжело"];
 function tagChips(counts) {
   const rows = CONV_TAGS.map((t) => [t, counts && counts[t] ? counts[t] | 0 : 0]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || CONV_TAGS.indexOf(a[0]) - CONV_TAGS.indexOf(b[0]));
   if (!rows.length) return "";
@@ -87,7 +87,7 @@ function defaultState() {
   return {
     v: 1, onboarded: false, registered: false,
     me: { id: "me_" + Math.random().toString(36).slice(2, 9), name: "", age: null, gender: "", seeking: "any", country: "", city: "", about: "", photos: [], interests: [], hue: 0, username: "" },
-    settings: { theme: "auto", notif: { match: true, messages: true, ratings: true, news: false } },
+    settings: { theme: "auto", notif: { bot: true } },
     premium: { active: false, until: 0, plan: null },
     boostUntil: 0,
     searches: { day: todayKey(), used: 0 },
@@ -112,7 +112,8 @@ function load() {
     if (out.me.seeking !== "f" && out.me.seeking !== "m") out.me.seeking = "";
     if (out.me.gender !== "f" && out.me.gender !== "m") out.me.gender = "";
     if (!Array.isArray(out.met)) out.met = (out.recentPartnerIds || []).filter(Boolean).map((id) => ({ id, ts: Date.now() }));
-    if (!out.reveals || !Array.isArray(out.reveals.ids)) out.reveals = { day: "", ids: [] };
+    if (!out.givenByMe || typeof out.givenByMe !== "object") out.givenByMe = {};
+    if (!out.settings.notif || out.settings.notif.bot == null) out.settings.notif = Object.assign({}, out.settings.notif, { bot: true });
     return out;
   } catch { return defaultState(); }
 }
@@ -707,8 +708,9 @@ const RATE_LABEL = ["", "Ужасно", "Очень плохо", "Плохо", "
 function openRateSheet(entry, after) {
   let score = null;
   const tags = CONV_TAGS;
-  let tag = null;
+  const picked = new Set();
   const stay = after === "stay";
+  const tagHint = isPremium() ? "Можно несколько меток." : "Одна метка. Несколько — в PRO.";
   const body = openSheet(`
     <div class="sh-title">Как прошёл разговор?</div>
     <div class="sh-sub">с ${esc(entry.partner.name)} · ${fmtDur(entry.dur)}</div>
@@ -716,7 +718,7 @@ function openRateSheet(entry, after) {
     <div class="rate-grid" id="rate-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button class="rate-btn" data-n="${n}">${n}</button>`).join("")}</div>
     <div class="rate-tags" id="rate-tags">${tags.map((t) => `<button class="chip" data-t="${t}">${t}</button>`).join("")}</div>
     <div class="sh-actions row"><button class="btn btn-soft rate-act" id="rate-home">${stay ? "Не сейчас" : after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary rate-act" id="rate-send" disabled>${stay || after !== "next" ? "Оценить" : "Оценить и дальше"}</button></div>
-    <div class="rate-note">Имя и фото видны в «Мои оценки». После 3 сообщений.</div>`, () => { if (!stay) afterChat(after); });
+    <div class="rate-note">${tagHint} Имя и фото видны в «Мои оценки».</div>`, () => { if (!stay) afterChat(after); });
   body.querySelector("#rate-grid").onclick = (e) => {
     const b = e.target.closest("[data-n]"); if (!b) return;
     score = +b.dataset.n; haptic("select");
@@ -728,19 +730,27 @@ function openRateSheet(entry, after) {
   };
   body.querySelector("#rate-tags").onclick = (e) => {
     const b = e.target.closest("[data-t]"); if (!b) return;
-    tag = tag === b.dataset.t ? null : b.dataset.t;
-    body.querySelectorAll("#rate-tags .chip").forEach((x) => x.classList.toggle("on", x.dataset.t === tag));
-    haptic("select");
+    const name = b.dataset.t;
+    if (picked.has(name)) { picked.delete(name); b.classList.remove("on"); haptic("select"); return; }
+    if (!isPremium() && picked.size >= 1) { toast("Несколько меток — в PRO"); haptic("warning"); return; }
+    picked.add(name); b.classList.add("on"); haptic("select");
   };
-  body.querySelector("#rate-home").onclick = () => closeSheet();
+  body.querySelector("#rate-home").onclick = () => { closeSheet(true); if (!stay) afterChat(after); };
   body.querySelector("#rate-send").onclick = async () => {
     if (!score) return;
-    const r = await backend.rate(entry.id, score, tag ? [tag] : []);
+    const chosen = [...picked];
+    const r = await backend.rate(entry.id, score, chosen);
     if (r.accepted) {
       entry.given = score;
-      if (chat && chat.partner && tag) {
-        const bag = chat.partner.tagCounts || (chat.partner.tagCounts = {});
-        bag[tag] = (bag[tag] | 0) + 1;
+      if (!state.givenByMe) state.givenByMe = {};
+      if (chat && chat.partner) {
+        state.givenByMe[chat.partner.id] = score;
+        const row = state.raters.find((x) => x.id === chat.partner.id);
+        if (row) row.given = score;
+        for (const t of chosen) {
+          const bag = chat.partner.tagCounts || (chat.partner.tagCounts = {});
+          bag[t] = (bag[t] | 0) + 1;
+        }
       }
       if (chat) { chat.given = score; chat.entry = entry; }
       $("gone-rate").classList.add("hidden");
@@ -780,12 +790,15 @@ function openPartnerProfile(p) {
   body.querySelector("#pp-block").onclick = () => confirmBlock(p);
 }
 function openRaterProfile(h) {
-  const p = { name: h.name, age: h.age, hue: h.hue, photos: h.photos || [], country: h.country, city: h.city, premium: h.premium, tagCounts: h.tagCounts, about: "" };
+  const p = { name: h.name, age: h.age, hue: h.hue, photos: h.photos || [], country: h.country, city: h.city, premium: h.premium, about: "" };
+  const mine = h.given != null ? h.given : (state.givenByMe && state.givenByMe[h.id]);
+  const theirTags = (h.tags || []).filter((t) => CONV_TAGS.includes(t));
   const body = openSheet(`${photosHTML(p)}
     <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
     <div class="ps-meta">${placeText(p)}</div>
-    <div class="given-score"><b>${h.score}</b><span>оценка тебе</span></div>
-    ${tagChips(p.tagCounts)}`);
+    <div class="given-score"><b>${h.score}</b><span>Оценка мне</span></div>
+    ${mine != null ? `<div class="given-score"><b>${mine}</b><span>Оценка тебе</span></div>` : `<div class="ps-meta">Оценка тебе · нет</div>`}
+    ${theirTags.length ? `<div class="tag-counts">${theirTags.map((t) => `<span class="chip static">${esc(t)}</span>`).join("")}</div>` : ""}`);
   bindPhotoDots(body);
 }
 function openReport(p) {
@@ -873,8 +886,7 @@ function renderProfile() {
   wr.textContent = pro ? "Мои оценки" : `Мои оценки · ${revealsLeft()} из ${FREE_REVEALS}`;
   wr.onclick = () => showScreen("ratings");
   [...$("theme-seg").children].forEach((b) => b.classList.toggle("on", b.dataset.v === state.settings.theme));
-  const N = [["match", "Найден собеседник", "search", "t-coral"], ["messages", "Сообщения", "chat", "t-green"], ["ratings", "Новые оценки", "star", "t-yellow"], ["news", "Новости Hunty", "bell", "t-red"]];
-  $("notif-list").innerHTML = N.map(([k, l, i, c]) => `<div class="list-row"><span class="lr-ic ${c}">${ic(i)}</span><span class="lr-label">${l}</span><button class="toggle ${state.settings.notif[k] ? "on" : ""}" data-n="${k}" aria-label="${l}"></button></div>`).join("");
+  $("notif-list").innerHTML = `<div class="list-row"><span class="lr-ic t-coral">${ic("bell")}</span><span class="lr-label">Уведомления от бота</span><button class="toggle ${state.settings.notif.bot ? "on" : ""}" data-n="bot" aria-label="Уведомления от бота"></button></div>`;
   $("blocked-count").textContent = state.blocked.length;
 }
 
@@ -1102,7 +1114,7 @@ function bind() {
   $("ended-next").onclick = () => leaveChat("next");
 
   $("theme-seg").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; state.settings.theme = b.dataset.v; save(); applyTheme(); renderProfile(); haptic("select"); };
-  $("notif-list").onclick = (e) => { const b = e.target.closest("[data-n]"); if (!b) return; state.settings.notif[b.dataset.n] = !state.settings.notif[b.dataset.n]; save(); b.classList.toggle("on"); haptic("select"); toast("Уведомления заработают вместе с сервером"); };
+  $("notif-list").onclick = (e) => { const b = e.target.closest("[data-n]"); if (!b) return; state.settings.notif[b.dataset.n] = !state.settings.notif[b.dataset.n]; save(); b.classList.toggle("on"); haptic("select"); };
   $("open-rules").onclick = openRules;
   $("open-blocked").onclick = () => {
     const body = openSheet(`<div class="sh-title">Заблокированные</div><div class="list-group" style="margin-top:16px">${state.blocked.length ? state.blocked.map((id) => { const p = backend.getProfile(id) || { name: id, hue: 0 }; return `<div class="rated-row">${avatarHTML(p, "sm")}<b>${esc(p.name)}</b><button class="btn btn-soft unb" data-unb="${id}">Разблокировать</button></div>`; }).join("") : `<div class="rated-row"><span class="hint">Никого нет</span></div>`}</div>`);
