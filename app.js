@@ -266,8 +266,10 @@ function toast(text, kind) {
   clearTimeout(toastT); toastT = setTimeout(() => el.classList.add("hidden"), 2600);
 }
 let sheetOnClose = null;
+let sheetGen = 0;
 function openSheet(html, onClose) {
   const sheet = $("sheet"), bd = $("sheet-backdrop");
+  sheetGen++;
   $("sheet-body").innerHTML = html; $("sheet-body").scrollTop = 0;
   paintIcons($("sheet-body"));
   sheet.classList.remove("hidden", "out"); bd.classList.remove("hidden", "out");
@@ -278,8 +280,12 @@ function openSheet(html, onClose) {
 function closeSheet(silent) {
   const sheet = $("sheet"), bd = $("sheet-backdrop");
   if (sheet.classList.contains("hidden")) return;
+  const gen = ++sheetGen;
   sheet.classList.add("out"); bd.classList.add("out");
-  setTimeout(() => { sheet.classList.add("hidden"); bd.classList.add("hidden"); }, 260);
+  setTimeout(() => {
+    if (gen !== sheetGen) return;
+    sheet.classList.add("hidden"); bd.classList.add("hidden");
+  }, 260);
   const cb = sheetOnClose; sheetOnClose = null;
   if (cb && !silent) cb();
   try { if (tg && tg.BackButton && !["register", "chat", "search"].includes(current)) tg.BackButton.hide(); } catch {}
@@ -477,7 +483,7 @@ function renderHome() {
 }
 
 /* ---------- search ---------- */
-let tipTimer = null, searching = false;
+let tipTimer = null, searching = false, searchGen = 0;
 function startSearch(opts) {
   opts = opts || {};
   rollover();
@@ -498,15 +504,17 @@ function startSearch(opts) {
     const p = $("safety-text"); p.classList.add("swap");
     setTimeout(() => { p.textContent = H.SAFETY_TIPS[tip++ % H.SAFETY_TIPS.length]; p.classList.remove("swap"); }, 250);
   }, 2600);
+  const gen = ++searchGen;
   searching = true;
   const exclude = metIds().concat(state.blocked);
   const filters = null;
   backend.findMatch({ filters, exclude, fast: isPremium() }).then((m) => {
-    if (!searching) return;
+    if (gen !== searchGen || !searching) return;
     searching = false;
     save();
-    revealMatch(m);
+    revealMatch(m, gen);
   }).catch((e) => {
+    if (gen !== searchGen) return;
     searching = false; clearInterval(tipTimer);
     if (e && e.code === "cancelled") return;
     if (e && e.code === "empty") { toast(filters ? "По фильтрам сейчас никого. Ослабь фильтры" : "Сейчас никого нет онлайн", "warn"); showScreen("home"); return; }
@@ -514,13 +522,17 @@ function startSearch(opts) {
   });
 }
 function cancelSearch() {
+  searchGen++;
   clearInterval(tipTimer);
   clearTimeout(revealTimer); revealTimer = null;
-  if (searching) backend.cancelSearch();
-  searching = false; showScreen("home");
+  const el = $("match-reveal");
+  if (el) { el.classList.add("hidden"); el.onclick = null; }
+  searching = false;
+  try { backend.cancelSearch(); } catch {}
+  showScreen("home");
 }
 let revealTimer = null;
-function revealMatch(m) {
+function revealMatch(m, gen) {
   const p = m.partner;
   const el = $("match-reveal");
   const where = [p.city, p.country].map((s) => (s || "").trim()).filter(Boolean).map(esc).join(", ");
@@ -529,15 +541,16 @@ function revealMatch(m) {
   el.classList.remove("hidden");
   haptic("success");
   const go = () => {
-    if (revealTimer == null && el.classList.contains("hidden")) return;
+    if (gen !== searchGen || current !== "search") return;
     clearTimeout(revealTimer); revealTimer = null;
     el.classList.add("hidden");
+    el.onclick = null;
     clearInterval(tipTimer);
-    if (current === "search") openChat(m);
+    openChat(m);
   };
   clearTimeout(revealTimer);
   revealTimer = setTimeout(go, 1400);
-  el.onclick = go;
+  el.onclick = (e) => { if (e.target.closest("#srch-cancel")) return; go(); };
 }
 
 /* ---------- chat ---------- */
@@ -640,8 +653,8 @@ function sendMsg() {
 function confirmEndChat() {
   if (!chat || chat.ended) return leaveChat("home");
   const body = openSheet(`<div class="sh-title">Закончить чат?</div><div class="sh-sub">Собеседник увидит, что ты вышел. Новый поиск сам не начнётся.</div>
-    <div class="sh-actions"><button class="btn btn-primary btn-lg" id="leave-yes">Да</button><button class="btn btn-soft btn-lg" id="leave-no">Остаться</button></div>`);
-  body.querySelector("#leave-yes").onclick = () => { closeSheet(true); setTimeout(() => leaveChat("home"), 220); };
+    <div class="sh-actions"><button class="btn btn-primary btn-lg flat" id="leave-yes">Да</button><button class="btn btn-soft btn-lg flat" id="leave-no">Остаться</button></div>`);
+  body.querySelector("#leave-yes").onclick = () => { closeSheet(true); leaveChat("home"); };
   body.querySelector("#leave-no").onclick = () => closeSheet(true);
 }
 async function endChat() {
@@ -665,8 +678,8 @@ async function endChat() {
 async function leaveChat(after) {
   if (!chat) return showScreen("home");
   const entry = await endChat();
-  if ($("messages")) $("messages").innerHTML = "";
   if (entry && entry.canRate && entry.given == null) return openRateSheet(entry, after);
+  if ($("messages")) $("messages").innerHTML = "";
   afterChat(after);
 }
 function afterChat(after) {
@@ -740,7 +753,7 @@ function openPartnerProfile(p) {
     <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
     <div class="ps-meta">${[placeText(p), p.gender === "f" ? "девушка" : p.gender === "m" ? "парень" : ""].filter(Boolean).join(" · ")}</div>
     <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}
-    <div class="sh-actions row"><button class="btn btn-soft" id="pp-report">${ic("flag")}Жалоба</button><button class="btn btn-soft" id="pp-block">${ic("block")}Блок</button></div>`);
+    <div class="sh-actions row"><button class="btn btn-soft flat" id="pp-report">${ic("flag")}Жалоба</button><button class="btn btn-soft flat" id="pp-block">${ic("block")}Блок</button></div>`);
   bindPhotoDots(body);
   body.querySelector("#pp-report").onclick = () => openReport(p);
   body.querySelector("#pp-block").onclick = () => confirmBlock(p);
@@ -760,7 +773,7 @@ function openReport(p) {
   const body = openSheet(`<div class="sh-title">Пожаловаться</div><div class="sh-sub">на ${esc(p.name)}. Можно сразу, даже без переписки. Собеседник не узнает, кто пожаловался.</div>
     <div class="reason-list" id="reasons">${RULES.REPORT_REASONS.map((r) => `<button class="reason" data-r="${r.id}"><span class="rd"></span>${r.label}</button>`).join("")}</div>
     <div class="block-row"><span class="lr-label">Заблокировать тоже</span><button class="toggle on" id="rep-block" aria-label="Блок"></button></div>
-    <div class="sh-actions"><button class="btn btn-danger btn-lg" id="rep-send" disabled>Отправить жалобу</button></div>`);
+    <div class="sh-actions"><button class="btn btn-danger btn-lg flat" id="rep-send" disabled>Отправить жалобу</button></div>`);
   body.querySelector("#reasons").onclick = (e) => {
     const b = e.target.closest("[data-r]"); if (!b) return;
     reason = b.dataset.r; haptic("select");
@@ -778,7 +791,7 @@ function openReport(p) {
 }
 function confirmBlock(p) {
   const body = openSheet(`<div class="sh-title">Заблокировать ${esc(p.name)}?</div><div class="sh-sub">Вы больше не попадёте друг на друга. Отменить можно в профиле.</div>
-    <div class="sh-actions"><button class="btn btn-danger btn-lg" id="blk-yes">Заблокировать</button><button class="btn btn-ghost" id="blk-no">Отмена</button></div>`);
+    <div class="sh-actions"><button class="btn btn-danger btn-lg flat" id="blk-yes">Заблокировать</button><button class="btn btn-ghost flat" id="blk-no">Отмена</button></div>`);
   body.querySelector("#blk-no").onclick = () => closeSheet(true);
   body.querySelector("#blk-yes").onclick = async () => {
     await doBlock(p); closeSheet(true); toast(`${p.name} в блоке`); haptic("success");

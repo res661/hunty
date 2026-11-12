@@ -419,7 +419,7 @@ html[data-theme="dark"] .safety-tip { background: rgba(255,255,255,.07); border-
 html[data-theme="dark"] .safety-tip p { color: rgba(255,255,255,.9); }
 .safety-tip p.swap { opacity: 0; transform: translateY(6px); }
 .st-ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: rgba(31,185,143,.18); color: var(--mint); flex: none; }
-.searching .bottom-cta { background: none; }
+.searching .bottom-cta { background: none; position: relative; z-index: 8; }
 .searching .btn-soft { background: var(--surface); color: var(--text); box-shadow: 0 3px 0 var(--line), 0 0 0 1px var(--line) inset; }
 html[data-theme="dark"] .searching .btn-soft { background: rgba(255,255,255,.1); color: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.4); }
 .match-reveal { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); color: var(--text); }
@@ -483,7 +483,11 @@ html[data-theme="dark"] .rating-chip { color: var(--gold); }
 .msg.photo, .msg.photo.me, .msg.photo.them { padding: 3px; background: transparent; box-shadow: none; }
 .msg + .msg.me, .msg + .msg.them { margin-top: 2px; }
 .msg.me + .msg.them, .msg.them + .msg.me { margin-top: 8px; }
-.msg.photo img { display: block; width: 168px; max-width: 58vw; height: 112px; object-fit: cover; border-radius: 16px; }
+.btn.flat, .btn.btn-primary.flat, .btn.btn-danger.flat, .btn.btn-soft.flat { box-shadow: none; }
+.btn.btn-soft.flat { background: transparent; box-shadow: 0 0 0 1px var(--line) inset; }
+.btn.flat:active, .btn.btn-primary.flat:active, .btn.btn-danger.flat:active { transform: none; box-shadow: none; }
+.btn.btn-soft.flat:active { transform: none; box-shadow: 0 0 0 1px var(--line) inset; }
+.msg.photo img { display: block; width: auto; height: auto; max-width: min(240px, 68vw); max-height: 360px; object-fit: contain; border-radius: 16px; }
 .msg.photo.me img { border-bottom-right-radius: 6px; }
 .msg.photo.them img { border-bottom-left-radius: 6px; }
 .attach-btn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--coral); flex: none; }
