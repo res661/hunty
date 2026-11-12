@@ -50,17 +50,17 @@ const P = {
 function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
-const MASCOT_SRC = "assets/cupion-mascot.png?v=31";
+const MASCOT_SRC = "assets/cupion-mascot.png?v=32";
 function mascotImg(cls) { return `<img class="${cls || "mascot"}" src="${MASCOT_SRC}" alt="" draggable="false">`; }
-function maskArt(bg, face, band, eye, wings) {
-  return `<svg class="anon-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="${bg}"/>${wings || ""}<path fill="${face}" d="M11.5 32c1.6-9.4 9.2-14.2 20.5-14.2S51 22.6 52.5 32c-1.6 9.4-9.2 14.2-20.5 14.2S13.1 41.4 11.5 32z"/><ellipse cx="23.6" cy="32" rx="5.5" ry="3.45" fill="${eye}"/><ellipse cx="40.4" cy="32" rx="5.5" ry="3.45" fill="${eye}"/><circle cx="24.7" cy="32" r="1.7" fill="${band}"/><circle cx="39.3" cy="32" r="1.7" fill="${band}"/><path d="M29.1 32.15c1.05-.85 4.75-.85 5.8 0" fill="none" stroke="${band}" stroke-width="1.45" stroke-linecap="round"/></svg>`;
+function maskArt(bg) {
+  const ink = "#FFF7F6";
+  return `<svg class="anon-svg" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="${bg}"/><path d="M23.6 24.6c.4-4.7 4-8.1 8.4-8.1 4.7 0 8.1 3.1 8.1 7.3 0 3.4-2 5.2-4.8 6.6-2.3 1.15-3.5 2.2-3.5 4.3v1.15" fill="none" stroke="${ink}" stroke-width="3.6" stroke-linecap="round"/><circle cx="32" cy="45.2" r="2.25" fill="${ink}"/></svg>`;
 }
-const MASK_WINGS = `<ellipse cx="13.5" cy="27.5" rx="8.2" ry="4.3" fill="#F7D0DA" transform="rotate(-26 13.5 27.5)"/><ellipse cx="50.5" cy="27.5" rx="8.2" ry="4.3" fill="#F7D0DA" transform="rotate(26 50.5 27.5)"/>`;
 const MASK_ART = {
-  red: maskArt("#E5484D", "#D13B42", "#9E2228", "#F8E4E4"),
-  cupid: maskArt("#E0567A", "#C44566", "#8E3148", "#FDE8EE", MASK_WINGS),
-  night: maskArt("#8E3A4A", "#732E3C", "#4E1C28", "#F3D5DA"),
-  pearl: maskArt("#C94B5F", "#E7A0AE", "#8A3142", "#FFF6F7"),
+  red: maskArt("#E5484D"),
+  cupid: maskArt("#E0567A"),
+  night: maskArt("#8E3A4A"),
+  pearl: maskArt("#C94B5F"),
 };
 function maskFor(p) {
   const id = p && p.maskId;
@@ -508,7 +508,7 @@ let sheetOnClose = null;
 let sheetGen = 0;
 function openSheet(html, onClose) {
   const sheet = $("sheet"), bd = $("sheet-backdrop");
-  sheet.classList.remove("is-rate");
+  sheet.classList.remove("is-rate", "is-pro");
   sheetGen++;
   $("sheet-body").innerHTML = html; $("sheet-body").scrollTop = 0;
   paintIcons($("sheet-body"));
@@ -525,7 +525,7 @@ function closeSheet(silent) {
   setTimeout(() => {
     if (gen !== sheetGen) return;
     sheet.classList.add("hidden"); bd.classList.add("hidden");
-    sheet.classList.remove("is-rate");
+    sheet.classList.remove("is-rate", "is-pro");
   }, 260);
   const cb = sheetOnClose; sheetOnClose = null;
   if (cb && !silent) cb();
@@ -552,8 +552,6 @@ function openRegister(edit) {
   document.querySelectorAll("#reg-scroll .field-why").forEach((el) => el.classList.toggle("hidden", !!edit));
   $("f-name").value = draft.name || "";
   $("f-age").value = draft.age || "";
-  $("f-country").value = draft.country || "";
-  $("f-city").value = draft.city || "";
   $("f-rules").checked = !!edit;
   renderGender(); renderSeek($("f-seek"), draft.seeking || ""); renderPhotos(); renderAgeHint();
   showScreen("register");
@@ -613,8 +611,6 @@ function saveRegister() {
     toast("Так возраст не меняется", "warn"); haptic("error"); return;
   }
   draft.name = name.slice(0, 20); draft.age = age;
-  draft.country = $("f-country").value.trim().slice(0, 28);
-  draft.city = $("f-city").value.trim().slice(0, 28);
   draft.username = myUsername();
   draft.about = "";
   draft.hue = draft.hue || Math.floor(Math.random() * HUES.length);
@@ -723,9 +719,9 @@ function renderHome() {
   const pro = isPremium();
   $("my-stats").innerHTML = `<div class="card-head"><h3>Твоя репутация</h3><small>${state.totals.chats ? "по оценкам собеседников" : "появится после чатов"}</small></div>` + myStatsHTML();
   $("home-premium").className = "card premium-card" + (pro ? " on" : "");
-  $("home-premium").innerHTML = mascotImg("prem-mascot") + (pro
-    ? `<h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки, фото после встречи, 6 фото, своя маска и «Ещё раз».</p>`
-    : `<h3>PRO подписка</h3><p>Оценки, фото после встречи, 6 фото, своя маска, сброс статистики и «Ещё раз».</p><button class="btn" id="home-pro-btn">Подробнее · от 30 ★</button>`);
+  $("home-premium").innerHTML = pro
+    ? `<div class="pro-kicker">${ic("crown")} Активна</div><h3>PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки, фото после встречи, 6 фото, своя маска и «Ещё раз».</p>`
+    : `${mascotImg("prem-mascot")}<h3>PRO подписка</h3><p>Оценки, фото после встречи, 6 фото, своя маска, сброс статистики и «Ещё раз».</p><button class="btn" id="home-pro-btn">Подробнее · от 30 ★</button>`;
   const b = $("home-pro-btn"); if (b) b.onclick = openPremium;
   $("home-tip").innerHTML = `<span class="si coral">${ic("info")}</span><div>${TIPS[Math.floor(Date.now() / 60000) % TIPS.length]}</div>`;
   paintIcons($("home-tip"));
@@ -789,7 +785,7 @@ function revealMatch(m, gen) {
   stopBumps();
   const p = m.partner;
   const el = $("match-reveal");
-  el.innerHTML = `<div class="found-scene"><div class="found-glow"></div>${mascotImg("found-mascot")}<div class="found-meet"><span class="found-side a">${anonHTML("", state.me)}</span><span class="found-side b">${anonHTML("", p)}</span></div><div class="found-word">Нашли</div></div>`;
+  el.innerHTML = `<div class="found-scene"><div class="found-glow"></div><div class="found-meet"><i class="found-ring"></i><span class="found-side a">${anonHTML("", state.me)}</span><span class="found-spark"></span><span class="found-side b">${anonHTML("", p)}</span></div><div class="found-word">Нашли</div></div>`;
   el.classList.remove("hidden");
   haptic("success");
   const go = () => {
@@ -801,7 +797,7 @@ function revealMatch(m, gen) {
     openChat(m);
   };
   clearTimeout(revealTimer);
-  revealTimer = setTimeout(go, 2000);
+  revealTimer = setTimeout(go, 1800);
   el.onclick = (e) => { if (e.target.closest("#srch-cancel")) return; go(); };
 }
 
@@ -1035,6 +1031,8 @@ function openRateSheet(entry, after) {
         state.givenByMe[chat.partner.id] = score;
         const row = state.raters.find((x) => x.id === chat.partner.id);
         if (row) row.given = score;
+        const meet = (state.matches || []).find((x) => x.sessionId === chat.id);
+        if (meet) meet.given = score;
         const bag = chat.partner.flagCounts || (chat.partner.flagCounts = { green: 0, mid: 0, red: 0 });
         bag[flag.id] = (bag[flag.id] | 0) + 1;
         const st = chat.partner.stats;
@@ -1081,8 +1079,9 @@ function openPartnerProfile(p, opts) {
   const fromChat = !!(opts && opts.lean);
   const shown = partnerShown(p);
   const photos = shown ? photosHTML(p) : anonBlock(p);
+  const where = placeText(p);
   const who = fromChat ? "" : `<div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
-    <div class="ps-meta">${placeText(p)}</div>`;
+    ${where ? `<div class="ps-meta">${where}</div>` : ""}`;
   const body = openSheet(`${photos}
     ${who}
     <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}
@@ -1162,9 +1161,7 @@ function finishProfileField(el) {
     if (!age || age < RULES.MIN_AGE || age > 99) { toast(age && age < 16 ? "Hunty доступен с 16 лет" : "Укажи возраст", "warn"); el.value = state.me.age || ""; haptic("error"); el.blur(); return; }
     if (state.me.age && H.agePool(state.me.age) !== H.agePool(age)) { toast("Так возраст не меняется", "warn"); el.value = state.me.age; haptic("error"); el.blur(); return; }
     state.me.age = age;
-  } else if (id === "p-country") state.me.country = el.value.trim().slice(0, 28);
-  else if (id === "p-city") state.me.city = el.value.trim().slice(0, 28);
-  else return;
+  } else return;
   state.me.about = "";
   save(); backend.updateMe(publicMe());
   if (document.activeElement === el) el.blur();
@@ -1204,6 +1201,17 @@ function renderProTools() {
     };
   });
 }
+function scoreBit(n, label) {
+  const miss = n == null || n === "";
+  return `<span class="score-bit${miss ? " miss" : ""}"><em>${label}</em><b>${miss ? "Пока без оценки" : n}</b></span>`;
+}
+function scorePair(given, theirs) {
+  return `<span class="pair-scores">${scoreBit(given, "ты поставил")}${scoreBit(theirs, "тебе поставили")}</span>`;
+}
+function givenFor(personId, explicit) {
+  if (explicit != null) return explicit;
+  return state.givenByMe && personId && state.givenByMe[personId] != null ? state.givenByMe[personId] : null;
+}
 function renderMyMatches() {
   const box = $("my-matches");
   if (!box) return;
@@ -1214,10 +1222,7 @@ function renderMyMatches() {
     return;
   }
   box.innerHTML = head + rows.map((m) => {
-    const got = m.theirScore == null
-      ? `<span class="match-wait">Пока без оценки</span>`
-      : `<span class="match-got"><b>${m.theirScore}</b></span>`;
-    return `<div class="match-row"><button class="match-main" type="button" data-mid="${esc(m.sessionId)}">${avatarHTML(m, "sm")}<span class="rater-main"><b>${esc(m.name)}${m.age ? ", " + m.age : ""}</b><span class="hint">${fmtDur(m.dur)}</span></span>${got}</button><button class="match-again" type="button" data-again="${esc(m.id)}">Ещё раз</button></div>`;
+    return `<div class="match-row"><button class="match-main" type="button" data-mid="${esc(m.sessionId)}">${avatarHTML(m, "sm")}<span class="rater-main"><b>${esc(m.name)}${m.age ? ", " + m.age : ""}</b><span class="hint">${fmtDur(m.dur)}</span>${scorePair(givenFor(m.id, m.given), m.theirScore)}</span></button><button class="match-again" type="button" data-again="${esc(m.id)}">Ещё раз</button></div>`;
   }).join("");
 }
 function renderProfile() {
@@ -1225,8 +1230,6 @@ function renderProfile() {
   const set = (id, val) => { const el = $(id); if (el && document.activeElement !== el) el.value = val == null ? "" : val; };
   set("p-name", m.name || "");
   set("p-age", m.age || "");
-  set("p-country", m.country || "");
-  set("p-city", m.city || "");
   renderSeek($("p-gender"), m.gender);
   renderSeek($("p-seek"), m.seeking);
   renderMyPhotos();
@@ -1234,7 +1237,7 @@ function renderProfile() {
   renderMyMatches();
   $("me-premium").className = "card premium-card" + (pro ? " on" : "");
   $("me-premium").innerHTML = pro
-    ? `${mascotImg("prem-mascot")}<h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки, фото после встречи, 6 фото, своя маска и «Ещё раз».</p>`
+    ? `<div class="pro-kicker">${ic("crown")} Активна</div><h3>PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки, фото после встречи, 6 фото, своя маска и «Ещё раз».</p>`
     : `${mascotImg("prem-mascot")}<h3>PRO подписка</h3><p>Оценки, фото после встречи, 6 фото, своя маска, сброс статистики и «Ещё раз».</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
   const pb = $("me-pro-btn"); if (pb) pb.onclick = openPremium;
   renderProTools();
@@ -1256,16 +1259,17 @@ const PLANS = [
 function openPremium() {
   let plan = "week";
   const feats = [["camera", "Фото в чате", "после встречи в 2:30"], ["eye", "Все оценки", "кто оценил — без лимита"], ["search", "Быстрее в поиске", "собеседник находится раньше"], ["clock", "Без ожидания", "частые «Дальше» не останавливают поиск"], ["crown", "Корона PRO", "на аватаре"], ["plus", "6 фото", "в профиле, у бесплатных — 3"], ["trash", "Сбросить статистику", "чаты и встречи, не оценки"], ["moon", "Своя маска", "её видят до 2:30"], ["rewind", "Ещё раз", "найти того же человека"]];
-  const body = openSheet(`<div class="prem-hero">${mascotImg("prem-hero-mascot")}<div class="sh-title">PRO подписка</div><div class="sh-sub">Оплата через Telegram Stars</div></div>
-    <div class="feat-list">${feats.map(([i, b, s]) => `<div class="feat"><span class="lr-ic">${ic(i)}</span><div><b>${b}</b><small>${s}</small></div></div>`).join("")}</div>
-    <div class="plans" id="plans">${PLANS.map((p) => `<button class="plan ${p.id === plan ? "on" : ""}" data-p="${p.id}">${p.save ? `<span class="save">${p.save}</span>` : ""}<b>${p.name}</b><span class="price">${ic("star")}${p.stars}</span><small>${p.note}</small></button>`).join("")}</div>
-    <div class="sh-actions"><button class="btn btn-primary btn-lg" id="buy">Оплатить ${PLANS[1].stars} ★</button></div>
-    <div class="limits-note">Честно: PRO не повышает рейтинг и не защищает от жалоб. Правила и безопасность одни для всех.</div>`);
+  const body = openSheet(`<div class="prem-head"><div class="prem-id">${mascotImg("prem-hero-mascot")}<div><div class="sh-title">PRO подписка</div><div class="sh-sub">Telegram Stars</div></div></div>
+    <div class="plans" id="plans">${PLANS.map((p) => `<button class="plan ${p.id === plan ? "on" : ""}" data-p="${p.id}"><b>${p.name}</b><span class="price">${ic("star")}${p.stars}</span><small>${p.note}</small></button>`).join("")}</div></div>
+    <div class="prem-scroll"><div class="feat-list">${feats.map(([i, b, s]) => `<div class="feat"><span class="lr-ic">${ic(i)}</span><div><b>${b}</b><small>${s}</small></div></div>`).join("")}</div>
+    <div class="limits-note">Честно: PRO не повышает рейтинг и не защищает от жалоб. Правила и безопасность одни для всех.</div></div>
+    <div class="prem-pay"><button class="btn btn-primary btn-lg" id="buy" type="button">Подключить · ${PLANS[1].stars} ★</button></div>`);
+  $("sheet").classList.add("is-pro");
   body.querySelector("#plans").onclick = (e) => {
     const b = e.target.closest("[data-p]"); if (!b) return;
     plan = b.dataset.p; haptic("select");
     body.querySelectorAll(".plan").forEach((x) => x.classList.toggle("on", x === b));
-    body.querySelector("#buy").textContent = `Оплатить ${PLANS.find((p) => p.id === plan).stars} ★`;
+    body.querySelector("#buy").textContent = `Подключить · ${PLANS.find((p) => p.id === plan).stars} ★`;
   };
   body.querySelector("#buy").onclick = () => payFlow(PLANS.find((p) => p.id === plan));
 }
@@ -1288,21 +1292,35 @@ function payFlow(plan) {
   };
 }
 function requirePro(fn) { return () => { if (!isPremium()) { haptic("warning"); return openPremium(); } fn(); }; }
+function ratingRows() {
+  const fromMatches = (state.matches || []).map((m) => ({
+    rid: m.sessionId, personId: m.id, name: m.name, age: m.age, hue: m.hue,
+    photos: m.photos || [], premium: m.premium, faceShown: true, dur: m.dur,
+    given: givenFor(m.id, m.given), theirs: m.theirScore == null ? null : m.theirScore, ts: m.ts || 0,
+  }));
+  const seen = new Set(fromMatches.map((r) => r.personId).filter(Boolean));
+  const extra = (state.raters || []).filter((h) => h && !seen.has(h.id)).map((h) => ({
+    rid: h.id || (h.name + ":" + h.ts), personId: h.id, name: h.name, age: h.age, hue: h.hue,
+    photos: h.photos || [], premium: h.premium, faceShown: !!h.faceShown, dur: h.dur,
+    given: givenFor(h.id, h.given), theirs: h.score == null ? null : h.score, ts: h.ts || 0,
+  }));
+  return fromMatches.concat(extra).sort((a, b) => b.ts - a.ts);
+}
 function renderRatings() {
-  const rows = [...state.raters].reverse();
+  const rows = ratingRows();
   const left = revealsLeft();
   const sub = $("ratings-sub");
   if (sub) sub.textContent = isPremium() ? "PRO · без лимита" : `Бесплатно ${FREE_REVEALS} в день · осталось ${left}`;
   const box = $("rater-list");
   if (!box) return;
   box.innerHTML = rows.length ? rows.map((h) => {
-    const id = h.id || (h.name + ":" + h.ts);
-    const open = isPremium() || revealed(id);
+    const open = isPremium() || revealed(h.rid);
     const face = h.faceShown ? avatarHTML(h, "sm") : anonHTML("sm");
-    return `<div class="rated-row" data-rid="${esc(id)}">${open
-      ? `${face}<div class="rater-main"><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div></div><span class="score">${h.score}</span>`
-      : `${anonHTML("sm")}<div class="rater-main"><b>Скрыто</b><div class="hint" style="margin:0">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
-  }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Оценка появится после разговора.</span></div>`;
+    const who = `${esc(h.name)}${h.age ? ", " + h.age : ""}`;
+    return `<div class="rated-row" data-rid="${esc(h.rid)}">${open
+      ? `${face}<div class="rater-main"><b>${who}</b><div class="hint">${fmtDur(h.dur)}</div>${scorePair(h.given, h.theirs)}</div>`
+      : `${anonHTML("sm")}<div class="rater-main"><b>Скрыто</b><div class="hint">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
+  }).join("") : `<div class="rated-row"><span class="hint">Пока нет. Оценка — после встречи в 2:30.</span></div>`;
 }
 function openRevealPaywall() {
   const body = openSheet(`<div class="sh-title">Лимит открытий</div><div class="sh-sub">Бесплатно ${FREE_REVEALS} в день. В PRO — без лимита.</div>
@@ -1785,8 +1803,11 @@ function bind() {
       if (!isPremium() && revealsLeft() <= 0) return openRevealPaywall();
       revealRater(id);
     }
+    if (!revealed(id) && !isPremium()) return;
+    const m = (state.matches || []).find((x) => x.sessionId === id);
+    if (m) { openPartnerProfile(Object.assign({}, m, { faceShown: true })); return; }
     const h = state.raters.find((r) => (r.id || (r.name + ":" + r.ts)) === id);
-    if (h && revealed(id)) openRaterProfile(h);
+    if (h) openRaterProfile(h);
   };
   let pSlot = 0;
   $("p-photos").onclick = (e) => {
@@ -1813,7 +1834,7 @@ function bind() {
       save(); renderMyPhotos(); backend.updateMe(publicMe());
     } catch { toast("Не удалось загрузить фото", "warn"); }
   };
-  ["p-name", "p-country", "p-city", "p-age"].forEach((id) => {
+  ["p-name", "p-age"].forEach((id) => {
     const el = $(id);
     el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); finishProfileField(el); } });
     el.addEventListener("blur", () => finishProfileField(el));
