@@ -46,11 +46,14 @@ const P = {
   crown: '<path d="M4 8l4 4 4-7 4 7 4-4-2 11H6z" fill="currentColor" stroke="none"/>',
   moon: '<path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
   info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.5"/>',
+  mic: '<rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V20M9 20h6"/>',
+  activity: '<circle cx="7" cy="7" r="1.35" fill="currentColor"/><circle cx="12" cy="7" r="1.35" fill="currentColor"/><circle cx="17" cy="7" r="1.35" fill="currentColor"/><circle cx="7" cy="12" r="1.35" fill="currentColor"/><circle cx="12" cy="12" r="1.35" fill="currentColor"/><circle cx="17" cy="12" r="1.35" fill="currentColor"/><circle cx="7" cy="17" r="1.35" fill="currentColor"/><circle cx="12" cy="17" r="1.35" fill="currentColor"/><circle cx="17" cy="17" r="1.35" fill="currentColor"/>',
+  play: '<path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none"/>',
 };
 function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
-const MASCOT_SRC = "assets/cupion-mascot.png?v=36";
+const MASCOT_SRC = "assets/cupion-mascot.png?v=37";
 function mascotImg(cls) { return `<img class="${cls || "mascot"}" src="${MASCOT_SRC}" alt="" draggable="false">`; }
 function maskArt(bg) {
   const ink = "#FFF7F6";
@@ -350,7 +353,7 @@ function applyTheme() {
     set("--bottom-bar", p.bottomBarBgColor || p.bgColor);
   }
   const inlineBg = (root.style.getPropertyValue("--bg") || "").trim();
-  const color = inlineBg || (theme === "dark" ? "#000000" : "#EFEFF4");
+  const color = inlineBg || (theme === "dark" ? "#07060A" : "#F6F2F5");
   const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute("content", color);
   try {
     if (tg && tg.setBackgroundColor) tg.setBackgroundColor(color);
@@ -521,14 +524,14 @@ let draft = null;
 let regStep = 0;
 let regEdit = false;
 const REG_ORDER = ["age", "name", "photos", "gender", "seek", "rules"];
-const REG_TITLES = { age: "Возраст", name: "Имя", photos: "Фото", gender: "Пол", seek: "Кого искать", rules: "Правила" };
+const REG_TITLES = { age: "Cupion", name: "Cupion", photos: "Cupion", gender: "Cupion", seek: "Cupion", rules: "Cupion" };
 const REG_LEADS = {
   age: "Сколько тебе лет?",
-  name: "Как тебя называть?",
+  name: "Как к тебе будут обращаться?",
   photos: "Добавь фото",
-  gender: "Ты…",
-  seek: "Кого ищем?",
-  rules: "Правила Hunty",
+  gender: "Парень или девушка?",
+  seek: "Кого искать?",
+  rules: "Правила Cupion",
 };
 function regVisible() { return REG_ORDER.filter((id) => id !== "rules" || !regEdit); }
 function paintReg(dir) {
@@ -575,7 +578,7 @@ function validateRegStep() {
     if (age && age < RULES.MIN_AGE) {
       flagErr($("f-age").parentElement);
       renderAgeHint();
-      toast("Нужно 18 или больше. Младше в Hunty не регистрируем.", "warn");
+      toast("Нужно 18 или больше. Младше в Cupion не регистрируем.", "warn");
       haptic("error");
       return false;
     }
@@ -647,7 +650,7 @@ function renderAgeHint() {
   const a = parseInt($("f-age").value, 10);
   const el = $("age-hint");
   if (!el) return;
-  if (a && a < RULES.MIN_AGE) { el.textContent = "Нужно 18 или больше. Младше в Hunty не регистрируем."; el.classList.add("err"); el.classList.remove("hidden"); return; }
+  if (a && a < RULES.MIN_AGE) { el.textContent = "Нужно 18 или больше. Младше в Cupion не регистрируем."; el.classList.add("err"); el.classList.remove("hidden"); return; }
   el.textContent = ""; el.classList.add("hidden"); el.classList.remove("err");
 }
 function resizeImage(file) {
@@ -672,7 +675,7 @@ function saveRegister() {
   const age = parseInt($("f-age").value, 10);
   if (!draft.photos.length) { flagErr($("photo-slots")); toast("Добавь хотя бы одно своё фото", "warn"); haptic("error"); return; }
   if (name.length < 2) { flagErr($("f-name").parentElement); toast("Напиши имя — хотя бы 2 буквы", "warn"); haptic("error"); return; }
-  if (!age || age < RULES.MIN_AGE || age > 99) { flagErr($("f-age").parentElement); toast(age && age < RULES.MIN_AGE ? "Нужно 18 или больше. Младше в Hunty не регистрируем." : "Укажи возраст", "warn"); haptic("error"); return; }
+  if (!age || age < RULES.MIN_AGE || age > 99) { flagErr($("f-age").parentElement); toast(age && age < RULES.MIN_AGE ? "Нужно 18 или больше. Младше в Cupion не регистрируем." : "Укажи возраст", "warn"); haptic("error"); return; }
   if (!state.registered && !$("f-rules").checked) { flagErr($("rules-row")); toast("Нужно принять правила", "warn"); haptic("error"); return; }
   if (draft.gender !== "f" && draft.gender !== "m") { flagErr($("f-gender")); toast("Укажи пол", "warn"); haptic("error"); return; }
   if (draft.seeking !== "f" && draft.seeking !== "m") { flagErr($("f-seek")); toast("Выбери, кого искать", "warn"); haptic("error"); return; }
@@ -750,7 +753,7 @@ function plural(n, a, b, c) { const m10 = n % 10, m100 = n % 100; return m10 ===
 function myRep() { return H.reputation(state.ratingsReceived); }
 function statsHTML(avg, isNew, count, avgSec, chats, matches) {
   const ratingVal = isNew ? `<b class="new-tag">Новый</b><span>${count} из 5 оценок</span>` : `<b>${avg.toFixed(1)}</b><span>из ${count} ${plural(count, "оценки", "оценок", "оценок")}</span>`;
-  const matchCell = matches == null ? "" : `<div class="stat"><b>${matches}</b><span>${plural(matches, "встреча", "встречи", "встреч")}</span></div>`;
+  const matchCell = matches == null ? "" : `<div class="stat"><b>${matches}</b><span>${plural(matches, "мэтч", "мэтча", "мэтчей")}</span></div>`;
   return `<div class="stat-grid${matchCell ? " has-match" : ""}">
     <div class="stat hl">${ratingVal}</div>
     <div class="stat"><b>${fmtDur(avgSec)}</b><span>ср. разговор</span></div>
@@ -769,7 +772,7 @@ const proBadge = () => `<span class="pro-badge">${ic("crown")}PRO</span>`;
 
 /* ---------- home ---------- */
 let onlineCount = 0;
-const TIPS = ["Сначала разговор без лиц. Фото открываются через 2:30", "Средняя оценка учитывается после 5 разговоров, до этого ты «Новый»", "Короткий пропуск не меняет среднюю и не считается чатом", "Юзернейм можно написать в чат самим. Номера и чужие ссылки — нет"];
+const TIPS = ["В чате нет имени и фото — только разговор. Мэтч в 2:30", "Средняя оценка учитывается после 5 разговоров, до этого ты «Новый»", "Короткий пропуск не меняет среднюю и не считается чатом", "Юзернейм можно написать в чат самим. Номера и чужие ссылки — нет"];
 const filtersActive = () => { const f = state.filters; return f.gender !== "any" || f.ageMin || f.ageMax || f.city; };
 function renderHome() {
   rollover();
@@ -800,7 +803,7 @@ function renderHome() {
   const premEl = $("home-premium");
   if (!pro) {
     premEl.className = "home-pro-hint";
-    premEl.innerHTML = `<span class="hph-icon" data-ic="crown"></span><div class="hph-text"><b>PRO подписка</b><span>Фото после 2:30, 6 фото, быстрее поиск</span></div><span class="hph-chev" data-ic="chev"></span>`;
+    premEl.innerHTML = `<span class="hph-icon" data-ic="crown"></span><div class="hph-text"><b>Cupion Premium</b><span>Голосовые и быстрее поиск</span></div><span class="hph-chev" data-ic="chev"></span>`;
     premEl.onclick = openPremium;
     paintIcons(premEl);
   } else {
@@ -861,7 +864,13 @@ function startSearch(opts) {
   }, 2600);
   const gen = ++searchGen;
   searching = true;
-  startBumps();
+  pendingMatch = null;
+  finishingChat = false;
+  stopFlyers();
+  if (!reduceMotion()) {
+    flyerSession = true;
+    requestAnimationFrame(() => startWave());
+  }
   const exclude = metIds().concat(state.blocked);
   const filters = null;
   backend.findMatch({ filters, exclude, fast: isPremium(), preferId: opts.preferId || "" }).then((m) => {
@@ -872,7 +881,7 @@ function startSearch(opts) {
     revealMatch(m, gen);
   }).catch((e) => {
     if (gen !== searchGen) return;
-    searching = false; clearInterval(tipTimer);
+    searching = false; clearInterval(tipTimer); stopFlyers();
     if (e && e.code === "cancelled") return;
     if (e && e.code === "empty") { toast(filters ? "По фильтрам сейчас никого. Ослабь фильтры" : "Сейчас никого нет онлайн", "warn"); showScreen("home"); return; }
     toast("Не получилось соединиться", "warn"); showScreen("home");
@@ -886,28 +895,164 @@ function cancelSearch() {
   const el = $("match-reveal");
   if (el) { el.classList.add("hidden"); el.onclick = null; }
   searching = false;
+  pendingMatch = null;
+  finishingChat = false;
+  stopFlyers();
   try { backend.cancelSearch(); } catch {}
   showScreen("home");
 }
 let revealTimer = null;
+let flyerAnims = [];
+let flyerCount = 0;
+let flyerSession = false;
+let pendingMatch = null;
+let finishingChat = false;
+function reduceMotion() {
+  try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; }
+}
+function stopFlyers() {
+  flyerSession = false;
+  flyerAnims.forEach((a) => { try { a.cancel(); } catch {} });
+  flyerAnims = [];
+  flyerCount = 0;
+  const field = $("fly-field");
+  if (field) field.innerHTML = "";
+}
+function pulseHeart() {
+  const el = document.querySelector(".searching .heart-pop");
+  if (!el) return;
+  el.classList.remove("arrive");
+  void el.offsetWidth;
+  el.classList.add("arrive");
+  haptic("light");
+}
+function bezEase(t, p1, p2) {
+  const cx = 3 * p1[0], bx = 3 * (p2[0] - p1[0]) - cx, ax = 1 - cx - bx;
+  const cy = 3 * p1[1], by = 3 * (p2[1] - p1[1]) - cy, ay = 1 - cy - by;
+  let u = t;
+  for (let i = 0; i < 6; i++) {
+    const x = ((ax * u + bx) * u + cx) * u - t;
+    const dx = (3 * ax * u + 2 * bx) * u + cx;
+    if (Math.abs(dx) < 1e-5) break;
+    u = Math.max(0, Math.min(1, u - x / (dx || 1e-5)));
+  }
+  return ((ay * u + by) * u + cy) * u;
+}
+function cubicPt(p0, p1, p2, p3, t) {
+  const u = 1 - t;
+  return {
+    x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
+    y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
+  };
+}
+function cubicDv(p0, p1, p2, p3, t) {
+  const u = 1 - t;
+  return {
+    x: 3 * u * u * (p1.x - p0.x) + 6 * u * t * (p2.x - p1.x) + 3 * t * t * (p3.x - p2.x),
+    y: 3 * u * u * (p1.y - p0.y) + 6 * u * t * (p2.y - p1.y) + 3 * t * t * (p3.y - p2.y),
+  };
+}
+const FLY_FACES = ["🙂", "😊", "😌", "😉", "🌸", "⭐", "💫", "🌷"];
+const FLY_EASES = [[[0.42, 0.02], [0.62, 0.28]], [[0.5, 0], [0.78, 0.32]], [[0.38, 0.08], [0.7, 0.22]], [[0.55, 0.05], [0.82, 0.4]]];
+function heartPoint(field) {
+  const heart = document.querySelector(".searching .heart-svg");
+  const fr = field.getBoundingClientRect();
+  if (!heart) return { x: fr.width / 2, y: fr.height * 0.42 };
+  const hr = heart.getBoundingClientRect();
+  return { x: hr.left + hr.width / 2 - fr.left, y: hr.top + hr.height * 0.46 - fr.top };
+}
+function onAvatarDone(anim) {
+  if (!flyerAnims.includes(anim)) return;
+  flyerAnims = flyerAnims.filter((a) => a !== anim);
+  flyerCount = Math.max(0, flyerCount - 1);
+  if (flyerSession || pendingMatch) pulseHeart();
+  if (flyerCount === 0 && pendingMatch) finishToChat();
+  else if (flyerCount === 0 && searching && flyerSession && !pendingMatch) {
+    setTimeout(() => { if (searching && flyerSession && !pendingMatch && flyerCount === 0) startWave(); }, 240);
+  }
+}
+function launchAvatar(field, from, to, bend, ease, delay, dur, hue, face) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const px = -dy / len, py = dx / len;
+  const c1 = { x: from.x + dx * 0.28 + px * bend, y: from.y + dy * 0.28 + py * bend };
+  const c2 = { x: from.x + dx * 0.72 + px * bend * 0.22, y: from.y + dy * 0.72 + py * bend * 0.22 };
+  const el = document.createElement("div");
+  el.className = "fly-av";
+  const pair = HUES[hue % HUES.length];
+  el.style.background = "linear-gradient(160deg, " + pair[0] + ", " + pair[1] + ")";
+  el.innerHTML = "<span>" + face + "</span>";
+  field.appendChild(el);
+  const n = 22;
+  const frames = [];
+  for (let i = 0; i <= n; i++) {
+    const raw = i / n;
+    const t = bezEase(raw, ease[0], ease[1]);
+    const p = cubicPt(from, c1, c2, to, t);
+    const d = cubicDv(from, c1, c2, to, Math.min(0.98, t));
+    const ang = Math.atan2(d.y, d.x) * 180 / Math.PI;
+    let along = 1, across = 1, o = raw < 0.08 ? raw / 0.08 : 1;
+    if (raw > 0.62) {
+      const k = (raw - 0.62) / 0.38;
+      const g = k * k;
+      along = Math.max(0.08, 1 + Math.sin(k * Math.PI) * 0.28 - g * 0.9);
+      across = Math.max(0.08, 1 - g * 0.78);
+      o = Math.max(0, 1 - g);
+    }
+    frames.push({
+      transform: "translate3d(" + p.x + "px," + p.y + "px,0) translate(-50%,-50%) rotate(" + ang + "deg) scale(" + along + "," + across + ") rotate(" + (-ang) + "deg)",
+      opacity: o,
+      offset: raw,
+    });
+  }
+  flyerCount++;
+  const anim = el.animate(frames, { duration: dur, delay: delay, easing: "linear", fill: "forwards" });
+  flyerAnims.push(anim);
+  anim.onfinish = () => { el.remove(); onAvatarDone(anim); };
+}
+function startWave() {
+  if (!flyerSession || pendingMatch || reduceMotion()) return;
+  const field = $("fly-field");
+  if (!field) return;
+  const w = field.clientWidth, h = field.clientHeight;
+  if (w < 40 || h < 40) { requestAnimationFrame(startWave); return; }
+  const to = heartPoint(field);
+  const spots = [[0.5, -0.08], [0.5, 1.08], [-0.1, 0.35], [1.1, 0.62], [-0.06, -0.04], [1.06, -0.02], [-0.08, 1.05], [1.08, 1.02], [0.12, -0.1], [0.88, 1.1], [-0.1, 0.78], [1.12, 0.18]];
+  const n = 8 + ((Math.random() * 5) | 0);
+  spots.sort(() => Math.random() - 0.5).slice(0, n).forEach((sp, i) => {
+    const from = { x: sp[0] * w, y: sp[1] * h };
+    const bend = (Math.random() * 2 - 1) * Math.min(130, Math.hypot(to.x - from.x, to.y - from.y) * 0.4);
+    launchAvatar(field, from, to, bend, FLY_EASES[i % FLY_EASES.length], i * 90 + Math.random() * 50, 1000 + Math.random() * 400, i, FLY_FACES[i % FLY_FACES.length]);
+  });
+}
+function finishToChat() {
+  if (finishingChat) return;
+  const job = pendingMatch;
+  if (!job || job.gen !== searchGen) return;
+  finishingChat = true;
+  pendingMatch = null;
+  flyerSession = false;
+  const pop = document.querySelector(".searching .heart-pop");
+  const go = () => {
+    finishingChat = false;
+    if (job.gen !== searchGen || current !== "search") return;
+    clearInterval(tipTimer);
+    stopFlyers();
+    openChat(job.m);
+  };
+  if (pop && !reduceMotion()) {
+    pop.classList.add("pop-final");
+    haptic("success");
+    setTimeout(go, 360);
+  } else go();
+}
 function revealMatch(m, gen) {
   stopBumps();
-  const p = m.partner;
+  if (gen !== searchGen) return;
+  pendingMatch = { m, gen };
   const el = $("match-reveal");
-  el.innerHTML = `<div class="found-scene"><div class="found-meet"><span class="found-side a">${anonHTML()}</span><span class="found-side b">${anonHTML()}</span></div><div class="found-word">Нашли</div></div>`;
-  el.classList.remove("hidden");
-  haptic("success");
-  const go = () => {
-    if (gen !== searchGen || current !== "search") return;
-    clearTimeout(revealTimer); revealTimer = null;
-    el.classList.add("hidden");
-    el.onclick = null;
-    clearInterval(tipTimer);
-    openChat(m);
-  };
-  clearTimeout(revealTimer);
-  revealTimer = setTimeout(go, 1800);
-  el.onclick = (e) => { if (e.target.closest("#srch-cancel")) return; go(); };
+  if (el) { el.classList.add("hidden"); el.onclick = null; }
+  if (!flyerSession || reduceMotion() || flyerCount === 0) finishToChat();
 }
 
 /* ---------- chat ---------- */
@@ -936,22 +1081,21 @@ function openChat(m) {
 function chatDur() { return chat ? Math.floor(((chat.endedAt || Date.now()) - chat.startedAt) / 1000) : 0; }
 function paintChatFace() {
   if (!chat) return;
-  const p = chat.partner;
-  const crown = p.premium ? `<i class="name-crown">${ic("crown")}</i>` : "";
-  const av = chat.masksOff ? avatarHTML(p, "sm") : anonHTML("sm", p);
-  $("chat-who").innerHTML = `<span class="who-av">${av}${crown}</span>`;
-  const photoBtn = $("chat-photo");
-  if (photoBtn) photoBtn.classList.toggle("hidden", !chat.masksOff);
-  paintIcons($("chat-who"));
+  const av = $("chat-avatar");
+  if (av) av.innerHTML = `<span class="glass-av">${ic("user")}</span>`;
+  const who = $("chat-who");
+  if (who && !who.querySelector("#chat-status")) who.innerHTML = `<b>Собеседник</b><small id="chat-status">в сети</small>`;
+  const st = $("chat-status");
+  if (st) st.textContent = chat.partnerGone ? "не в сети" : (chat.typing ? "печатает…" : "в сети");
 }
 function paintMaskNote() {
   const el = $("mask-note");
   if (!el) return;
   if (!chat || chat.ended || chat.masksOff) { el.classList.add("hidden"); el.classList.remove("soon"); return; }
   el.classList.remove("hidden");
-  if (chat.partnerGone) { el.textContent = "Фото так и не открылись"; el.classList.remove("soon"); return; }
-  if (maskPhase(chatDur()) === "soon") { el.textContent = "Сейчас откроются фото"; el.classList.add("soon"); return; }
-  el.textContent = "Фото откроются через " + fmtDur(MASK_SEC - chatDur());
+  if (chat.partnerGone) { el.textContent = "Мэтча не случилось"; el.classList.remove("soon"); return; }
+  if (maskPhase(chatDur()) === "soon") { el.textContent = "Скоро мэтч"; el.classList.add("soon"); return; }
+  el.textContent = "Мэтч через " + fmtDur(MASK_SEC - chatDur());
   el.classList.remove("soon");
 }
 function recordMatch() {
@@ -973,7 +1117,7 @@ function addMatchMoment() {
   if (!box) return;
   const el = document.createElement("div");
   el.className = "match-moment";
-  el.innerHTML = `<b>Встреча</b><span>Вы увидели друг друга</span>`;
+  el.innerHTML = `<b>Вы замэтчились</b><span>Это мэтч</span>`;
   box.appendChild(el);
   box.scrollTop = box.scrollHeight;
 }
@@ -1060,10 +1204,10 @@ function showMsgMenu(el, x, y) {
   let m = $("msg-menu");
   if (!m) { m = document.createElement("div"); m.id = "msg-menu"; m.className = "msg-menu hidden"; $("app").appendChild(m); }
   m.dataset.mid = el.dataset.mid;
-  m.innerHTML = `<div class="msg-emoji">${REACT_SET.map((e) => `<button type="button" data-emoji="${e}">${e}</button>`).join("")}</div><button type="button" data-act="reply">Ответить</button>`;
+  m.innerHTML = `<button type="button" data-act="reply">Ответить</button><button type="button" data-act="copy">Копировать</button><button type="button" data-act="report">Пожаловаться</button>`;
   m.classList.remove("hidden");
   const app = $("app").getBoundingClientRect();
-  const w = 228, h = 86;
+  const w = 228, h = 148;
   let left = x - app.left - 16;
   let top = y - app.top - h - 8;
   left = Math.max(8, Math.min(left, app.width - w - 8));
@@ -1072,11 +1216,16 @@ function showMsgMenu(el, x, y) {
   m.style.top = top + "px";
   suppressClick = true;
 }
+function msgStamp() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
 function addMsg(text, who) {
   const box = $("messages");
   const el = document.createElement("div"); el.className = "msg " + who;
   const body = document.createElement("div"); body.className = "msg-body"; body.textContent = text;
-  el.appendChild(body);
+  const time = document.createElement("span"); time.className = "msg-time"; time.textContent = msgStamp();
+  el.appendChild(body); el.appendChild(time);
   sealBubble(el, who, "text");
   box.appendChild(el); box.scrollTop = box.scrollHeight;
 }
@@ -1110,20 +1259,137 @@ function addSys(text, kind) {
   const el = document.createElement("div"); el.className = "sys" + (kind ? " " + kind : ""); el.textContent = text;
   box.appendChild(el); box.scrollTop = box.scrollHeight;
 }
-function updateSend() { $("msg-send").disabled = !$("msg-input").value.trim() || !chat || chat.ended || chat.partnerGone; }
+function updateSend() {
+  const btn = $("msg-send");
+  const input = $("msg-input");
+  if (!btn || !input) return;
+  const blocked = !chat || chat.ended || chat.partnerGone;
+  const send = !!input.value.trim() && !blocked;
+  btn.classList.toggle("is-send", send);
+  btn.classList.toggle("is-mic", !send);
+  btn.disabled = !!blocked;
+  btn.innerHTML = ic(send ? "send" : "mic");
+  btn.setAttribute("aria-label", send ? "Отправить" : "Голосовое");
+}
 function markPartnerGone() {
   if (!chat || chat.partnerGone) return;
   chat.partnerGone = true;
   $("typing").classList.add("hidden");
   addSys("Собеседник вышел");
-  const small = $("chat-who") && $("chat-who").querySelector("small");
-  if (small) small.textContent = "вышел";
+  chat.typing = false;
+  const small = $("chat-status");
+  if (small) small.textContent = "не в сети";
   $("msg-input").disabled = true;
   $("msg-input").placeholder = "Собеседник вышел";
   $("msg-input").blur();
   updateSend();
   const can = chat.masksOff && H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0) && chat.given == null;
   $("gone-rate").classList.toggle("hidden", !can);
+}
+let voicePtr = null;
+function stopVoiceTracks() {
+  const v = voicePtr;
+  if (!v) return;
+  if (v.raf) cancelAnimationFrame(v.raf);
+  if (v.rec && v.rec.state !== "inactive") { try { v.rec.stop(); } catch {} }
+  if (v.stream) v.stream.getTracks().forEach((t) => t.stop());
+}
+function paintVoiceBars(live) {
+  const box = $("voice-live");
+  if (!box) return;
+  const bars = live || Array.from({ length: 16 }, () => 30 + Math.round(Math.random() * 70));
+  box.innerHTML = bars.map((h) => `<i style="height:${h}%"></i>`).join("");
+  return bars;
+}
+function voiceFrame() {
+  if (!voicePtr) return;
+  const s = Math.floor((Date.now() - voicePtr.t0) / 1000);
+  const label = $("voice-time");
+  if (label) label.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  voicePtr.bars = paintVoiceBars();
+  if (s >= 60) { endVoice(true); return; }
+  voicePtr.raf = requestAnimationFrame(voiceFrame);
+}
+async function beginVoice(e) {
+  if (voicePtr) return;
+  voicePtr = { id: e.pointerId, x: e.clientX, cancel: false, chunks: [], rec: null, stream: null, t0: Date.now(), bars: [], raf: 0 };
+  $("composer").classList.add("recording");
+  $("voice-bar").classList.remove("hidden");
+  $("voice-bar").classList.remove("cancel");
+  const hint = $("voice-hint");
+  if (hint) hint.textContent = "Влево — отмена";
+  try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (!voicePtr) { stream.getTracks().forEach((t) => t.stop()); return; }
+    voicePtr.stream = stream;
+    const rec = new MediaRecorder(stream);
+    voicePtr.rec = rec;
+    rec.ondataavailable = (ev) => { if (ev.data && ev.data.size && voicePtr) voicePtr.chunks.push(ev.data); };
+    rec.start();
+  } catch {}
+  voiceFrame();
+  haptic("light");
+}
+function addVoice(blob, ms, bars) {
+  if (!chat) return;
+  const box = $("messages");
+  const el = document.createElement("div");
+  el.className = "msg me voice";
+  const secs = Math.max(1, Math.round(ms / 1000));
+  const heights = bars && bars.length ? bars : Array.from({ length: 16 }, () => 30 + Math.round(Math.random() * 70));
+  el.innerHTML = `<button type="button" class="v-play" aria-label="Слушать">${ic("play")}</button><span class="v-wave">${heights.map((h) => `<i style="height:${h}%"></i>`).join("")}</span><span class="msg-time">0:${String(secs % 60).padStart(2, "0")}</span>`;
+  if (blob && blob.size) el.dataset.src = URL.createObjectURL(blob);
+  sealBubble(el, "me", "voice");
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+  chat.mine++;
+  maybeUnlock();
+}
+function endVoice(send) {
+  const v = voicePtr;
+  if (!v) return;
+  voicePtr = null;
+  const dur = Date.now() - v.t0;
+  $("composer").classList.remove("recording");
+  $("voice-bar").classList.add("hidden");
+  const cleanup = () => {
+    if (v.stream) v.stream.getTracks().forEach((t) => t.stop());
+  };
+  const cancelled = !send || v.cancel || dur < 450;
+  const deliver = (blob) => {
+    cleanup();
+    if (cancelled) { if (v.cancel) toast("Отменено"); return; }
+    addVoice(blob, dur, v.bars);
+    haptic("light");
+  };
+  if (v.rec && v.rec.state === "recording") {
+    v.rec.onstop = () => deliver(new Blob(v.chunks, { type: v.rec.mimeType || "audio/webm" }));
+    try { v.rec.stop(); } catch { deliver(null); }
+    return;
+  }
+  if (v.raf) cancelAnimationFrame(v.raf);
+  deliver(null);
+}
+function onVoiceMove(e) {
+  if (!voicePtr || e.pointerId !== voicePtr.id) return;
+  const cancel = e.clientX - voicePtr.x < -72;
+  if (cancel !== voicePtr.cancel) {
+    voicePtr.cancel = cancel;
+    $("voice-bar").classList.toggle("cancel", cancel);
+    const hint = $("voice-hint");
+    if (hint) hint.textContent = cancel ? "Отмена" : "Влево — отмена";
+    if (cancel) haptic("light");
+  }
+}
+async function askContact() {
+  if (!chat || chat.ended || chat.partnerGone) return;
+  try {
+    const r = await backend.requestContact(chat.id);
+    if (r && r.status === "matched" && r.username) addSys("Контакты совпали · @" + r.username, "ok");
+    else addSys("Запрос на обмен контактами отправлен");
+    haptic("light");
+  } catch { toast("Сейчас не получится", "warn"); }
 }
 function shakeField(el) { el.classList.remove("blocked"); void el.offsetWidth; el.classList.add("blocked"); setTimeout(() => el.classList.remove("blocked"), 900); }
 function sendMsg() {
@@ -1344,7 +1610,7 @@ function finishProfileField(el) {
     state.me.name = name.slice(0, 20);
   } else if (id === "p-age") {
     const age = parseInt(el.value, 10);
-    if (!age || age < RULES.MIN_AGE || age > 99) { toast(age && age < RULES.MIN_AGE ? "Нужно 18 или больше. Младше в Hunty не регистрируем." : "Укажи возраст", "warn"); el.value = state.me.age || ""; haptic("error"); el.blur(); return; }
+    if (!age || age < RULES.MIN_AGE || age > 99) { toast(age && age < RULES.MIN_AGE ? "Нужно 18 или больше. Младше в Cupion не регистрируем." : "Укажи возраст", "warn"); el.value = state.me.age || ""; haptic("error"); el.blur(); return; }
     const fromPool = H.agePool(state.me.age);
     const toPool = H.agePool(age);
     if (fromPool && toPool && fromPool !== toPool) { toast("Так возраст не меняется", "warn"); el.value = state.me.age; haptic("error"); el.blur(); return; }
@@ -1352,12 +1618,13 @@ function finishProfileField(el) {
   } else return;
   state.me.about = "";
   save(); backend.updateMe(publicMe());
+  paintHero();
   if (document.activeElement === el) el.blur();
   } finally { profileLock = false; }
 }
 function confirmResetActivity() {
   if (!isPremium()) { haptic("warning"); return openPremium(); }
-  const body = openSheet(`<div class="sh-title">Сбросить статистику?</div><div class="sh-sub">Чаты, среднее время и список встреч. Оценки и «Мои оценки» останутся.</div>
+  const body = openSheet(`<div class="sh-title">Сбросить статистику?</div><div class="sh-sub">Чаты, среднее время и список мэтчей. Оценки и «Мои оценки» останутся.</div>
     <div class="sh-actions"><button class="btn btn-primary btn-lg" id="rst-act">Сбросить</button><button class="btn btn-ghost" id="rst-act-no">Отмена</button></div>`);
   body.querySelector("#rst-act-no").onclick = () => closeSheet(true);
   body.querySelector("#rst-act").onclick = () => {
@@ -1391,34 +1658,46 @@ function renderMyMatches() {
   const box = $("my-matches");
   if (!box) return;
   const rows = [...(state.matches || [])].reverse();
-  const head = `<div class="card-head"><h3>Встречи</h3></div><p class="match-sub">С кем дошли до 2:30</p>`;
+  const head = `<div class="card-head"><h3>Мэтчи</h3></div><p class="match-sub">С кем дошли до 2:30</p>`;
   if (!rows.length) {
-    box.innerHTML = head + `<p class="hint">Пока нет. Встреча — если дойти до 2:30.</p>`;
+    box.innerHTML = head + `<p class="hint">Пока нет. Мэтч — если дойти до 2:30.</p>`;
     return;
   }
   box.innerHTML = head + rows.map((m) => {
     const mine = givenFor(m.id, m.given);
     const open = mutualWrite(mine, m.theirScore);
-    const title = open ? `${esc(m.name)}${m.age ? ", " + m.age : ""}` : (m.age ? esc(String(m.age)) + " лет" : "Встреча");
+    const title = open ? `${esc(m.name)}${m.age ? ", " + m.age : ""}` : (m.age ? esc(String(m.age)) + " лет" : "Мэтч");
     const write = open ? `<button class="write-btn" type="button" data-write="${esc(m.id)}">Написать</button>` : "";
     return `<div class="match-row${open ? " can-write" : ""}"><button class="match-main" type="button" data-mid="${esc(m.sessionId)}">${avatarHTML(m, "sm")}<span class="rater-main"><b>${title}</b><span class="hint">${fmtDur(m.dur)}</span>${scorePair(mine, m.theirScore)}</span></button>${write}<button class="match-again" type="button" data-again="${esc(m.id)}">Ещё раз</button></div>`;
   }).join("");
 }
+function paintPremBanner() {
+  const el = $("prem-banner");
+  if (!el) return;
+  const pro = isPremium();
+  el.classList.toggle("is-on", pro);
+  el.innerHTML = `<span class="prem-art" aria-hidden="true"><svg viewBox="0 0 200 180"><path fill="#fff" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><ellipse cx="74" cy="52" rx="22" ry="12" fill="#fff" opacity=".55" transform="rotate(-32 74 52)"/></svg></span><span class="prem-copy"><span class="prem-badge">${pro ? "Активна" : "Premium"}</span><b>Cupion Premium</b><small>${pro ? "До " + new Date(state.premium.until).toLocaleDateString("ru-RU") : "Голосовые сообщения"}</small></span><span class="prem-go">${pro ? "Открыть" : "Подключить"}</span>`;
+}
+function paintHero() {
+  const el = $("profile-hero");
+  if (!el) return;
+  const m = state.me;
+  const r = myRep();
+  const num = r.isNew ? "Новый" : (r.avg || 0).toFixed(1);
+  const av = (m.photos && m.photos[0]) ? avatarHTML(m, "xl") : `<span class="av xl" style="${avStyle(m.hue)}">${esc(((m.name || "?").trim().charAt(0) || "?").toUpperCase())}</span>`;
+  el.innerHTML = `${av}<div class="hero-copy"><p class="kicker">Профиль</p><h1>${esc(m.name || "Без имени")}</h1><p class="stat-line"><span>Рейтинг</span><b>${num}</b></p></div>`;
+}
 function renderProfile() {
-  const m = state.me, pro = isPremium(), rep = myRep();
+  const m = state.me;
   const set = (id, val) => { const el = $(id); if (el && document.activeElement !== el) el.value = val == null ? "" : val; };
   set("p-name", m.name || "");
   set("p-age", m.age || "");
   renderSeek($("p-gender"), m.gender);
   renderSeek($("p-seek"), m.seeking);
   renderMyPhotos();
-  $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML();
+  paintPremBanner();
+  paintHero();
   renderMyMatches();
-  $("me-premium").className = "card premium-card" + (pro ? " on" : "");
-  $("me-premium").innerHTML = pro
-    ? `<div class="pro-kicker">${ic("crown")} Активна</div><h3>PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Фото после 2:30, 6 фото и «Ещё раз».</p>`
-    : `${mascotImg("prem-mascot")}<h3>PRO подписка</h3><p>Фото после 2:30, 6 фото, быстрее поиск и «Ещё раз».</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
-  const pb = $("me-pro-btn"); if (pb) pb.onclick = openPremium;
   renderProTools();
   const wr = $("who-rated-bottom");
   wr.textContent = "Мои оценки";
@@ -1437,11 +1716,12 @@ const PLANS = [
 ];
 function openPremium() {
   let plan = "week";
-  const feats = [["camera", "Фото в чате", "после 2:30"], ["plus", "6 фото в профиле", "бесплатно — 3"], ["search", "Быстрее поиск", ""], ["clock", "Без паузы", "после частых «Дальше»"], ["crown", "Корона", "на аватаре"], ["trash", "Сбросить статистику", "чаты и встречи"], ["rewind", "Ещё раз", "найти того же"]];
-  openSheet(`<div class="feat-list">${feats.map(([i, b, s]) => `<div class="feat"><span class="lr-ic">${ic(i)}</span><div><b>${b}</b>${s ? `<small>${s}</small>` : ""}</div></div>`).join("")}</div>`);
-  $("prem-dock-top").innerHTML = `<div class="prem-id">${mascotImg("prem-hero-mascot")}<div class="sh-title">PRO подписка</div></div>
-    <div class="plans" id="plans">${PLANS.map((p) => `<button class="plan ${p.id === plan ? "on" : ""}" data-p="${p.id}" type="button"><b>${p.name}</b><span class="price">${ic("star")}${p.stars}</span></button>`).join("")}</div>`;
-  $("prem-dock-bot").innerHTML = `<button class="btn btn-primary btn-lg" id="buy" type="button">Подключить · ${PLANS[1].stars} ★</button>`;
+  const pro = isPremium();
+  const feats = [["mic", "Голосовые", "сообщения в чате"], ["search", "Быстрее поиск", ""], ["clock", "Без паузы", "после частых «Дальше»"], ["crown", "Корона", "на аватаре"], ["trash", "Сбросить статистику", "чаты и мэтчи"], ["rewind", "Ещё раз", "найти того же"]];
+  openSheet(`<div class="feat-list">${feats.map(([i, b, s]) => `<div class="feat"><span class="lr-ic">${ic(i)}</span><div><b>${b}</b>${s ? `<small>${s}</small>` : ""}</div></div>`).join("")}</div>
+    <div class="plans" id="plans">${PLANS.map((p) => `<button class="plan ${p.id === plan ? "on" : ""}" data-p="${p.id}" type="button"><b>${p.name}</b><span class="price">${ic("star")}${p.stars}</span></button>`).join("")}</div>`);
+  $("prem-dock-top").innerHTML = `<div class="pay-stack"><div class="pay-back a"></div><div class="pay-back b"></div><div class="pay-front"><span class="prem-badge">${pro ? "Активна" : "Premium"}</span><h2>Голосовые<br><span>Cupion Premium</span></h2></div></div>`;
+  $("prem-dock-bot").innerHTML = `<button class="btn btn-gradient btn-lg" id="buy" type="button">Подключить · ${PLANS[1].stars} ★</button>`;
   $("sheet").classList.add("is-pro");
   paintIcons($("sheet"));
   requestAnimationFrame(pinPremiumSheet);
@@ -1490,16 +1770,16 @@ function ratingRows() {
 function renderRatings() {
   const rows = ratingRows();
   const sub = $("ratings-sub");
-  if (sub) sub.textContent = "После встречи в 2:30";
+  if (sub) sub.textContent = "После мэтча в 2:30";
   const box = $("rater-list");
   if (!box) return;
   box.innerHTML = rows.length ? rows.map((h) => {
     const open = mutualWrite(h.given, h.theirs);
     const face = (open || h.faceShown) ? avatarHTML(h, "sm") : anonHTML("sm");
-    const title = open ? `${esc(h.name)}${h.age ? ", " + h.age : ""}` : (h.age ? esc(String(h.age)) + " лет" : "Встреча");
+    const title = open ? `${esc(h.name)}${h.age ? ", " + h.age : ""}` : (h.age ? esc(String(h.age)) + " лет" : "Мэтч");
     const write = open ? `<button class="write-btn" type="button" data-write="${esc(h.personId || "")}">Написать</button>` : "";
     return `<article class="oc-row${open ? " can-write" : ""}" data-rid="${esc(h.rid)}"><div class="oc-who">${face}<div><b>${title}</b><span>${fmtDur(h.dur)}</span></div>${write}</div>${scorePair(h.given, h.theirs)}</article>`;
-  }).join("") : `<div class="oc-empty">Пока нет. Оценка — после встречи в 2:30.</div>`;
+  }).join("") : `<div class="oc-empty">Пока нет. Оценка — после мэтча в 2:30.</div>`;
 }
 function openRevealPaywall() {
   const body = openSheet(`<div class="sh-title">Лимит открытий</div><div class="sh-sub">Бесплатно ${FREE_REVEALS} в день. В PRO — без лимита.</div>
@@ -1529,7 +1809,7 @@ function openLimitSheet() {
 /* ---------- rules / restricted ---------- */
 function openRules() {
   const R0 = [["Только 18+", "Возраст от 18. Младше зарегистрироваться нельзя. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама", "Чужие ссылки и номера в чате не проходят. Юзернейм можно написать самим. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 — после разговора, если вы успели пообщаться. Фото в «Мои оценки» только если они успели открыться. Короткий пропуск не попадает в среднюю."]];
-  openSheet(`<div class="sh-title">Правила Hunty</div><div class="sh-sub">Коротко и по делу</div>
+  openSheet(`<div class="sh-title">Правила Cupion</div><div class="sh-sub">Коротко и по делу</div>
     <div class="rules-list">${R0.map(([b, p], i) => `<div class="rule"><span class="rn">${i + 1}</span><div><b>${b}</b><p>${p}</p></div></div>`).join("")}</div>
     <div class="rate-note">30 жалоб за 24 часа закрывают поиск на 10 часов. Низкие оценки никогда не ограничивают. Ещё 30 жалоб за сутки — снова 10 часов.</div>`);
 }
@@ -1589,13 +1869,21 @@ function refresh() { if (current === "home") renderHome(); if (current === "prof
 function bindBackend() {
   backend.on("typing", ({ sessionId, on }) => {
     if (!chat || chat.id !== sessionId || chat.ended) return;
+    chat.typing = !!on;
     $("typing").classList.toggle("hidden", !on);
+    const st = $("chat-status");
+    if (st && !chat.partnerGone) st.textContent = on ? "печатает…" : "в сети";
     if (on) { const b = $("messages"); b.scrollTop = b.scrollHeight; }
   });
   backend.on("message", ({ sessionId, text, photo }) => {
     if (!chat || chat.id !== sessionId || chat.ended) return;
-    $("typing").classList.add("hidden"); chat.theirs++;
-    if (photo) { if (chat.masksOff) addPhoto(photo, "them"); } else addMsg(text, "them");
+    chat.typing = false;
+    $("typing").classList.add("hidden");
+    const st = $("chat-status");
+    if (st && !chat.partnerGone) st.textContent = "в сети";
+    if (photo) return;
+    chat.theirs++;
+    addMsg(text, "them");
     maybeUnlock(); haptic("light");
   });
   backend.on("partnerLeft", ({ sessionId }) => {
@@ -1614,6 +1902,10 @@ function bindBackend() {
       state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: partner.photos || [], faceShown: true, age: partner.age, country: partner.country, city: partner.city, premium: partner.premium, score, dur, ts: Date.now() });
     }
     save(); refresh();
+  });
+  backend.on("contactMatched", ({ sessionId, username }) => {
+    if (!chat || chat.id !== sessionId) return;
+    addSys(username ? "Контакты совпали · @" + username : "Контакты совпали", "ok");
   });
 }
 
@@ -1985,6 +2277,10 @@ function bind() {
   $("reg-save").onclick = regAdvance;
 
   let heartArm = false;
+  $("btn-search").addEventListener("pointerdown", () => { $("btn-search").classList.add("squish"); haptic("light"); });
+  $("btn-search").addEventListener("pointerup", () => $("btn-search").classList.remove("squish"));
+  $("btn-search").addEventListener("pointerleave", () => $("btn-search").classList.remove("squish"));
+  $("btn-search").addEventListener("pointercancel", () => $("btn-search").classList.remove("squish"));
   $("btn-search").onclick = () => {
     const ready = state.registered && (state.me.age | 0) >= RULES.MIN_AGE && !banned() && !$("btn-search").classList.contains("off");
     if (!ready) return startSearch();
@@ -1997,8 +2293,24 @@ function bind() {
   $("cd-skip").onclick = onCooldownAction;
   $("srch-cancel").onclick = cancelSearch;
 
-  $("chat-skip").onclick = () => { haptic("medium"); leaveChat("next"); };
-  $("chat-report").onclick = () => { if (chat) openReport(chat.partner); };
+  const back = $("chat-back");
+  if (back) back.onclick = () => goBack();
+  const actBtn = $("chat-activity");
+  if (actBtn) actBtn.onclick = () => {
+    const menu = $("act-menu");
+    if (!menu) return;
+    menu.classList.toggle("hidden");
+    haptic("light");
+  };
+  const actMenu = $("act-menu");
+  if (actMenu) actMenu.onclick = (e) => {
+    const b = e.target.closest("[data-act]");
+    if (!b) return;
+    actMenu.classList.add("hidden");
+    if (b.dataset.act === "skip") { haptic("medium"); leaveChat("next"); }
+    else if (b.dataset.act === "contact") askContact();
+    else if (b.dataset.act === "report" && chat) openReport(chat.partner);
+  };
   $("gone-rate").onclick = () => {
     if (!chat || chat.given != null || !chat.masksOff) return;
     if (!H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0)) return;
@@ -2006,7 +2318,7 @@ function bind() {
     chat.entry = entry;
     openRateSheet(entry, "stay");
   };
-  $("chat-who").onclick = () => chat && openPartnerProfile(chat.partner, { lean: true });
+  $("chat-who").onclick = () => { if (chat) toast("Имя, фото и возраст скрыты"); };
   let chatPhotoTap = null;
   let lastMsgTap = { id: "", t: 0 };
   $("messages").addEventListener("pointerdown", (e) => {
@@ -2071,6 +2383,8 @@ function bind() {
     lastMsgTap = { id: msg.dataset.mid, t: now };
   });
   document.addEventListener("pointerdown", (e) => {
+    const act = $("act-menu");
+    if (act && !act.classList.contains("hidden") && !e.target.closest("#act-menu, #chat-activity")) act.classList.add("hidden");
     const menu = $("msg-menu");
     if (!menu || menu.classList.contains("hidden")) return;
     if (e.target.closest("#msg-menu")) return;
@@ -2085,6 +2399,19 @@ function bind() {
       const el = document.querySelector(`.msg[data-mid="${CSS.escape(menu.dataset.mid)}"]`);
       if (el) { replyTo = { id: el.dataset.mid, preview: bubblePreview(el) }; paintReplyBar(); $("msg-input").focus(); }
       hideMsgMenu();
+      return;
+    }
+    if (e.target.closest("[data-act='copy']")) {
+      const el = document.querySelector(`.msg[data-mid="${CSS.escape(menu.dataset.mid)}"]`);
+      const text = bubblePreview(el);
+      hideMsgMenu();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast("Скопировано")).catch(() => toast("Скопировано"));
+      else toast("Скопировано");
+      return;
+    }
+    if (e.target.closest("[data-act='report']")) {
+      hideMsgMenu();
+      if (chat) openReport(chat.partner);
     }
   });
   $("reply-x").onclick = () => { replyTo = null; paintReplyBar(); };
@@ -2092,14 +2419,28 @@ function bind() {
   $("msg-input").addEventListener("focus", () => { predictKb(true); scrollMessagesNow(); });
   $("msg-input").addEventListener("blur", () => predictKb(false));
   $("msg-input").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendMsg(); } });
-  $("msg-send").addEventListener("pointerdown", (e) => e.preventDefault());
+  $("msg-send").addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if ($("msg-send").classList.contains("is-send")) return;
+    if (!chat || chat.ended || chat.partnerGone) return;
+    if (!isPremium()) { haptic("warning"); openPremium(); return; }
+    beginVoice(e);
+  });
+  $("msg-send").addEventListener("pointermove", onVoiceMove);
+  $("msg-send").addEventListener("pointerup", (e) => { if (voicePtr && e.pointerId === voicePtr.id) endVoice(true); });
+  $("msg-send").addEventListener("pointercancel", (e) => { if (voicePtr && e.pointerId === voicePtr.id) endVoice(false); });
   $("msg-send").addEventListener("mousedown", (e) => e.preventDefault());
-  $("msg-send").onclick = sendMsg;
-  $("chat-photo").onclick = () => {
-    if (!chat || !chat.masksOff) { toast("Фото откроются сами, чуть позже"); return; }
-    if (!isPremium()) openPhotoPaywall(); else $("chat-photo-input").click();
-  };
-  $("chat-photo-input").onchange = () => { const f = $("chat-photo-input").files[0]; $("chat-photo-input").value = ""; sendChatPhoto(f); };
+  $("msg-send").onclick = () => { if ($("msg-send").classList.contains("is-send")) sendMsg(); };
+  $("messages").addEventListener("click", (e) => {
+    const play = e.target.closest(".v-play");
+    if (!play) return;
+    const msg = play.closest(".msg");
+    if (!msg || !msg.dataset.src) { play.classList.toggle("on"); return; }
+    let audio = msg._audio;
+    if (!audio) { audio = new Audio(msg.dataset.src); msg._audio = audio; audio.onended = () => msg.classList.remove("playing"); }
+    if (msg.classList.contains("playing")) { audio.pause(); msg.classList.remove("playing"); }
+    else { audio.play(); msg.classList.add("playing"); }
+  });
   $("ended-home").onclick = () => leaveChat("home");
   $("ended-next").onclick = () => leaveChat("next");
 
@@ -2193,6 +2534,10 @@ function bind() {
     const a = document.activeElement;
     if (a && a.closest && a.closest("#edit-card")) a.blur();
   });
+  const sheetX = $("sheet-close");
+  if (sheetX) sheetX.onclick = () => closeSheet();
+  const premBanner = $("prem-banner");
+  if (premBanner) premBanner.onclick = () => openPremium();
   $("sheet-backdrop").onclick = () => closeSheet();
   let sy = null;
   $("sheet").addEventListener("click", (e) => {

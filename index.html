@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="theme-color" content="#EFEFF4" />
   <meta name="format-detection" content="telephone=no" />
-  <title>Hunty</title>
-  <link rel="icon" href="assets/cupion-mascot.png?v=36" type="image/png" />
-  <link rel="stylesheet" href="styles.css?v=36" />
+  <title>Cupion</title>
+  <link rel="icon" href="assets/cupion-mascot.png?v=37" type="image/png" />
+  <link rel="stylesheet" href="styles.css?v=37" />
+  <link rel="stylesheet" href="glass.css?v=37" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     (function () {
@@ -34,19 +35,19 @@
     <div class="onboard-track" id="ob-track">
       <article class="ob-slide">
         <div class="ob-art art-cards">
-          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=36" alt="" draggable="false"></div>
+          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=37" alt="" draggable="false"></div>
           <div class="mini-card c3"><span class="av sm anon" data-anon></span><div><b>Лиза, 26</b><small>★ 9.4 · 301 чат</small></div></div>
           <div class="mini-card c2"><span class="av sm anon" data-anon></span><div><b>Даня, 27</b><small>★ 8.3 · 212 чатов</small></div></div>
           <div class="mini-card c1"><span class="av sm anon" data-anon></span><div><b>Аня, 22</b><small>★ 8.7 · 124 чата</small></div><span class="live-dot"></span></div>
         </div>
         <h1>Сначала просто разговор</h1>
-        <p>Лица закрыты. Через две с половиной минуты фото открываются сами — это встреча. Не хочешь — «Дальше» раньше, и лица так и не увидите.</p>
+        <p>В чате нет имени, фото и возраста. Через две с половиной минуты это мэтч. Не хочешь — «Дальше» раньше.</p>
       </article>
       <article class="ob-slide">
         <div class="ob-art art-rating">
           <div class="ob-score"><b>8</b><span>из 10</span></div>
         </div>
-        <h1>Оценка после встречи</h1>
+        <h1>Оценка после мэтча</h1>
         <p>Если дошли до 2:30, можно поставить от 1 до 10. Оценка видна в «Мои оценки».</p>
       </article>
       <article class="ob-slide">
@@ -70,7 +71,7 @@
 
   <!-- REGISTRATION -->
   <section class="screen hidden reg" data-screen="register">
-    <header class="nav-bar"><button class="icon-btn" id="reg-back" data-ic="back" aria-label="Назад"></button><div class="nav-title" id="reg-title">Возраст</div><span class="icon-btn ghost"></span></header>
+    <header class="nav-bar"><button class="icon-btn" id="reg-back" data-ic="back" aria-label="Назад"></button><div class="nav-title" id="reg-title">Cupion</div><span class="icon-btn ghost"></span></header>
     <div class="reg-progress" id="reg-progress" role="progressbar" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1">
       <i class="on"></i><i></i><i></i><i></i><i></i><i></i>
     </div>
@@ -79,7 +80,7 @@
       <div class="reg-track" id="reg-track">
         <div class="reg-step is-current" data-step="age">
           <div class="group-title">Возраст <span class="req">от 18</span></div>
-          <p class="field-why">Hunty только для тех, кому уже есть 18.</p>
+          <p class="field-why">Cupion только для тех, кому уже есть 18.</p>
           <div class="age-row">
             <button class="step-btn" id="age-minus" type="button" aria-label="Меньше">−</button>
             <label class="field age-field"><input id="f-age" inputmode="numeric" maxlength="2" placeholder="18" /></label>
@@ -89,12 +90,12 @@
         </div>
         <div class="reg-step" data-step="name">
           <div class="group-title">Имя <span class="req">обязательно</span></div>
-          <p class="field-why">Как к тебе будут обращаться. Имя видно сразу.</p>
+          <p class="field-why">Так к тебе будут обращаться в профиле. В чате имя скрыто.</p>
           <label class="field"><input id="f-name" maxlength="20" placeholder="Как тебя называть" autocomplete="off" enterkeyhint="next" /></label>
         </div>
         <div class="reg-step" data-step="photos">
           <div class="group-title">Фото <span class="req">обязательно</span></div>
-          <p class="field-why">Их увидят, если разговор дойдёт до 2:30. Бесплатно — 3 фото, в PRO — до 6. Кружок — как фото встанет в аватар.</p>
+          <p class="field-why">Для твоего профиля. В чате фото не показываются. Бесплатно — 3, в Premium — до 6.</p>
           <div class="photo-slots" id="photo-slots"></div>
           <input type="file" id="photo-input" accept="image/*" hidden />
         </div>
@@ -102,14 +103,14 @@
           <div class="group-title">Пол <span class="req">обязательно</span></div>
           <p class="field-why">Нужен для подбора. На профиле пол не показывается.</p>
           <div class="segment" id="f-gender">
-            <button type="button" data-v="f">Девушка</button><button type="button" data-v="m">Парень</button>
+            <button type="button" data-v="m">Парень</button><button type="button" data-v="f">Девушка</button>
           </div>
         </div>
         <div class="reg-step" data-step="seek">
           <div class="group-title">Кого искать <span class="req">обязательно</span></div>
           <p class="field-why">Тоже для подбора — кого тебе показывать.</p>
           <div class="segment" id="f-seek">
-            <button type="button" data-v="f">Девушек</button><button type="button" data-v="m">Парней</button>
+            <button type="button" data-v="m">Парней</button><button type="button" data-v="f">Девушек</button>
           </div>
         </div>
         <div class="reg-step" data-step="rules">
@@ -117,7 +118,7 @@
           <p class="field-why">Без 18+ контента, оскорблений, скама и обмана с возрастом.</p>
           <label class="check-row" id="rules-row">
             <input type="checkbox" id="f-rules" /><span class="check"></span>
-            <span>Я принимаю <button class="inline-link" id="open-rules-reg">правила Hunty</button>: без 18+ контента, оскорблений, скама и обмана с возрастом.</span>
+            <span>Я принимаю <button class="inline-link" id="open-rules-reg">правила Cupion</button>: без 18+ контента, оскорблений, скама и обмана с возрастом.</span>
           </label>
         </div>
       </div>
@@ -131,11 +132,15 @@
       <div class="search-hero" id="search-hero">
         <h1 class="find-title">Найти<br>собеседника</h1>
         <div class="orb-wrap">
+          <span class="ambient a1" aria-hidden="true"></span>
+          <span class="ambient a2" aria-hidden="true"></span>
           <span class="heart-glow" aria-hidden="true"></span>
+          <span class="heart-halo" aria-hidden="true"></span>
+          <span class="sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
           <button class="search-btn" id="btn-search" type="button" aria-label="Найти собеседника">
             <span class="heart-shadow" aria-hidden="true"></span>
             <span class="heart-pop"><span class="heart-beat">
-              <svg class="heart-svg" viewBox="0 0 200 180" aria-hidden="true"><defs><radialGradient id="hg" cx="32%" cy="28%" r="78%"><stop offset="0%" stop-color="#ffe7f3"/><stop offset="28%" stop-color="#ff7eb3"/><stop offset="60%" stop-color="#ff3d8b"/><stop offset="100%" stop-color="#c41062"/></radialGradient><linearGradient id="hs" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#7a0a40" stop-opacity=".4"/></linearGradient></defs><path fill="url(#hg)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><path fill="url(#hs)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><ellipse cx="78" cy="56" rx="24" ry="13" fill="#fff" opacity=".72" transform="rotate(-28 78 56)"/></svg>
+              <svg class="heart-svg" viewBox="0 0 200 180" aria-hidden="true"><defs><radialGradient id="hg" cx="34%" cy="28%" r="78%"><stop offset="0%" stop-color="#fff"/><stop offset="16%" stop-color="#ffe0f0"/><stop offset="38%" stop-color="#ff6eae"/><stop offset="64%" stop-color="#ff2d78"/><stop offset="100%" stop-color="#9a0848"/></radialGradient><linearGradient id="hs" x1="0" y1="0" x2="0" y2="1"><stop offset="42%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#5c0830" stop-opacity=".55"/></linearGradient><linearGradient id="hrim" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity=".85"/><stop offset="45%" stop-color="#fff" stop-opacity=".15"/><stop offset="100%" stop-color="#fff" stop-opacity=".45"/></linearGradient></defs><path fill="url(#hg)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><path fill="url(#hs)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><path fill="none" stroke="url(#hrim)" stroke-width="3" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><ellipse cx="74" cy="52" rx="26" ry="14" fill="#fff" opacity=".88" transform="rotate(-32 74 52)"/><ellipse cx="92" cy="40" rx="8" ry="4" fill="#fff" opacity=".7" transform="rotate(-18 92 40)"/></svg>
             </span></span>
             <span class="sb-icon" data-ic="search"></span>
             <span class="sb-label">Поиск</span>
@@ -165,7 +170,8 @@
   <!-- PROFILE -->
   <section class="screen hidden tabbed" data-screen="profile">
     <div class="scroll">
-      <header class="large-title center"><h1>Профиль</h1></header>
+      <button class="prem-banner" id="prem-banner" type="button"></button>
+      <div class="profile-hero" id="profile-hero"></div>
       <div class="card edit-card" id="edit-card">
         <div class="photo-slots" id="p-photos"></div>
         <input type="file" id="p-photo-input" accept="image/*" hidden />
@@ -177,16 +183,14 @@
         </div>
         <div class="group-title">Пол</div>
         <div class="segment" id="p-gender">
-          <button type="button" data-v="f">Девушка</button><button type="button" data-v="m">Парень</button>
+          <button type="button" data-v="m">Парень</button><button type="button" data-v="f">Девушка</button>
         </div>
         <div class="group-title">Кого искать</div>
         <div class="segment" id="p-seek">
-          <button type="button" data-v="f">Девушек</button><button type="button" data-v="m">Парней</button>
+          <button type="button" data-v="m">Парней</button><button type="button" data-v="f">Девушек</button>
         </div>
       </div>
-      <div class="card stats-card" id="me-stats"></div>
       <div class="card" id="my-matches"></div>
-      <div class="card premium-card" id="me-premium"></div>
       <div id="pro-tools"></div>
       <div class="group-title pad">Оформление</div>
       <div class="list-group"><div class="list-row"><span class="lr-ic t-indigo" data-ic="moon"></span><span class="lr-label">Тема</span>
@@ -216,11 +220,16 @@
 
   <!-- SEARCHING -->
   <section class="screen hidden searching" data-screen="search">
+    <div class="fly-field" id="fly-field"></div>
     <div class="srch-center">
       <div class="bump-field" id="bump-field"></div>
       <div class="radar">
-        <i class="r1"></i><i class="r2"></i><i class="r3"></i>
-        <div class="search-heart" aria-hidden="true"><span class="heart-beat"><svg class="heart-svg" viewBox="0 0 200 180" aria-hidden="true"><defs><radialGradient id="hg2" cx="32%" cy="28%" r="78%"><stop offset="0%" stop-color="#ffe7f3"/><stop offset="28%" stop-color="#ff7eb3"/><stop offset="60%" stop-color="#ff3d8b"/><stop offset="100%" stop-color="#c41062"/></radialGradient><linearGradient id="hs2" x1="0" y1="0" x2="0" y2="1"><stop offset="50%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#7a0a40" stop-opacity=".4"/></linearGradient></defs><path fill="url(#hg2)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><path fill="url(#hs2)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><ellipse cx="78" cy="56" rx="24" ry="13" fill="#fff" opacity=".72" transform="rotate(-28 78 56)"/></svg></span></div>
+        <span class="ambient a1" aria-hidden="true"></span>
+        <span class="ambient a2" aria-hidden="true"></span>
+        <span class="heart-glow" aria-hidden="true"></span>
+        <span class="heart-halo" aria-hidden="true"></span>
+        <span class="sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <div class="search-heart" aria-hidden="true"><span class="heart-shadow"></span><span class="heart-pop"><span class="heart-beat"><svg class="heart-svg" viewBox="0 0 200 180" aria-hidden="true"><defs><radialGradient id="hg2" cx="34%" cy="28%" r="78%"><stop offset="0%" stop-color="#fff"/><stop offset="16%" stop-color="#ffe0f0"/><stop offset="38%" stop-color="#ff6eae"/><stop offset="64%" stop-color="#ff2d78"/><stop offset="100%" stop-color="#9a0848"/></radialGradient><linearGradient id="hs2" x1="0" y1="0" x2="0" y2="1"><stop offset="42%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#5c0830" stop-opacity=".55"/></linearGradient><linearGradient id="hrim2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity=".85"/><stop offset="45%" stop-color="#fff" stop-opacity=".15"/><stop offset="100%" stop-color="#fff" stop-opacity=".45"/></linearGradient></defs><path fill="url(#hg2)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><path fill="url(#hs2)" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><path fill="none" stroke="url(#hrim2)" stroke-width="3" d="M100 158C62 128 24 104 24 66 24 40 44 22 70 22c16 0 26 8 30 20 4-12 14-20 30-20 26 0 46 18 46 44 0 38-38 62-76 92z"/><ellipse cx="74" cy="52" rx="26" ry="14" fill="#fff" opacity=".88" transform="rotate(-32 74 52)"/><ellipse cx="92" cy="40" rx="8" ry="4" fill="#fff" opacity=".7" transform="rotate(-18 92 40)"/></svg></span></span></div>
         <div class="radar-me" id="radar-me"></div>
       </div>
       <div class="srch-title" id="srch-title">Ищем собеседника…</div>
@@ -233,22 +242,36 @@
 
   <!-- CHAT -->
   <section class="screen hidden chat" data-screen="chat">
+    <div class="chat-bg" aria-hidden="true"></div>
     <header class="chat-head">
-      <button class="chat-pill report" id="chat-report" type="button">Жалоба</button>
-      <button class="chat-who" id="chat-who"></button>
-      <button class="chat-pill skip" id="chat-skip" type="button">Дальше</button>
+      <button class="glass-cap back-cap" id="chat-back" type="button" data-ic="back" aria-label="Назад"></button>
+      <button class="glass-cap center-cap" id="chat-who" type="button">
+        <b>Собеседник</b>
+        <small id="chat-status">в сети</small>
+      </button>
+      <span class="glass-cap av-cap" id="chat-avatar" aria-hidden="true"></span>
     </header>
     <div class="messages" id="messages"></div>
     <div class="typing hidden" id="typing"><i></i><i></i><i></i></div>
+    <div class="act-pop hidden" id="act-menu" role="menu">
+      <button type="button" data-act="skip">Дальше</button>
+      <button type="button" data-act="contact">Обменяться контактами</button>
+      <button type="button" data-act="report">Пожаловаться</button>
+    </div>
     <footer class="composer" id="composer">
       <div class="mask-note hidden" id="mask-note"></div>
       <div class="reply-bar hidden" id="reply-bar"><div class="reply-copy"><b>Ответ</b><span id="reply-preview"></span></div><button type="button" id="reply-x" aria-label="Убрать ответ">×</button></div>
-      <div class="composer-row">
-        <button class="attach-btn hidden" id="chat-photo" type="button" data-ic="camera" aria-label="Фото"></button>
-        <input type="file" id="chat-photo-input" accept="image/*" hidden />
+      <div class="composer-row" id="composer-row">
+        <button class="act-btn" id="chat-activity" type="button" data-ic="activity" aria-label="Действия"></button>
         <label class="msg-field"><input id="msg-input" placeholder="Сообщение" autocomplete="off" maxlength="500" enterkeyhint="send" /></label>
         <button class="gone-rate hidden" id="gone-rate" type="button">Оценить</button>
-        <button class="send-btn" id="msg-send" data-ic="send" aria-label="Отправить"></button>
+        <button class="send-btn is-mic" id="msg-send" type="button" data-ic="mic" aria-label="Голосовое"></button>
+      </div>
+      <div class="voice-bar hidden" id="voice-bar">
+        <span class="voice-dot"></span>
+        <span class="voice-time" id="voice-time">0:00</span>
+        <span class="voice-live" id="voice-live"></span>
+        <span class="voice-hint" id="voice-hint">Влево — отмена</span>
       </div>
     </footer>
     <footer class="composer ended hidden" id="composer-ended">
@@ -260,7 +283,7 @@
   <!-- RESTRICTED -->
   <section class="screen hidden restricted" data-screen="restricted">
     <div class="rs-center">
-      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=36" alt="" draggable="false"></div>
+      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=37" alt="" draggable="false"></div>
       <h1>Поиск временно ограничен</h1>
       <p id="rs-reason">На твой профиль пожаловались несколько человек. Низкие оценки к ограничениям не приводят — только жалобы.</p>
       <div class="rs-timer" id="rs-timer">59:59</div>
@@ -294,12 +317,12 @@
 
   <!-- SHEET + TOAST -->
   <div class="sheet-backdrop hidden" id="sheet-backdrop"></div>
-  <div class="sheet hidden" id="sheet" role="dialog"><div class="sheet-grab"></div><div class="prem-dock-top" id="prem-dock-top"></div><div class="sheet-body" id="sheet-body"></div><div class="prem-dock-bot" id="prem-dock-bot"></div></div>
+  <div class="sheet hidden" id="sheet" role="dialog"><div class="sheet-grab"></div><button class="sheet-close" id="sheet-close" type="button" data-ic="close" aria-label="Закрыть"></button><div class="prem-dock-top" id="prem-dock-top"></div><div class="sheet-body" id="sheet-body"></div><div class="prem-dock-bot" id="prem-dock-bot"></div></div>
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=36"></script>
-<script src="mock.js?v=36"></script>
-<script src="app.js?v=36"></script>
+<script src="rules.js?v=37"></script>
+<script src="mock.js?v=37"></script>
+<script src="app.js?v=37"></script>
 </body>
 </html>

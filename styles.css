@@ -1,7 +1,8 @@
 /* Hunty — Telegram Mini App. Visual layer only. */
 :root {
-  --ease: cubic-bezier(0.32, 0.72, 0, 1);
-  --dur: 340ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --dur: 420ms;
   --fast: 180ms;
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", sans-serif;
   --font-display: var(--font-ui);
@@ -15,7 +16,10 @@
   --gold: #FFB020;
   --red: #FF3B30;
   /* Telegram themeParams, with Hunty fallbacks. Accent stays pink, not button-color. */
-  --bg: var(--tg-theme-secondary-bg-color, #EFEFF4);
+  --bg: var(--tg-theme-secondary-bg-color, #F6F2F5);
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-stroke: rgba(255, 255, 255, 0.82);
+  --glass-solid: rgba(255, 248, 251, 0.78);
   --surface: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #FFFFFF));
   --surface-2: #E5E5EA;
   --secondary: var(--tg-theme-secondary-bg-color, #EFEFF4);
@@ -51,10 +55,13 @@
   color-scheme: light;
 }
 html[data-theme="light"] {
-  --bg: #EFEFF4;
-  --surface: #FFFFFF;
-  --secondary: #EFEFF4;
-  --header: #EFEFF4;
+  --bg: #F6F2F5;
+  --surface: rgba(255, 255, 255, 0.72);
+  --secondary: #F6F2F5;
+  --header: #F6F2F5;
+  --glass: rgba(255, 255, 255, 0.64);
+  --glass-stroke: rgba(255, 255, 255, 0.86);
+  --glass-solid: rgba(255, 248, 251, 0.82);
   --bottom-bar: rgba(255, 255, 255, 0.92);
   --text: #000000;
   --muted: #8E8E93;
@@ -70,23 +77,26 @@ html[data-theme="dark"] {
   --coral-deep: #E9487C;
   --coral-soft: rgba(255, 91, 147, 0.16);
   --ink: #FFFFFF;
-  --bg: #000000;
-  --surface: #1C1C1E;
-  --surface-2: #2C2C2E;
-  --secondary: #1C1C1E;
-  --header: #000000;
-  --bottom-bar: rgba(28, 28, 30, 0.94);
-  --frost: rgba(0, 0, 0, 0.78);
+  --bg: #07060A;
+  --surface: #1C1C1F;
+  --surface-2: #151517;
+  --secondary: #07060A;
+  --header: #07060A;
+  --bottom-bar: rgba(12, 10, 14, 0.72);
+  --frost: rgba(8, 6, 10, 0.55);
+  --glass: rgba(18, 14, 20, 0.58);
+  --glass-stroke: rgba(255, 255, 255, 0.16);
+  --glass-solid: rgba(16, 12, 18, 0.78);
   --text: #FFFFFF;
-  --muted: #8E8E93;
-  --faint: #636366;
+  --muted: #C7C7CC;
+  --faint: #8E8E93;
   --subtitle: #8E8E93;
   --section-header: #8E8E93;
   --destructive: #FF453A;
   --red: #FF453A;
   --line: rgba(255, 255, 255, 0.1);
   --press: rgba(255, 255, 255, 0.08);
-  --bubble-them: #2C2C2E;
+  --bubble-them: rgba(255, 255, 255, 0.08);
   --bubble-me: #FF5B93;
   --bubble-me-text: #FFFFFF;
   --ring: rgba(255, 91, 147, 0.5);
@@ -591,7 +601,7 @@ html[data-theme="dark"] .new-badge { color: var(--gold); }
 
 /* searching */
 .searching.morph-in .srch-center { animation: morphIn 420ms var(--ease) both; }
-@keyframes morphIn { from { opacity: 0; transform: scale(0.62); } to { opacity: 1; transform: none; } }
+@keyframes morphIn { from { opacity: 0; } to { opacity: 1; } }
 .chat.morph-chat { animation: chatIn 380ms var(--ease) both; }
 @keyframes chatIn { from { opacity: 0; transform: translate3d(0, 28px, 0) scale(0.98); } to { opacity: 1; transform: none; } }
 .srch-center { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: var(--safe-t); }
@@ -743,7 +753,7 @@ html[data-theme="dark"] .rating-chip { color: var(--gold); }
 .rating-chip svg { width: 11px; height: 11px; }
 
 /* sheets */
-.sheet-backdrop { position: absolute; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.4); animation: fadeIn .25s var(--ease) both; }
+.sheet-backdrop { position: absolute; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.38); backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2); animation: fadeIn .25s var(--ease) both; }
 .sheet-backdrop.out { animation: fadeOut .24s var(--ease) both; }
 @keyframes fadeIn { from { opacity: 0; } }
 @keyframes fadeOut { to { opacity: 0; } }
@@ -752,10 +762,10 @@ html[data-theme="dark"] .rating-chip { color: var(--gold); }
   max-height: calc(var(--app-h) - var(--safe-t) - 24px);
   display: flex; flex-direction: column;
   border-radius: 28px 28px 0 0; background: var(--bg);
-  animation: sheetIn 380ms var(--ease) both;
+  animation: sheetIn 560ms var(--spring) both;
 }
 .sheet.out { animation: sheetOut 260ms var(--ease) both; }
-@keyframes sheetIn { from { transform: translate3d(0, 110%, 0); } }
+@keyframes sheetIn { 0% { transform: translate3d(0, 110%, 0); } 72% { transform: translate3d(0, -6px, 0); } 100% { transform: translate3d(0, 0, 0); } }
 @keyframes sheetOut { to { transform: translate3d(0, 110%, 0); } }
 .sheet-grab { width: 36px; height: 5px; border-radius: 3px; background: var(--faint); opacity: 0.7; margin: 8px auto 2px; flex: none; }
 .sheet-body { overflow-y: auto; overflow-x: hidden; padding: 8px var(--pad-r) calc(var(--safe-b) + 16px) var(--pad-l); }
@@ -899,23 +909,24 @@ html[data-theme="dark"] .toast { background: #F2F2F7; color: #000; }
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .search-btn, .sh-rings i, .radar > i, .radar-me { animation: none !important; }
+  .search-btn, .sh-rings i, .radar > i, .radar-me, .sparks i, .heart-glow, .ambient, .heart-beat { animation: none !important; }
   .reg-track { transition: none !important; }
 }
 
-/* Search page: glossy heart, no stats */
+/* Liquid glass + dark premium. Heart, chat, paywall, ambient glow. */
 .home-quiet { display: none; }
 .find-title {
   position: relative;
   z-index: 2;
-  font-size: 34px;
-  font-weight: 700;
+  font-size: 40px;
+  font-weight: 760;
   letter-spacing: -0.045em;
-  line-height: 1.02;
+  line-height: 0.98;
   text-align: center;
-  margin: 0 0 8px;
+  margin: 0 0 4px;
 }
-.search-hero .orb-wrap { width: 280px; height: 260px; }
+.find-title { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif; }
+.search-hero .orb-wrap { width: 300px; height: 280px; }
 .search-hero .heart-glow {
   position: absolute;
   width: 280px; height: 280px;
