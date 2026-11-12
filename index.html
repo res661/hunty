@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#F6F2EC" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=24" type="image/svg+xml" />
+  <link rel="icon" href="assets/mark.svg?v=25" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=24" />
+  <link rel="stylesheet" href="styles.css?v=25" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -31,15 +31,10 @@
       </article>
       <article class="ob-slide">
         <div class="ob-art art-rating">
-          <div class="rate-widget">
-            <div class="rw-top"><span class="rw-num">8.7</span><span class="rw-of">/10</span></div>
-            <div class="rw-bar"><i style="width:87%"></i></div>
-            <div class="rw-row"><span><b>124</b> разговора</span><span><b>6:12</b> в среднем</span></div>
-          </div>
-          <div class="rate-pills"><span>7</span><span>8</span><span class="on">9</span><span>10</span></div>
+          <div class="ob-flags" id="ob-flags"></div>
         </div>
-        <h1>Больше, чем фото</h1>
-        <p>Если в разговоре уже 3 сообщения, вы оцениваете друг друга. В профиле видно, какой человек в общении.</p>
+        <h1>Флаги после разговора</h1>
+        <p>После разговора ставят 1–10. Это грин, жёлтый или ред флаг — и счётчик в профиле.</p>
       </article>
       <article class="ob-slide">
         <div class="ob-art art-safe">
@@ -64,16 +59,19 @@
   <section class="screen hidden reg" data-screen="register">
     <header class="nav-bar"><button class="icon-btn" id="reg-back" data-ic="back" aria-label="Назад"></button><div class="nav-title" id="reg-title">Твой профиль</div><span class="icon-btn ghost"></span></header>
     <div class="scroll" id="reg-scroll">
-      <div class="reg-lead" id="reg-lead">Фото, имя, возраст, пол и кого искать.</div>
+      <div class="reg-lead" id="reg-lead">Это увидят собеседники. Пол и кого искать — только для подбора.</div>
 
-      <div class="group-title">Фото <span class="req">обязательно, хотя бы одно своё</span></div>
+      <div class="group-title">Фото <span class="req">обязательно</span></div>
+      <p class="field-why">Так тебя увидят в поиске и в чате. Кружок на фото — как оно встанет в аватар.</p>
       <div class="photo-slots" id="photo-slots"></div>
       <input type="file" id="photo-input" accept="image/*" hidden />
 
       <div class="group-title">Имя <span class="req">обязательно</span></div>
+      <p class="field-why">Как к тебе будут обращаться.</p>
       <label class="field"><input id="f-name" maxlength="20" placeholder="Как тебя называть" autocomplete="off" /></label>
 
-      <div class="group-title">Возраст <span class="req">обязательно, от 16</span></div>
+      <div class="group-title">Возраст <span class="req">от 16</span></div>
+      <p class="field-why">16–17 общаются только между собой, 18+ — только с 18+.</p>
       <div class="age-row">
         <button class="step-btn" id="age-minus" aria-label="Меньше">−</button>
         <label class="field age-field"><input id="f-age" inputmode="numeric" maxlength="2" placeholder="18" /></label>
@@ -82,19 +80,23 @@
       <div class="hint err hidden" id="age-hint"></div>
 
       <div class="group-title">Пол <span class="req">обязательно</span></div>
+      <p class="field-why">Нужен для подбора. На профиле пол не показывается.</p>
       <div class="segment" id="f-gender">
         <button data-v="f">Девушка</button><button data-v="m">Парень</button>
       </div>
 
       <div class="group-title">Кого искать <span class="req">обязательно</span></div>
+      <p class="field-why">Тоже для подбора — кого тебе показывать.</p>
       <div class="segment" id="f-seek">
         <button data-v="f">Девушек</button><button data-v="m">Парней</button>
       </div>
 
       <div class="group-title">Страна <span class="opt">необязательно</span></div>
+      <p class="field-why">Если укажешь, будет видно в профиле.</p>
       <label class="field"><input id="f-country" maxlength="28" placeholder="Например, Польша" autocomplete="off" /></label>
 
       <div class="group-title">Город <span class="opt">необязательно</span></div>
+      <p class="field-why">Тоже необязательно и тоже видно в профиле.</p>
       <label class="field"><input id="f-city" maxlength="28" placeholder="Например, Варшава" autocomplete="off" /></label>
 
       <label class="check-row" id="rules-row">
@@ -190,11 +192,9 @@
   <!-- SEARCHING -->
   <section class="screen hidden searching" data-screen="search">
     <div class="srch-center">
+      <div class="bump-field" id="bump-field"></div>
       <div class="radar">
         <i class="r1"></i><i class="r2"></i><i class="r3"></i>
-        <span class="orbit o1 av sm" style="--h:2">О</span>
-        <span class="orbit o2 av sm" style="--h:5">А</span>
-        <span class="orbit o3 av sm" style="--h:8">М</span>
         <div class="radar-me" id="radar-me"></div>
       </div>
       <div class="srch-title" id="srch-title">Ищем собеседника…</div>
@@ -271,8 +271,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=24"></script>
-<script src="mock.js?v=24"></script>
-<script src="app.js?v=24"></script>
+<script src="rules.js?v=25"></script>
+<script src="mock.js?v=25"></script>
+<script src="app.js?v=25"></script>
 </body>
 </html>

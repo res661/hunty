@@ -75,7 +75,9 @@ function flagFor(score) {
   if (n >= 1 && n <= 4) return FLAGS[2];
   return null;
 }
-function flagMark() { return `<i class="flag-mark" aria-hidden="true"></i>`; }
+function flagMark() {
+  return `<svg class="flag-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 2.85a1.05 1.05 0 0 1 1.05 1.05v16.2a1.05 1.05 0 0 1-2.1 0V3.9A1.05 1.05 0 0 1 5 2.85z"/><path fill="currentColor" d="M6.2 4.55c2.15-.95 3.55 1.15 5.75.4 2.15-.75 3.5-1.9 5.75-.85.95.42 1.7 1.05 1.7 1.95l-.4 6.2c-.06.75-.65 1.2-1.35.95-2.2-.75-3.6.95-5.75.25-2.2-.7-3.6-2.55-5.7-1.6V4.55z"/></svg>`;
+}
 function flagWidget(flag, count, on) {
   if (!flag) return "";
   const n = count == null ? "" : `<em>${count}</em>`;
@@ -165,7 +167,16 @@ function haptic(kind) {
   } catch {}
 }
 let chromeRaf = 0;
-let lastChrome = "";
+let chromeLoop = false;
+let pinUntil = 0;
+let kbAnim = null;
+let renderedH = null;
+let renderedTop = 0;
+let lastKbHeight = 0;
+let stableGuess = 0;
+let lastSampleAt = 0;
+let lastSampleH = null;
+let insetBot = 0;
 function pinMessages() {
   const box = document.getElementById("messages");
   const chatOn = document.querySelector('[data-screen="chat"]');
@@ -174,42 +185,160 @@ function pinMessages() {
 function scrollMessagesNow() {
   requestAnimationFrame(() => requestAnimationFrame(pinMessages));
 }
-function scheduleChrome() {
-  if (chromeRaf) return;
-  chromeRaf = requestAnimationFrame(() => { chromeRaf = 0; applyChrome(); });
+function easeKb(t) {
+  const x1 = 0.22, y1 = 1, x2 = 0.36, y2 = 1;
+  let u = t;
+  for (let i = 0; i < 5; i++) {
+    const a = 1 - u;
+    const x = 3 * a * a * u * x1 + 3 * a * u * u * x2 + u * u * u;
+    const dx = 3 * a * a * x1 + 6 * a * u * (x2 - x1) + 3 * u * u * (1 - x2);
+    if (Math.abs(dx) < 1e-4) break;
+    u = Math.max(0, Math.min(1, u - (x - t) / dx));
+  }
+  const a = 1 - u;
+  return 3 * a * a * u * y1 + 3 * a * u * u * y2 + u * u * u;
 }
-function applyChrome() {
+function readFrame() {
+  const vv = window.visualViewport;
+  const vvH = vv ? vv.height : window.innerHeight;
+  const vvTop = vv ? vv.offsetTop : 0;
+  let stable = window.innerHeight;
+  try {
+    if (tg && tg.viewportStableHeight) stable = tg.viewportStableHeight;
+    else {
+      if (!stableGuess) stableGuess = window.innerHeight;
+      if (vvH > stableGuess - 40) stableGuess = Math.max(window.innerHeight, vvH);
+      stable = Math.max(stableGuess, window.innerHeight);
+    }
+  } catch {}
+  return { vvH, vvTop, stable };
+}
+function paintInsets() {
   const root = document.documentElement;
-  let top = 0, bot = 0, left = 0, right = 0, stable = window.innerHeight;
+  let top = 0, bot = 0, left = 0, right = 0;
   try {
     if (tg) {
       const sa = tg.safeAreaInset || {}, csa = tg.contentSafeAreaInset || {};
       top = (+sa.top || 0) + (+csa.top || 0); bot = (+sa.bottom || 0) + (+csa.bottom || 0);
       left = (+sa.left || 0) + (+csa.left || 0); right = (+sa.right || 0) + (+csa.right || 0);
-      if (tg.viewportStableHeight) stable = tg.viewportStableHeight;
     }
   } catch {}
-  const vv = window.visualViewport;
-  const vvTop = vv ? Math.round(vv.offsetTop) : 0;
-  const vvH = vv ? Math.round(vv.height) : Math.round(stable);
-  const kbOpen = Math.round(stable) - vvH > 80;
-  const key = [top, bot, left, right, vvTop, vvH, kbOpen ? 1 : 0].join("|");
-  if (key === lastChrome) return;
-  const prev = lastChrome.split("|");
-  const viewChanged = prev.length > 5 && (prev[4] !== String(vvTop) || prev[5] !== String(vvH));
-  lastChrome = key;
-  const app = document.getElementById("app");
-  if (app && app.style.transform) app.style.transform = "";
+  insetBot = bot;
   root.style.setProperty("--tg-safe-t", top + "px");
   root.style.setProperty("--tg-safe-b", bot + "px");
   root.style.setProperty("--tg-safe-l", left + "px");
   root.style.setProperty("--tg-safe-r", right + "px");
-  root.style.setProperty("--vv-top", vvTop + "px");
-  root.style.setProperty("--vv-h", vvH + "px");
-  root.style.setProperty("--app-h", vvH + "px");
-  root.dataset.kb = kbOpen ? "1" : "0";
-  if (viewChanged) pinMessages();
+  const app = document.getElementById("app");
+  if (app && app.style.transform) app.style.transform = "";
 }
+function paintChrome() {
+  const root = document.documentElement;
+  const h = renderedH;
+  root.style.setProperty("--vv-top", renderedTop + "px");
+  root.style.setProperty("--vv-h", h + "px");
+  root.style.setProperty("--app-h", h + "px");
+  const stable = readFrame().stable;
+  const span = Math.max(160, lastKbHeight || 280);
+  const open = Math.max(0, Math.min(1, (stable - h) / span));
+  root.style.setProperty("--kb-safe", (insetBot * (1 - open)) + "px");
+  root.dataset.kb = open > 0.55 ? "1" : "0";
+}
+function armPin() { pinUntil = Math.max(pinUntil, performance.now() + 220); }
+function kickChrome() {
+  if (chromeLoop) return;
+  chromeLoop = true;
+  requestAnimationFrame(chromeFrame);
+}
+function chromeFrame(now) {
+  chromeLoop = false;
+  if (kbAnim) {
+    const t = Math.min(1, (now - kbAnim.t0) / kbAnim.dur);
+    const e = easeKb(t);
+    renderedH = kbAnim.fromH + (kbAnim.toH - kbAnim.fromH) * e;
+    renderedTop = kbAnim.fromTop + (kbAnim.toTop - kbAnim.fromTop) * e;
+    if (t >= 1) {
+      renderedH = kbAnim.toH;
+      renderedTop = kbAnim.toTop;
+      kbAnim = null;
+    }
+    paintChrome();
+  }
+  if (now < pinUntil || kbAnim) pinMessages();
+  if (kbAnim || performance.now() < pinUntil) kickChrome();
+}
+function beginTween(toH, toTop) {
+  kbAnim = { fromH: renderedH, fromTop: renderedTop, toH, toTop, t0: performance.now(), dur: 300 };
+  armPin();
+  kickChrome();
+}
+function sampleViewport() {
+  paintInsets();
+  const f = readFrame();
+  const targetH = f.vvH;
+  const targetTop = f.vvTop;
+  const now = performance.now();
+  const step = lastSampleH == null ? 0 : Math.abs(targetH - lastSampleH);
+  const dt = now - lastSampleAt;
+  const streaming = lastSampleH != null && dt < 90 && step > 0.5 && step < 72;
+  lastSampleAt = now;
+  lastSampleH = targetH;
+  const kbPx = Math.round(f.stable - f.vvH);
+  if (kbPx > 80) lastKbHeight = kbPx;
+  if (renderedH == null) {
+    renderedH = targetH;
+    renderedTop = targetTop;
+    paintChrome();
+    return;
+  }
+  if (streaming) {
+    kbAnim = null;
+    renderedH = targetH;
+    renderedTop = targetTop;
+    paintChrome();
+    armPin();
+    kickChrome();
+    return;
+  }
+  const abs = Math.abs(targetH - renderedH);
+  const topDelta = Math.abs(targetTop - renderedTop);
+  if (abs < 1.5 && topDelta < 1) { paintChrome(); return; }
+  if (kbAnim && Math.abs(targetH - kbAnim.toH) < 64) {
+    const dir0 = Math.sign(kbAnim.toH - kbAnim.fromH);
+    const dir1 = Math.sign(targetH - renderedH) || dir0;
+    if (dir0 === dir1 || Math.abs(targetH - renderedH) < 24) {
+      kbAnim.toH = targetH;
+      kbAnim.toTop = targetTop;
+      armPin();
+      kickChrome();
+      return;
+    }
+  }
+  if (abs >= 48 || topDelta >= 40) { beginTween(targetH, targetTop); return; }
+  kbAnim = null;
+  renderedH = targetH;
+  renderedTop = targetTop;
+  paintChrome();
+  armPin();
+  kickChrome();
+}
+function predictKb(opening) {
+  if (renderedH == null) return;
+  const f = readFrame();
+  if (opening) {
+    if (lastKbHeight < 80) { armPin(); kickChrome(); return; }
+    const target = f.stable - lastKbHeight;
+    if (renderedH - target < 48) { armPin(); kickChrome(); return; }
+    beginTween(target, renderedTop);
+    return;
+  }
+  if (f.stable - renderedH < 48) { armPin(); kickChrome(); return; }
+  beginTween(f.stable, 0);
+}
+function scheduleChrome() {
+  if (chromeRaf) return;
+  chromeRaf = requestAnimationFrame(() => { chromeRaf = 0; sampleViewport(); });
+}
+function applyChrome() { sampleViewport(); }
 function systemTheme() {
   if (tg && tg.initData && tg.colorScheme) return tg.colorScheme === "dark" ? "dark" : "light";
   return window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -283,6 +412,7 @@ function showScreen(name) {
   } catch {}
 }
 function goBack() {
+  if (viewerOpen()) return closeViewer();
   if (!$("sheet").classList.contains("hidden")) return closeSheet();
   if (current === "chat") {
     if (!chat || chat.ended || (chat.mine || 0) + (chat.theirs || 0) < RULES.MIN_RATE_MSGS) return leaveChat("home");
@@ -305,6 +435,7 @@ let sheetOnClose = null;
 let sheetGen = 0;
 function openSheet(html, onClose) {
   const sheet = $("sheet"), bd = $("sheet-backdrop");
+  sheet.classList.remove("is-rate");
   sheetGen++;
   $("sheet-body").innerHTML = html; $("sheet-body").scrollTop = 0;
   paintIcons($("sheet-body"));
@@ -321,6 +452,7 @@ function closeSheet(silent) {
   setTimeout(() => {
     if (gen !== sheetGen) return;
     sheet.classList.add("hidden"); bd.classList.add("hidden");
+    sheet.classList.remove("is-rate");
   }, 260);
   const cb = sheetOnClose; sheetOnClose = null;
   if (cb && !silent) cb();
@@ -344,6 +476,7 @@ function openRegister(edit) {
   $("reg-save").textContent = edit ? "Сохранить" : "Начать";
   $("reg-lead").classList.toggle("hidden", !!edit);
   $("rules-row").classList.toggle("hidden", !!edit);
+  document.querySelectorAll("#reg-scroll .field-why").forEach((el) => el.classList.toggle("hidden", !!edit));
   $("f-name").value = draft.name || "";
   $("f-age").value = draft.age || "";
   $("f-country").value = draft.country || "";
@@ -542,6 +675,7 @@ function startSearch(opts) {
   }, 2600);
   const gen = ++searchGen;
   searching = true;
+  startBumps();
   const exclude = metIds().concat(state.blocked);
   const filters = null;
   backend.findMatch({ filters, exclude, fast: isPremium() }).then((m) => {
@@ -559,6 +693,7 @@ function startSearch(opts) {
 }
 function cancelSearch() {
   searchGen++;
+  stopBumps();
   clearInterval(tipTimer);
   clearTimeout(revealTimer); revealTimer = null;
   const el = $("match-reveal");
@@ -569,11 +704,12 @@ function cancelSearch() {
 }
 let revealTimer = null;
 function revealMatch(m, gen) {
+  stopBumps();
   const p = m.partner;
   const el = $("match-reveal");
   const where = [p.city, p.country].map((s) => (s || "").trim()).filter(Boolean).map(esc).join(", ");
   const rate = p.stats && p.stats.count >= RULES.NEW_UNTIL ? ratingChip(p) : `<span class="rating-chip">новый</span>`;
-  el.innerHTML = `<button class="mr-person" type="button">${avatarHTML(p, "hero")}<b>${esc(p.name)}, ${p.age}</b>${where ? `<span class="mr-place">${where}</span>` : ""}${rate}</button>`;
+  el.innerHTML = `<button class="mr-person" type="button"><span class="mr-kicker">Нашли</span><b>${esc(p.name)}, ${p.age}</b>${where ? `<span class="mr-place">${where}</span>` : ""}${rate}</button>`;
   el.classList.remove("hidden");
   haptic("success");
   const go = () => {
@@ -601,7 +737,11 @@ function openChat(m) {
     <button class="chat-intro" id="chat-intro">${avatarHTML(p, "lg")}<b>${esc(p.name)}, ${p.age}</b>
     <small>${ratingChip(p)} ${p.stats.chats} ${plural(p.stats.chats, "чат", "чата", "чатов")} · ср. ${fmtDur(p.stats.avgSec)}</small><span class="ci-more">Профиль</span></button>
     `;
-  $("chat-intro").onclick = () => openPartnerProfile(p);
+  $("chat-intro").onclick = (e) => {
+    const img = e.target.closest(".av img");
+    if (img && img.getAttribute("src")) { openViewer([img.src], 0); return; }
+    openPartnerProfile(p);
+  };
   $("composer").classList.remove("hidden"); $("composer-ended").classList.add("hidden");
   $("gone-rate").classList.add("hidden");
   $("typing").classList.add("hidden");
@@ -729,18 +869,21 @@ function openRateSheet(entry, after) {
   const stay = after === "stay";
   const body = openSheet(`
     <div class="sh-title">Как прошёл разговор?</div>
-    <div class="rate-big empty" id="rate-big"><b>–</b><span>Выбери от 1 до 10</span></div>
+    <div class="rate-hint" id="rate-hint">Выбери от 1 до 10</div>
+    <div class="rate-big hidden" id="rate-big"></div>
     <div class="flag-row" id="flag-row">${FLAGS.map((f) => flagWidget(f, null, false)).join("")}</div>
     <div class="rate-grid" id="rate-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button class="rate-btn" data-n="${n}">${n}</button>`).join("")}</div>
     <div class="sh-actions row"><button class="btn btn-soft rate-act" id="rate-home">${stay ? "Не сейчас" : after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary rate-act" id="rate-send" disabled>${stay || after !== "next" ? "Оценить" : "Оценить и дальше"}</button></div>
     <div class="rate-note">Имя и фото видны в «Мои оценки».</div>`, () => { if (!stay) afterChat(after); });
+  $("sheet").classList.add("is-rate");
   body.querySelector("#rate-grid").onclick = (e) => {
     const b = e.target.closest("[data-n]"); if (!b) return;
     score = +b.dataset.n; haptic("select");
     const flag = flagFor(score);
     body.querySelectorAll(".rate-btn").forEach((x) => { x.className = "rate-btn"; });
     b.classList.add("on", score <= 4 ? "lo" : score <= 7 ? "mid" : "top");
-    const big = body.querySelector("#rate-big"); big.classList.remove("empty");
+    const hint = body.querySelector("#rate-hint"); if (hint) hint.classList.add("hidden");
+    const big = body.querySelector("#rate-big"); big.classList.remove("hidden");
     big.innerHTML = `<b>${score}</b><span class="flag-hero ${flag.cls}">${flagMark()}${esc(flag.name)}</span>`;
     body.querySelectorAll("#flag-row .flag-w").forEach((el) => el.classList.toggle("on", el.dataset.f === flag.id));
     body.querySelector("#rate-send").disabled = false;
@@ -759,6 +902,13 @@ function openRateSheet(entry, after) {
         if (row) row.given = score;
         const bag = chat.partner.flagCounts || (chat.partner.flagCounts = { green: 0, mid: 0, red: 0 });
         bag[flag.id] = (bag[flag.id] | 0) + 1;
+        const st = chat.partner.stats;
+        if (st) {
+          const n0 = st.count | 0;
+          const sum0 = Math.round((Number(st.avg) || 0) * n0);
+          st.count = n0 + 1;
+          st.avg = Math.round(((sum0 + score) / st.count) * 10) / 10;
+        }
       }
       if (chat) { chat.given = score; chat.entry = entry; }
       $("gone-rate").classList.add("hidden");
@@ -1063,6 +1213,290 @@ function bindBackend() {
   });
 }
 
+/* ---------- colliding search avatars ---------- */
+const BUMP_FACES = [
+  { ch: "О", h: 2 }, { ch: "А", h: 5 }, { ch: "М", h: 8 },
+  { ch: "Л", h: 1 }, { ch: "Д", h: 4 }, { ch: "К", h: 7 },
+];
+let bumpRaf = 0;
+let bumpBalls = [];
+function stopBumps() {
+  if (bumpRaf) cancelAnimationFrame(bumpRaf);
+  bumpRaf = 0;
+  bumpBalls = [];
+  const field = $("bump-field");
+  if (field) field.innerHTML = "";
+}
+function startBumps() {
+  stopBumps();
+  const field = $("bump-field");
+  if (!field) return;
+  field.innerHTML = BUMP_FACES.map((f) => `<span class="bump-av av sm" style="${avStyle(f.h)}">${f.ch}</span>`).join("");
+  const nodes = [...field.children];
+  const bootFrame = () => {
+    if (!searching || current !== "search") return;
+    const w0 = field.clientWidth, h0 = field.clientHeight;
+    if (w0 < 40 || h0 < 40) { bumpRaf = requestAnimationFrame(bootFrame); return; }
+    const R = 18;
+    bumpBalls = nodes.map((el, i) => {
+      const ang = (i / nodes.length) * Math.PI * 2 + 0.4;
+      const rad = Math.min(w0, h0) * 0.28;
+      return {
+        el, r: R,
+        x: w0 / 2 + Math.cos(ang) * rad,
+        y: h0 * 0.42 + Math.sin(ang) * rad * 0.55,
+        vx: Math.cos(ang + 1.1) * (90 + i * 18),
+        vy: Math.sin(ang + 0.4) * (80 + (6 - i) * 14),
+      };
+    });
+    let last = performance.now();
+    const step = (now) => {
+      const reveal = $("match-reveal");
+      if (!searching || current !== "search" || (reveal && !reveal.classList.contains("hidden"))) { bumpRaf = 0; return; }
+      const dt = Math.min(0.034, (now - last) / 1000) || 0.016;
+      last = now;
+      const w = field.clientWidth, h = field.clientHeight;
+      const me = $("radar-me");
+      let cx = w / 2, cy = h * 0.42, cr = 58;
+      if (me && me.getBoundingClientRect) {
+        const mr = me.getBoundingClientRect();
+        const fr = field.getBoundingClientRect();
+        cx = mr.left + mr.width / 2 - fr.left;
+        cy = mr.top + mr.height / 2 - fr.top;
+        cr = mr.width / 2 + 2;
+      }
+      for (const b of bumpBalls) {
+        b.x += b.vx * dt; b.y += b.vy * dt;
+        if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
+        if (b.x > w - b.r) { b.x = w - b.r; b.vx = -Math.abs(b.vx); }
+        if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); }
+        if (b.y > h - b.r) { b.y = h - b.r; b.vy = -Math.abs(b.vy); }
+        const dx = b.x - cx, dy = b.y - cy, dist = Math.hypot(dx, dy) || 0.01, min = cr + b.r;
+        if (dist < min) {
+          const nx = dx / dist, ny = dy / dist;
+          b.x = cx + nx * min; b.y = cy + ny * min;
+          const vn = b.vx * nx + b.vy * ny;
+          if (vn < 0) { b.vx -= 1.8 * vn * nx; b.vy -= 1.8 * vn * ny; }
+        }
+      }
+      for (let i = 0; i < bumpBalls.length; i++) {
+        for (let j = i + 1; j < bumpBalls.length; j++) {
+          const a = bumpBalls[i], c = bumpBalls[j];
+          const dx = c.x - a.x, dy = c.y - a.y, dist = Math.hypot(dx, dy) || 0.01, min = a.r + c.r;
+          if (dist >= min) continue;
+          const nx = dx / dist, ny = dy / dist, overlap = (min - dist) / 2;
+          a.x -= nx * overlap; a.y -= ny * overlap;
+          c.x += nx * overlap; c.y += ny * overlap;
+          const dvn = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
+          if (dvn < 0) { a.vx += dvn * nx; a.vy += dvn * ny; c.vx -= dvn * nx; c.vy -= dvn * ny; }
+        }
+      }
+      for (const b of bumpBalls) {
+        const sp = Math.hypot(b.vx, b.vy) || 1;
+        if (sp > 240) { b.vx *= 240 / sp; b.vy *= 240 / sp; }
+        else if (sp < 70) { b.vx *= 70 / sp; b.vy *= 70 / sp; }
+        b.el.style.transform = `translate(${(b.x - b.r).toFixed(1)}px, ${(b.y - b.r).toFixed(1)}px)`;
+        b.el.classList.add("go");
+      }
+      bumpRaf = requestAnimationFrame(step);
+    };
+    bumpRaf = requestAnimationFrame(step);
+  };
+  bumpRaf = requestAnimationFrame(bootFrame);
+}
+
+/* ---------- photo viewer ---------- */
+let viewer = null;
+function viewerOpen() {
+  const el = document.getElementById("viewer");
+  return !!(el && !el.classList.contains("hidden"));
+}
+function openViewer(urls, index) {
+  urls = (urls || []).filter(Boolean);
+  if (!urls.length) return;
+  const active = document.activeElement;
+  if (active && active.blur && active !== document.body) { try { active.blur(); } catch {} }
+  if (!viewer) mountViewer();
+  viewer.urls = urls;
+  viewer.index = Math.max(0, Math.min(index | 0, urls.length - 1));
+  resetViewer();
+  showViewerFrame();
+  const root = $("viewer");
+  root.classList.remove("hidden");
+  root.style.transform = "";
+  root.style.opacity = "";
+  $("app").classList.add("viewing");
+  try { if (tg && tg.BackButton) tg.BackButton.show(); } catch {}
+}
+function closeViewer() {
+  const root = document.getElementById("viewer");
+  if (!root || root.classList.contains("hidden")) return;
+  root.classList.add("hidden");
+  root.style.transform = "";
+  root.style.opacity = "";
+  const app = document.getElementById("app");
+  if (app) app.classList.remove("viewing");
+  try {
+    const sheet = document.getElementById("sheet");
+    if (tg && tg.BackButton && sheet && sheet.classList.contains("hidden") && !["register", "chat", "search"].includes(current)) tg.BackButton.hide();
+  } catch {}
+}
+function resetViewer() {
+  viewer.scale = 1; viewer.x = 0; viewer.y = 0;
+  viewer.mode = ""; viewer.moved = false; viewer.pointers = new Map();
+  viewer.pinch = null; viewer.drag = null;
+}
+function showViewerFrame() {
+  const img = $("viewer-img");
+  img.src = viewer.urls[viewer.index];
+  applyViewer();
+  const count = $("viewer-count");
+  if (viewer.urls.length > 1) { count.textContent = (viewer.index + 1) + " / " + viewer.urls.length; count.classList.remove("hidden"); }
+  else { count.textContent = ""; count.classList.add("hidden"); }
+}
+function applyViewer() {
+  const img = $("viewer-img");
+  if (img) img.style.transform = `translate(${viewer.x}px, ${viewer.y}px) scale(${viewer.scale})`;
+}
+function clampViewer() {
+  const img = $("viewer-img"), stage = $("viewer-stage");
+  if (!img || !stage) return;
+  if (viewer.scale <= 1.01) { viewer.scale = 1; viewer.x = 0; viewer.y = 0; return; }
+  const limX = Math.max(0, (img.offsetWidth * viewer.scale - stage.clientWidth) / 2);
+  const limY = Math.max(0, (img.offsetHeight * viewer.scale - stage.clientHeight) / 2);
+  viewer.x = Math.max(-limX, Math.min(limX, viewer.x));
+  viewer.y = Math.max(-limY, Math.min(limY, viewer.y));
+}
+function zoomViewer(next, px, py) {
+  const stage = $("viewer-stage");
+  const rect = stage.getBoundingClientRect();
+  const pointX = px - (rect.left + rect.width / 2);
+  const pointY = py - (rect.top + rect.height / 2);
+  next = Math.max(1, Math.min(4, next));
+  const k = viewer.scale ? next / viewer.scale : 1;
+  viewer.x = pointX - (pointX - viewer.x) * k;
+  viewer.y = pointY - (pointY - viewer.y) * k;
+  viewer.scale = next;
+  clampViewer();
+  applyViewer();
+}
+function mountViewer() {
+  const root = document.createElement("div");
+  root.id = "viewer";
+  root.className = "viewer hidden";
+  root.innerHTML = `<button class="viewer-x" id="viewer-x" type="button" aria-label="Закрыть">${ic("close")}</button><div class="viewer-count hidden" id="viewer-count"></div><div class="viewer-stage" id="viewer-stage"><img id="viewer-img" alt="" draggable="false"></div>`;
+  $("app").appendChild(root);
+  paintIcons(root);
+  viewer = { urls: [], index: 0, scale: 1, x: 0, y: 0, pointers: new Map(), mode: "", moved: false, pinch: null, drag: null, tap: 0 };
+  const stage = root.querySelector("#viewer-stage");
+  root.querySelector("#viewer-x").onclick = (e) => { e.stopPropagation(); closeViewer(); };
+  stage.addEventListener("wheel", (e) => {
+    if (!viewerOpen()) return;
+    e.preventDefault();
+    zoomViewer(viewer.scale * Math.exp(-e.deltaY * 0.0018), e.clientX, e.clientY);
+  }, { passive: false });
+  stage.addEventListener("pointerdown", (e) => {
+    try { stage.setPointerCapture(e.pointerId); } catch {}
+    viewer.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    viewer.moved = false;
+    if (viewer.pointers.size >= 2) {
+      const pts = [...viewer.pointers.values()];
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+      viewer.pinch = { dist, scale: viewer.scale, x: viewer.x, y: viewer.y, mx: (pts[0].x + pts[1].x) / 2, my: (pts[0].y + pts[1].y) / 2 };
+      viewer.mode = "pinch";
+    } else {
+      viewer.mode = viewer.scale > 1.01 ? "pan" : "swipe";
+      viewer.drag = { x: e.clientX, y: e.clientY, ox: viewer.x, oy: viewer.y };
+    }
+  });
+  stage.addEventListener("pointermove", (e) => {
+    if (!viewer.pointers.has(e.pointerId)) return;
+    e.preventDefault();
+    viewer.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (viewer.mode === "pinch" && viewer.pointers.size >= 2 && viewer.pinch) {
+      const pts = [...viewer.pointers.values()];
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+      const mx = (pts[0].x + pts[1].x) / 2, my = (pts[0].y + pts[1].y) / 2;
+      const next = Math.max(1, Math.min(4, viewer.pinch.scale * dist / viewer.pinch.dist));
+      const stageRect = stage.getBoundingClientRect();
+      const px = viewer.pinch.mx - (stageRect.left + stageRect.width / 2);
+      const py = viewer.pinch.my - (stageRect.top + stageRect.height / 2);
+      const k = viewer.pinch.scale ? next / viewer.pinch.scale : 1;
+      viewer.scale = next;
+      viewer.x = px - (px - viewer.pinch.x) * k + (mx - viewer.pinch.mx);
+      viewer.y = py - (py - viewer.pinch.y) * k + (my - viewer.pinch.my);
+      clampViewer();
+      applyViewer();
+      viewer.moved = true;
+      return;
+    }
+    if (!viewer.drag) return;
+    const dx = e.clientX - viewer.drag.x, dy = e.clientY - viewer.drag.y;
+    if (Math.hypot(dx, dy) > 6) viewer.moved = true;
+    if (viewer.mode === "pan") {
+      viewer.x = viewer.drag.ox + dx; viewer.y = viewer.drag.oy + dy;
+      clampViewer(); applyViewer();
+    } else if (viewer.mode === "swipe" && viewer.scale <= 1.01) {
+      if (dy > 0 && dy > Math.abs(dx)) {
+        root.style.transform = `translateY(${dy}px)`;
+        root.style.opacity = String(Math.max(0.35, 1 - dy / 420));
+      } else {
+        $("viewer-img").style.transform = `translate(${dx}px, 0) scale(1)`;
+      }
+    }
+  });
+  const endPtr = (e) => {
+    if (!viewer.pointers.has(e.pointerId) && viewer.pointers.size) return;
+    viewer.pointers.delete(e.pointerId);
+    if (viewer.mode === "pinch" && viewer.pointers.size < 2) {
+      viewer.mode = viewer.scale > 1.01 ? "pan" : "swipe";
+      const left = [...viewer.pointers.values()][0];
+      viewer.drag = left ? { x: left.x, y: left.y, ox: viewer.x, oy: viewer.y } : null;
+      viewer.pinch = null;
+      if (viewer.pointers.size) return;
+    }
+    if (viewer.pointers.size) return;
+    const dx = viewer.drag ? e.clientX - viewer.drag.x : 0;
+    const dy = viewer.drag ? e.clientY - viewer.drag.y : 0;
+    if (viewer.mode === "swipe" && viewer.scale <= 1.01) {
+      if (dy > 90 && dy > Math.abs(dx) * 1.15) { closeViewer(); viewer.drag = null; viewer.mode = ""; return; }
+      root.style.transform = "";
+      root.style.opacity = "";
+      if (viewer.urls.length > 1 && Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy)) {
+        viewer.index = (viewer.index + (dx < 0 ? 1 : -1) + viewer.urls.length) % viewer.urls.length;
+        resetViewer();
+        showViewerFrame();
+        return;
+      }
+      applyViewer();
+    }
+    if (!viewer.moved) {
+      const now = Date.now();
+      if (now - viewer.tap < 280) {
+        viewer.tap = 0;
+        if (viewer.scale > 1.05) zoomViewer(1, e.clientX, e.clientY);
+        else zoomViewer(2.4, e.clientX, e.clientY);
+      } else {
+        viewer.tap = now;
+        const img = $("viewer-img");
+        const r = img.getBoundingClientRect();
+        const onImg = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+        if (!onImg && viewer.scale <= 1.01) setTimeout(() => { if (viewer && viewer.tap === now && viewer.scale <= 1.01 && viewerOpen()) closeViewer(); }, 260);
+      }
+    }
+    viewer.drag = null;
+    if (viewer.pointers.size === 0) viewer.mode = "";
+  };
+  stage.addEventListener("pointerup", endPtr);
+  stage.addEventListener("pointercancel", endPtr);
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape" && viewerOpen()) { e.preventDefault(); closeViewer(); } });
+}
+function paintObFlags() {
+  const el = $("ob-flags");
+  if (!el) return;
+  el.innerHTML = flagWidget(FLAGS[0], 12, true) + flagWidget(FLAGS[1], 4, false) + flagWidget(FLAGS[2], 1, false);
+}
+
 /* ---------- bindings ---------- */
 function bind() {
   $("ob-track").addEventListener("scroll", syncOb, { passive: true });
@@ -1083,7 +1517,12 @@ function bind() {
     const del = e.target.closest("[data-del]");
     if (del) { draft.photos.splice(+del.dataset.del, 1); renderPhotos(); return; }
     const add = e.target.closest("[data-add]");
-    if (add) { photoSlot = Math.min(+add.dataset.add, draft.photos.length); $("photo-input").value = ""; $("photo-input").click(); }
+    if (add) { photoSlot = Math.min(+add.dataset.add, draft.photos.length); $("photo-input").value = ""; $("photo-input").click(); return; }
+    const img = e.target.closest("img");
+    if (img && img.parentElement && img.parentElement.classList.contains("photo-slot")) {
+      const imgs = [...$("photo-slots").querySelectorAll(".photo-slot > img")];
+      openViewer(imgs.map((i) => i.src), Math.max(0, imgs.indexOf(img)));
+    }
   };
   $("photo-input").onchange = async () => {
     const f = $("photo-input").files[0]; if (!f) return;
@@ -1106,13 +1545,26 @@ function bind() {
     openRateSheet(entry, "stay");
   };
   $("chat-who").onclick = () => chat && openPartnerProfile(chat.partner);
+  let chatPhotoTap = null;
   $("messages").addEventListener("pointerdown", (e) => {
-    if (e.target.closest("button, a, input, textarea")) return;
+    chatPhotoTap = e.target.closest(".msg.photo img");
+    if (e.target.closest("button, a, input, textarea")) { chatPhotoTap = null; return; }
     const input = $("msg-input");
     if (document.activeElement === input) input.blur();
   });
+  $("messages").addEventListener("pointerup", (e) => {
+    const img = chatPhotoTap;
+    chatPhotoTap = null;
+    if (!img) return;
+    const r = img.getBoundingClientRect();
+    const hit = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    if (!hit && e.target.closest(".msg.photo img") !== img) return;
+    const imgs = [...$("messages").querySelectorAll(".msg.photo img")];
+    openViewer(imgs.map((i) => i.src), Math.max(0, imgs.indexOf(img)));
+  });
   $("msg-input").addEventListener("input", updateSend);
-  $("msg-input").addEventListener("focus", () => scrollMessagesNow());
+  $("msg-input").addEventListener("focus", () => { predictKb(true); scrollMessagesNow(); });
+  $("msg-input").addEventListener("blur", () => predictKb(false));
   $("msg-input").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendMsg(); } });
   $("msg-send").addEventListener("pointerdown", (e) => e.preventDefault());
   $("msg-send").addEventListener("mousedown", (e) => e.preventDefault());
@@ -1154,7 +1606,12 @@ function bind() {
     const del = e.target.closest("[data-del]");
     if (del) { state.me.photos.splice(+del.dataset.del, 1); save(); renderMyPhotos(); return; }
     const add = e.target.closest("[data-add]");
-    if (add) { pSlot = Math.min(+add.dataset.add, (state.me.photos || []).length); $("p-photo-input").value = ""; $("p-photo-input").click(); }
+    if (add) { pSlot = Math.min(+add.dataset.add, (state.me.photos || []).length); $("p-photo-input").value = ""; $("p-photo-input").click(); return; }
+    const img = e.target.closest("img");
+    if (img && img.parentElement && img.parentElement.classList.contains("photo-slot")) {
+      const imgs = [...$("p-photos").querySelectorAll(".photo-slot > img")];
+      openViewer(imgs.map((i) => i.src), Math.max(0, imgs.indexOf(img)));
+    }
   };
   $("p-photo-input").onchange = async () => {
     const f = $("p-photo-input").files[0]; if (!f) return;
@@ -1177,7 +1634,15 @@ function bind() {
   });
   $("sheet-backdrop").onclick = () => closeSheet();
   let sy = null;
-  $("sheet").addEventListener("touchstart", (e) => { if ($("sheet-body").scrollTop <= 0) sy = e.touches[0].clientY; }, { passive: true });
+  $("sheet").addEventListener("click", (e) => {
+    if (e.target.closest(".ps-x, button, a, [data-add], [data-del]")) return;
+    const img = e.target.closest(".ps-photo img");
+    if (!img) return;
+    const box = img.closest(".ps-photos") || img.parentElement;
+    const imgs = [...box.querySelectorAll(".ps-photo img")];
+    openViewer(imgs.map((i) => i.currentSrc || i.src), Math.max(0, imgs.indexOf(img)));
+  });
+  $("sheet").addEventListener("touchstart", (e) => { if (viewerOpen() || $("sheet-body").scrollTop > 0) { sy = null; return; } sy = e.touches[0].clientY; }, { passive: true });
   $("sheet").addEventListener("touchmove", (e) => { if (sy == null) return; const dy = e.touches[0].clientY - sy; if (dy > 0) $("sheet").style.transform = `translateY(${dy}px)`; }, { passive: true });
   $("sheet").addEventListener("touchend", (e) => { if (sy == null) return; const dy = e.changedTouches[0].clientY - sy; $("sheet").style.transform = ""; sy = null; if (dy > 110) closeSheet(); });
 }
@@ -1185,7 +1650,7 @@ function bind() {
 /* ---------- boot ---------- */
 function boot() {
   initTelegram();
-  paintIcons(); paintStaticAvatars();
+  paintIcons(); paintStaticAvatars(); paintObFlags();
   bind(); bindBackend();
   rollover();
   try { const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user; if (u && !state.me.name) state.me.name = (u.first_name || "").slice(0, 20); } catch {}

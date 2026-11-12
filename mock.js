@@ -231,13 +231,45 @@
     t18: "lera_test", t19: "kira_test", t20: "alina_test", t21: "polina_test", t22: "nika_test",
     t23: "sasha_test", t24: "mark_test", t25: "denis_test", t26: "gleb_test", t27: "stepan_test",
   };
+  function deriveFlags(avg, count, salt) {
+    const n = count | 0;
+    const counts = { green: 0, mid: 0, red: 0 };
+    if (n <= 0) return { counts, avg: 0 };
+    let sum = Math.round(Number(avg) * n);
+    sum = Math.max(n, Math.min(10 * n, sum));
+    const scores = new Array(n);
+    const base = Math.max(1, Math.min(10, Math.round(sum / n)));
+    for (let i = 0; i < n; i++) scores[i] = base;
+    let cur = base * n;
+    let i = 0;
+    while (cur < sum) { if (scores[i % n] < 10) { scores[i % n]++; cur++; } i++; }
+    i = 0;
+    while (cur > sum) { if (scores[i % n] > 1) { scores[i % n]--; cur--; } i++; }
+    let rng = (salt + 1) * 9973;
+    const next = () => { rng = (Math.imul(rng, 1664525) + 1013904223) >>> 0; return rng; };
+    const mean = sum / n;
+    const spread = 1 + (salt % 3);
+    const lo = Math.max(1, Math.round(mean) - spread);
+    const hi = Math.min(10, Math.round(mean) + spread + 1);
+    const passes = Math.max(1, Math.round(n * (0.12 + (salt % 5) * 0.06)));
+    for (let p = 0; p < passes; p++) {
+      const a = next() % n;
+      const b = next() % n;
+      if (a === b) continue;
+      if (scores[a] < hi && scores[b] > lo) { scores[a]++; scores[b]--; }
+    }
+    for (const sc of scores) {
+      if (sc >= 8) counts.green++;
+      else if (sc >= 5) counts.mid++;
+      else counts.red++;
+    }
+    return { counts, avg: Math.round((sum / n) * 10) / 10 };
+  }
   PROFILES.forEach((p, i) => {
     p.username = HANDLES[p.id];
-    p.flagCounts = {
-      green: [11, 4, 8, 0, 6, 14, 2, 9][i % 8],
-      mid: [3, 7, 1, 5, 0, 4, 8, 2][i % 8],
-      red: [1, 0, 4, 2, 6, 0, 3, 1][i % 8],
-    };
+    const bag = deriveFlags(p.stats.avg, p.stats.count, i + 3);
+    p.flagCounts = bag.counts;
+    p.stats.avg = bag.avg;
   });
 
   function publicProfile(p) {
@@ -429,6 +461,13 @@
         const flag = score >= 8 ? "green" : score >= 5 ? "mid" : "red";
         s.partner.flagCounts = s.partner.flagCounts || { green: 0, mid: 0, red: 0 };
         s.partner.flagCounts[flag] = (s.partner.flagCounts[flag] | 0) + 1;
+        const st = s.partner.stats;
+        if (st) {
+          const n0 = st.count | 0;
+          const sum0 = Math.round((Number(st.avg) || 0) * n0);
+          st.count = n0 + 1;
+          st.avg = Math.round(((sum0 + (score | 0)) / st.count) * 10) / 10;
+        }
         myRatings.set(s.partner.id, { score });
         return { accepted: true };
       },
