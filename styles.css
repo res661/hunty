@@ -226,9 +226,9 @@ html[data-theme="dark"] .rate-widget { background: #23242C; }
 .rate-pills span { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; background: var(--surface); box-shadow: 0 3px 0 var(--line); }
 .rate-pills span.on { background: var(--coral); color: #fff; box-shadow: 0 3px 0 var(--coral-deep); transform: translateY(-4px); }
 .art-rating { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.ob-flags { width: min(280px, 100%); display: flex; flex-direction: column; gap: 8px; }
-.ob-flags .flag-w { width: 100%; max-width: none; min-height: 46px; justify-content: flex-start; padding: 8px 14px; border-radius: 14px; font-size: 15px; }
-.ob-flags .flag-mark { width: 24px; height: 24px; }
+.ob-score { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 160px; height: 160px; border-radius: 36px; background: var(--surface); box-shadow: var(--shadow); }
+.ob-score b { font-family: var(--font-display); font-weight: 800; font-size: 72px; letter-spacing: -3px; line-height: .9; color: var(--text); }
+.ob-score span { margin-top: 4px; color: var(--muted); font-weight: 700; font-size: 16px; }
 .safe-widget { width: 280px; padding: 10px; border-radius: 26px; background: var(--surface); box-shadow: var(--shadow-lg); text-align: left; }
 .safe-row { display: flex; align-items: center; gap: 12px; padding: 10px; font-weight: 600; font-size: 15px; }
 .safe-row + .safe-row { border-top: 1px solid var(--line); }

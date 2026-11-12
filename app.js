@@ -495,9 +495,16 @@ function openRegister(edit) {
 }
 function renderGender() { [...$("f-gender").children].forEach((b) => b.classList.toggle("on", b.dataset.v === (draft.gender || ""))); }
 function renderSeek(root, value) { if (!root) return; [...root.children].forEach((b) => b.classList.toggle("on", b.dataset.v === (value || ""))); }
+function photoCap() { return isPremium() ? 6 : 3; }
+function photoSlotsFor(list) {
+  const n = (list || []).filter(Boolean).length;
+  const cap = photoCap();
+  return n < cap ? cap : n;
+}
 function renderPhotos() {
-  const slots = [0, 1, 2].map((i) => {
-    const src = draft.photos[i];
+  const photos = draft.photos || [];
+  const slots = Array.from({ length: photoSlotsFor(photos) }, (_, i) => {
+    const src = photos[i];
     if (src) return `<div class="photo-slot ${i === 0 ? "main" : ""}" data-i="${i}"><img src="${src}" alt="">${i === 0 ? `<span class="av-preview"><img src="${src}" alt=""></span>` : ""}<button class="ps-x" data-del="${i}" aria-label="Удалить">${ic("close")}</button></div>`;
     return `<button class="photo-slot ${i === 0 ? "main" : ""}" data-add="${i}">${ic(i === 0 ? "camera" : "plus")}<span class="ps-label">${i === 0 ? "Главное" : "Ещё"}</span></button>`;
   });
@@ -648,11 +655,11 @@ function renderHome() {
   clearInterval(cdInt);
   if (paused) cdInt = setInterval(() => { if (current === "home") renderHome(); }, 1000);
   const pro = isPremium();
-  $("my-stats").innerHTML = `<div class="card-head"><h3>Твоя репутация</h3><small>${state.totals.chats ? "по оценкам собеседников" : "появится после чатов"}</small></div>` + myStatsHTML() + flagChips(myFlagCounts());
+  $("my-stats").innerHTML = `<div class="card-head"><h3>Твоя репутация</h3><small>${state.totals.chats ? "по оценкам собеседников" : "появится после чатов"}</small></div>` + myStatsHTML();
   $("home-premium").className = "card premium-card" + (pro ? " on" : "");
   $("home-premium").innerHTML = pro
-    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</p>`
-    : `<span class="pc-star">${ic("star")}</span><h3>PRO подписка</h3><p>Все оценки, фото в чате и поиск быстрее.</p><button class="btn" id="home-pro-btn">Подробнее · от 99 ★</button>`;
+    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Все оценки, фото после встречи, до 6 фото в профиле.</p>`
+    : `<span class="pc-star">${ic("star")}</span><h3>PRO подписка</h3><p>Все оценки, фото после встречи, до 6 фото в профиле и поиск быстрее.</p><button class="btn" id="home-pro-btn">Подробнее · от 30 ★</button>`;
   const b = $("home-pro-btn"); if (b) b.onclick = openPremium;
   $("home-tip").innerHTML = `<span class="si coral">${ic("info")}</span><div>${TIPS[Math.floor(Date.now() / 60000) % TIPS.length]}</div>`;
   paintIcons($("home-tip"));
@@ -715,9 +722,7 @@ function revealMatch(m, gen) {
   stopBumps();
   const p = m.partner;
   const el = $("match-reveal");
-  const where = [p.city, p.country].map((s) => (s || "").trim()).filter(Boolean).map(esc).join(", ");
-  const rate = p.stats && p.stats.count >= RULES.NEW_UNTIL ? ratingChip(p) : `<span class="rating-chip">новый</span>`;
-  el.innerHTML = `<button class="mr-person" type="button">${anonHTML("xl")}<span class="mr-kicker">Нашли</span><b>${esc(p.name)}, ${p.age}</b>${where ? `<span class="mr-place">${where}</span>` : ""}${rate}</button>`;
+  el.innerHTML = `<button class="mr-person" type="button">${anonHTML("xl")}<span class="mr-kicker">Нашли</span></button>`;
   el.classList.remove("hidden");
   haptic("success");
   const go = () => {
@@ -751,7 +756,6 @@ function openChat(m) {
   $("typing").classList.add("hidden");
   $("msg-input").disabled = false; $("msg-input").placeholder = "Сообщение";
   $("msg-input").value = ""; updateSend();
-  $("chat-timer").classList.remove("unlocked");
   rememberPartner(chat.partner.id); save();
   showScreen("chat");
   clearInterval(timerInt); tickTimer(); timerInt = setInterval(tickTimer, 1000);
@@ -813,11 +817,6 @@ function tryUnmask() {
 }
 function tickTimer() {
   if (!chat) return;
-  const d = chatDur();
-  $("timer-text").textContent = fmtDur(d);
-  const total = (chat.mine || 0) + (chat.theirs || 0);
-  const frac = Math.min(1, total / RULES.MIN_RATE_MSGS);
-  $("timer-ring").style.strokeDashoffset = String(50.27 * (1 - frac));
   paintMaskNote();
   tryUnmask();
   maybeUnlock();
@@ -825,7 +824,7 @@ function tickTimer() {
 function maybeUnlock() {
   if (!chat || chat.unlockedShown || chat.ended || !chat.masksOff) return;
   if (!H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0)) return;
-  chat.unlockedShown = true; $("chat-timer").classList.add("unlocked");
+  chat.unlockedShown = true;
 }
 function addMsg(text, who) {
   const box = $("messages");
@@ -944,7 +943,6 @@ function openRateSheet(entry, after) {
     <div class="sh-title">Как прошёл разговор?</div>
     <div class="rate-hint" id="rate-hint">Выбери от 1 до 10</div>
     <div class="rate-big hidden" id="rate-big"></div>
-    <div class="flag-row" id="flag-row">${FLAGS.map((f) => flagWidget(f, null, false)).join("")}</div>
     <div class="rate-grid" id="rate-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button class="rate-btn" data-n="${n}">${n}</button>`).join("")}</div>
     <div class="sh-actions row"><button class="btn btn-soft rate-act" id="rate-home">${stay ? "Не сейчас" : after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary rate-act" id="rate-send" disabled>${stay || after !== "next" ? "Оценить" : "Оценить и дальше"}</button></div>
     <div class="rate-note">Имя и фото видны в «Мои оценки».</div>`);
@@ -952,13 +950,11 @@ function openRateSheet(entry, after) {
   body.querySelector("#rate-grid").onclick = (e) => {
     const b = e.target.closest("[data-n]"); if (!b) return;
     score = +b.dataset.n; haptic("select");
-    const flag = flagFor(score);
     body.querySelectorAll(".rate-btn").forEach((x) => { x.className = "rate-btn"; });
     b.classList.add("on", score <= 4 ? "lo" : score <= 7 ? "mid" : "top");
     const hint = body.querySelector("#rate-hint"); if (hint) hint.classList.add("hidden");
     const big = body.querySelector("#rate-big"); big.classList.remove("hidden");
-    big.innerHTML = `<b>${score}</b><span class="flag-hero ${flag.cls}">${flagMark()}${esc(flag.name)}</span>`;
-    body.querySelectorAll("#flag-row .flag-w").forEach((el) => el.classList.toggle("on", el.dataset.f === flag.id));
+    big.innerHTML = `<b>${score}</b>`;
     body.querySelector("#rate-send").disabled = false;
   };
   body.querySelector("#rate-home").onclick = () => { closeSheet(true); if (!stay) commitLeave(after); };
@@ -1023,15 +1019,14 @@ function openPartnerProfile(p, opts) {
     <div class="ps-meta">${placeText(p)}</div>`;
   const body = openSheet(`${photos}
     ${who}
-    <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}${flagChips(p.flagCounts)}
+    <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}
     <div class="sh-actions row"><button class="btn btn-soft flat" id="pp-report">${ic("flag")}Жалоба</button><button class="btn btn-soft flat" id="pp-block">${ic("block")}Блок</button></div>`);
   bindPhotoDots(body);
   body.querySelector("#pp-report").onclick = () => openReport(p);
   body.querySelector("#pp-block").onclick = () => confirmBlock(p);
 }
 function scoreLine(score, label) {
-  const flag = flagFor(score);
-  return `<div class="given-score"><b>${score}</b><span>${label}</span></div>${flag ? `<div class="flag-row">${flagWidget(flag, null, true)}</div>` : ""}`;
+  return `<div class="given-score"><b>${score}</b><span>${label}</span></div>`;
 }
 function openRaterProfile(h) {
   const shown = !!h.faceShown;
@@ -1080,7 +1075,7 @@ function showEnded() { $("composer").classList.add("hidden"); $("composer-ended"
 /* ---------- profile tab ---------- */
 function renderMyPhotos() {
   const photos = state.me.photos || [];
-  $("p-photos").innerHTML = [0, 1, 2].map((i) => {
+  $("p-photos").innerHTML = Array.from({ length: photoSlotsFor(photos) }, (_, i) => {
     const src = photos[i];
     if (src) return `<div class="photo-slot ${i === 0 ? "main" : ""}"><img src="${src}" alt="">${i === 0 ? `<span class="av-preview"><img src="${src}" alt=""></span>` : ""}<button class="ps-x" data-del="${i}" type="button" aria-label="Удалить">${ic("close")}</button></div>`;
     return `<button class="photo-slot ${i === 0 ? "main" : ""}" type="button" data-add="${i}">${ic(i === 0 ? "camera" : "plus")}<span class="ps-label">${i === 0 ? "Главное" : "Ещё"}</span></button>`;
@@ -1119,10 +1114,9 @@ function renderMyMatches() {
     return;
   }
   box.innerHTML = head + rows.map((m) => {
-    const flag = flagFor(m.theirScore);
     const got = m.theirScore == null
       ? `<span class="match-wait">Пока без оценки</span>`
-      : `<span class="match-got">${flag ? flagWidget(flag, null, true, true) : ""}<b>${m.theirScore}</b></span>`;
+      : `<span class="match-got"><b>${m.theirScore}</b></span>`;
     return `<button class="match-row" type="button" data-mid="${esc(m.sessionId)}">${avatarHTML(m, "sm")}<span class="rater-main"><b>${esc(m.name)}${m.age ? ", " + m.age : ""}</b><span class="hint">${fmtDur(m.dur)}</span></span>${got}</button>`;
   }).join("");
 }
@@ -1136,12 +1130,12 @@ function renderProfile() {
   renderSeek($("p-gender"), m.gender);
   renderSeek($("p-seek"), m.seeking);
   renderMyPhotos();
-  $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML() + flagChips(myFlagCounts());
+  $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML();
   renderMyMatches();
   $("me-premium").className = "card premium-card" + (pro ? " on" : "");
   $("me-premium").innerHTML = pro
-    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</p>`
-    : `<span class="pc-star">${ic("star")}</span><h3>PRO подписка</h3><p>Все оценки, фото в чате и поиск быстрее.</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
+    ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Все оценки, фото после встречи, до 6 фото в профиле.</p>`
+    : `<span class="pc-star">${ic("star")}</span><h3>PRO подписка</h3><p>Все оценки, фото после встречи, до 6 фото в профиле и поиск быстрее.</p><button class="btn" id="me-pro-btn">Подключить за Stars</button>`;
   const pb = $("me-pro-btn"); if (pb) pb.onclick = openPremium;
   const wr = $("who-rated-bottom");
   wr.textContent = pro ? "Мои оценки" : `Мои оценки · ${revealsLeft()} из ${FREE_REVEALS}`;
@@ -1152,10 +1146,15 @@ function renderProfile() {
 }
 
 /* ---------- premium ---------- */
-const PLANS = [{ id: "week", name: "Неделя", stars: 99, note: "7 дней" }, { id: "month", name: "Месяц", stars: 299, note: "30 дней", save: "−30%" }];
+const PLANS = [
+  { id: "three", name: "3 дня", stars: 30, note: "3 дня" },
+  { id: "week", name: "Неделя", stars: 90, note: "7 дней" },
+  { id: "two", name: "14 дней", stars: 150, note: "14 дней" },
+  { id: "month", name: "Месяц", stars: 240, note: "30 дней" },
+];
 function openPremium() {
-  let plan = "month";
-  const feats = [["eye", "Все оценки", "кто оценил — без лимита"], ["search", "Быстрее в поиске", "собеседник находится раньше"], ["crown", "Корона PRO", "маленький значок у имени"], ["camera", "Фото в чате", "можно отправлять снимки"], ["clock", "Без ожидания", "частые «Дальше» не останавливают поиск"]];
+  let plan = "week";
+  const feats = [["camera", "Фото в чате", "после встречи в 2:30"], ["eye", "Все оценки", "кто оценил — без лимита"], ["search", "Быстрее в поиске", "собеседник находится раньше"], ["clock", "Без ожидания", "частые «Дальше» не останавливают поиск"], ["crown", "Корона PRO", "на аватаре"], ["plus", "6 фото", "в профиле, у бесплатных — 3"]];
   const body = openSheet(`<div class="prem-hero"><div class="prem-orb">${ic("crown")}</div><div class="sh-title">PRO подписка</div><div class="sh-sub">Оплата через Telegram Stars</div></div>
     <div class="feat-list">${feats.map(([i, b, s]) => `<div class="feat"><span class="lr-ic">${ic(i)}</span><div><b>${b}</b><small>${s}</small></div></div>`).join("")}</div>
     <div class="plans" id="plans">${PLANS.map((p) => `<button class="plan ${p.id === plan ? "on" : ""}" data-p="${p.id}">${p.save ? `<span class="save">${p.save}</span>` : ""}<b>${p.name}</b><span class="price">${ic("star")}${p.stars}</span><small>${p.note}</small></button>`).join("")}</div>
@@ -1182,7 +1181,7 @@ function payFlow(plan) {
     if (state.cooldown) clearCooldown();
     save(); backend.updateMe(publicMe());
     haptic("success");
-    body.innerHTML = `<div class="pay-box"><div class="success-ic">${ic("check")}</div><div class="sh-title">PRO подключён!</div><div class="sh-sub">До ${new Date(r.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</div><div class="sh-actions"><button class="btn btn-primary btn-lg" id="pay-done">Круто</button></div></div>`;
+    body.innerHTML = `<div class="pay-box"><div class="success-ic">${ic("check")}</div><div class="sh-title">PRO подключён!</div><div class="sh-sub">До ${new Date(r.until).toLocaleDateString("ru-RU")}. Все оценки, фото после встречи, до 6 фото в профиле.</div><div class="sh-actions"><button class="btn btn-primary btn-lg" id="pay-done">Круто</button></div></div>`;
     body.querySelector("#pay-done").onclick = () => closeSheet(true);
     refresh();
   };
@@ -1198,11 +1197,9 @@ function renderRatings() {
   box.innerHTML = rows.length ? rows.map((h) => {
     const id = h.id || (h.name + ":" + h.ts);
     const open = isPremium() || revealed(id);
-    const flag = flagFor(h.score);
-    const flagHtml = open && flag ? `<div class="flag-row">${flagWidget(flag, null, true)}</div>` : "";
     const face = h.faceShown ? avatarHTML(h, "sm") : anonHTML("sm");
     return `<div class="rated-row" data-rid="${esc(id)}">${open
-      ? `${face}<div class="rater-main"><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div>${flagHtml}</div><span class="score">${h.score}</span>`
+      ? `${face}<div class="rater-main"><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div></div><span class="score">${h.score}</span>`
       : `${anonHTML("sm")}<div class="rater-main"><b>Скрыто</b><div class="hint" style="margin:0">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
   }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Оценка появится после разговора.</span></div>`;
 }
@@ -1557,11 +1554,7 @@ function mountViewer() {
   stage.addEventListener("pointercancel", endPtr);
   window.addEventListener("keydown", (e) => { if (e.key === "Escape" && viewerOpen()) { e.preventDefault(); closeViewer(); } });
 }
-function paintObFlags() {
-  const el = $("ob-flags");
-  if (!el) return;
-  el.innerHTML = flagWidget(FLAGS[0], 12, true) + flagWidget(FLAGS[1], 4, false) + flagWidget(FLAGS[2], 1, false);
-}
+function paintObFlags() {}
 
 /* ---------- bindings ---------- */
 function bind() {
@@ -1583,7 +1576,10 @@ function bind() {
     const del = e.target.closest("[data-del]");
     if (del) { draft.photos.splice(+del.dataset.del, 1); renderPhotos(); return; }
     const add = e.target.closest("[data-add]");
-    if (add) { photoSlot = Math.min(+add.dataset.add, draft.photos.length); $("photo-input").value = ""; $("photo-input").click(); return; }
+    if (add) {
+      if ((draft.photos || []).filter(Boolean).length >= photoCap()) { toast(isPremium() ? "Максимум 6 фото" : "Бесплатно — 3 фото. В PRO — до 6", "warn"); return; }
+      photoSlot = Math.min(+add.dataset.add, draft.photos.length); $("photo-input").value = ""; $("photo-input").click(); return;
+    }
     const img = e.target.closest("img");
     if (img && img.parentElement && img.parentElement.classList.contains("photo-slot")) {
       const imgs = [...$("photo-slots").querySelectorAll(".photo-slot > img")];
@@ -1592,7 +1588,13 @@ function bind() {
   };
   $("photo-input").onchange = async () => {
     const f = $("photo-input").files[0]; if (!f) return;
-    try { draft.photos[photoSlot] = await resizeImage(f); draft.photos = draft.photos.filter(Boolean).slice(0, 3); renderPhotos(); } catch { toast("Не удалось загрузить фото", "warn"); }
+    try {
+      const over = (draft.photos || []).filter(Boolean).length > photoCap();
+      draft.photos[photoSlot] = await resizeImage(f);
+      draft.photos = draft.photos.filter(Boolean);
+      if (!over) draft.photos = draft.photos.slice(0, photoCap());
+      renderPhotos();
+    } catch { toast("Не удалось загрузить фото", "warn"); }
   };
   $("open-rules-reg").onclick = (e) => { e.preventDefault(); e.stopPropagation(); openRules(); };
   $("reg-save").onclick = saveRegister;
@@ -1682,7 +1684,10 @@ function bind() {
     const del = e.target.closest("[data-del]");
     if (del) { state.me.photos.splice(+del.dataset.del, 1); save(); renderMyPhotos(); return; }
     const add = e.target.closest("[data-add]");
-    if (add) { pSlot = Math.min(+add.dataset.add, (state.me.photos || []).length); $("p-photo-input").value = ""; $("p-photo-input").click(); return; }
+    if (add) {
+      if ((state.me.photos || []).filter(Boolean).length >= photoCap()) { toast(isPremium() ? "Максимум 6 фото" : "Бесплатно — 3 фото. В PRO — до 6", "warn"); return; }
+      pSlot = Math.min(+add.dataset.add, (state.me.photos || []).length); $("p-photo-input").value = ""; $("p-photo-input").click(); return;
+    }
     const img = e.target.closest("img");
     if (img && img.parentElement && img.parentElement.classList.contains("photo-slot")) {
       const imgs = [...$("p-photos").querySelectorAll(".photo-slot > img")];
@@ -1691,7 +1696,13 @@ function bind() {
   };
   $("p-photo-input").onchange = async () => {
     const f = $("p-photo-input").files[0]; if (!f) return;
-    try { state.me.photos[pSlot] = await resizeImage(f); state.me.photos = state.me.photos.filter(Boolean).slice(0, 3); save(); renderMyPhotos(); backend.updateMe(publicMe()); } catch { toast("Не удалось загрузить фото", "warn"); }
+    try {
+      const over = (state.me.photos || []).filter(Boolean).length > photoCap();
+      state.me.photos[pSlot] = await resizeImage(f);
+      state.me.photos = state.me.photos.filter(Boolean);
+      if (!over) state.me.photos = state.me.photos.slice(0, photoCap());
+      save(); renderMyPhotos(); backend.updateMe(publicMe());
+    } catch { toast("Не удалось загрузить фото", "warn"); }
   };
   ["p-name", "p-country", "p-city", "p-age"].forEach((id) => {
     const el = $(id);

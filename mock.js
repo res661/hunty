@@ -506,7 +506,7 @@
 
       async purchasePremium(planId) {
         await wait(1200);
-        const days = planId === "month" ? 30 : 7;
+        const days = { three: 3, week: 7, two: 14, month: 30 }[planId] || 7;
         return { ok: true, until: Date.now() + days * 86400e3 };
       },
     };

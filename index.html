@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#F2F3F5" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=29" type="image/svg+xml" />
+  <link rel="icon" href="assets/mark.svg?v=30" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=29" />
+  <link rel="stylesheet" href="styles.css?v=30" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -31,10 +31,10 @@
       </article>
       <article class="ob-slide">
         <div class="ob-art art-rating">
-          <div class="ob-flags" id="ob-flags"></div>
+          <div class="ob-score"><b>8</b><span>из 10</span></div>
         </div>
-        <h1>Флаги после разговора</h1>
-        <p>После разговора ставят 1–10. Это грин, жёлтый или ред флаг — и счётчик в профиле.</p>
+        <h1>Оценка после встречи</h1>
+        <p>Если дошли до 2:30, можно поставить от 1 до 10. Оценка видна в «Мои оценки».</p>
       </article>
       <article class="ob-slide">
         <div class="ob-art art-safe">
@@ -62,7 +62,7 @@
       <div class="reg-lead" id="reg-lead">Имя видно сразу. Фото — через две с половиной минуты. Пол и кого искать — только для подбора.</div>
 
       <div class="group-title">Фото <span class="req">обязательно</span></div>
-      <p class="field-why">Их увидят, если разговор дойдёт до 2:30. Кружок — как фото встанет в аватар.</p>
+      <p class="field-why">Их увидят, если разговор дойдёт до 2:30. Бесплатно — 3 фото, в PRO — до 6. Кружок — как фото встанет в аватар.</p>
       <div class="photo-slots" id="photo-slots"></div>
       <input type="file" id="photo-input" accept="image/*" hidden />
 
@@ -211,7 +211,6 @@
     <header class="chat-head">
       <button class="chat-pill report" id="chat-report" type="button">Жалоба</button>
       <button class="chat-who" id="chat-who"></button>
-      <div class="timer hidden" id="chat-timer"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" class="tr-bg"/><circle cx="10" cy="10" r="8" class="tr-fg" id="timer-ring"/></svg><span id="timer-text">0:00</span></div>
       <button class="chat-pill skip" id="chat-skip" type="button">Дальше</button>
     </header>
     <div class="messages" id="messages"></div>
@@ -273,8 +272,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=29"></script>
-<script src="mock.js?v=29"></script>
-<script src="app.js?v=29"></script>
+<script src="rules.js?v=30"></script>
+<script src="mock.js?v=30"></script>
+<script src="app.js?v=30"></script>
 </body>
 </html>
