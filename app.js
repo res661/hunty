@@ -53,7 +53,7 @@ const P = {
 function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
-const MASCOT_SRC = "assets/cupion-mascot.png?v=37";
+const MASCOT_SRC = "assets/cupion-mascot.png?v=38";
 function mascotImg(cls) { return `<img class="${cls || "mascot"}" src="${MASCOT_SRC}" alt="" draggable="false">`; }
 function maskArt(bg) {
   const ink = "#FFF7F6";
@@ -431,6 +431,7 @@ function showScreen(name, dir) {
   }
   $("tabbar").classList.toggle("hidden", !TABS.includes(name));
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.dataset.tab === name));
+  requestAnimationFrame(placeTabPill);
   if (name === "home") renderHome();
   if (name === "ratings") renderRatings();
   if (name === "profile") renderProfile();
@@ -490,7 +491,10 @@ function openSheet(html, onClose) {
   sheetGen++;
   $("sheet-body").innerHTML = html; $("sheet-body").scrollTop = 0;
   paintIcons($("sheet-body"));
-  sheet.classList.remove("hidden", "out"); bd.classList.remove("hidden", "out");
+  sheet.style.transition = "";
+  sheet.style.transform = "";
+  sheet.classList.remove("hidden", "out", "dragging");
+  bd.classList.remove("hidden", "out");
   sheetOnClose = onClose || null;
   try { if (tg && tg.BackButton) tg.BackButton.show(); } catch {}
   return $("sheet-body");
@@ -499,12 +503,16 @@ function closeSheet(silent) {
   const sheet = $("sheet"), bd = $("sheet-backdrop");
   if (sheet.classList.contains("hidden")) return;
   const gen = ++sheetGen;
-  sheet.classList.add("out"); bd.classList.add("out");
+  const alreadyOff = (sheet.style.transform || "").indexOf("110%") !== -1;
+  if (!alreadyOff) sheet.classList.add("out");
+  bd.classList.add("out");
   setTimeout(() => {
     if (gen !== sheetGen) return;
     sheet.classList.add("hidden"); bd.classList.add("hidden");
-    sheet.classList.remove("is-rate", "is-pro");
-  }, 260);
+    sheet.classList.remove("is-rate", "is-pro", "out", "dragging");
+    sheet.style.transition = "";
+    sheet.style.transform = "";
+  }, alreadyOff ? 40 : 280);
   const cb = sheetOnClose; sheetOnClose = null;
   if (cb && !silent) cb();
   try { if (tg && tg.BackButton && !["register", "chat", "search"].includes(current)) tg.BackButton.hide(); } catch {}
@@ -1082,9 +1090,7 @@ function chatDur() { return chat ? Math.floor(((chat.endedAt || Date.now()) - ch
 function paintChatFace() {
   if (!chat) return;
   const av = $("chat-avatar");
-  if (av) av.innerHTML = `<span class="glass-av">${ic("user")}</span>`;
-  const who = $("chat-who");
-  if (who && !who.querySelector("#chat-status")) who.innerHTML = `<b>Собеседник</b><small id="chat-status">в сети</small>`;
+  if (av && !av.querySelector("svg")) av.innerHTML = ic("user");
   const st = $("chat-status");
   if (st) st.textContent = chat.partnerGone ? "не в сети" : (chat.typing ? "печатает…" : "в сети");
 }
@@ -1216,16 +1222,11 @@ function showMsgMenu(el, x, y) {
   m.style.top = top + "px";
   suppressClick = true;
 }
-function msgStamp() {
-  const d = new Date();
-  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-}
 function addMsg(text, who) {
   const box = $("messages");
   const el = document.createElement("div"); el.className = "msg " + who;
   const body = document.createElement("div"); body.className = "msg-body"; body.textContent = text;
-  const time = document.createElement("span"); time.className = "msg-time"; time.textContent = msgStamp();
-  el.appendChild(body); el.appendChild(time);
+  el.appendChild(body);
   sealBubble(el, who, "text");
   box.appendChild(el); box.scrollTop = box.scrollHeight;
 }
@@ -1338,7 +1339,7 @@ function addVoice(blob, ms, bars) {
   el.className = "msg me voice";
   const secs = Math.max(1, Math.round(ms / 1000));
   const heights = bars && bars.length ? bars : Array.from({ length: 16 }, () => 30 + Math.round(Math.random() * 70));
-  el.innerHTML = `<button type="button" class="v-play" aria-label="Слушать">${ic("play")}</button><span class="v-wave">${heights.map((h) => `<i style="height:${h}%"></i>`).join("")}</span><span class="msg-time">0:${String(secs % 60).padStart(2, "0")}</span>`;
+  el.innerHTML = `<button type="button" class="v-play" aria-label="Слушать">${ic("play")}</button><span class="v-wave">${heights.map((h) => `<i style="height:${h}%"></i>`).join("")}</span><span class="v-len">0:${String(secs % 60).padStart(2, "0")}</span>`;
   if (blob && blob.size) el.dataset.src = URL.createObjectURL(blob);
   sealBubble(el, "me", "voice");
   box.appendChild(el);
@@ -2293,8 +2294,10 @@ function bind() {
   $("cd-skip").onclick = onCooldownAction;
   $("srch-cancel").onclick = cancelSearch;
 
-  const back = $("chat-back");
-  if (back) back.onclick = () => goBack();
+  const report = $("chat-report");
+  if (report) report.onclick = () => { if (chat) openReport(chat.partner); };
+  const skip = $("chat-skip");
+  if (skip) skip.onclick = () => { haptic("medium"); leaveChat("next"); };
   const actBtn = $("chat-activity");
   if (actBtn) actBtn.onclick = () => {
     const menu = $("act-menu");
@@ -2534,12 +2537,11 @@ function bind() {
     const a = document.activeElement;
     if (a && a.closest && a.closest("#edit-card")) a.blur();
   });
-  const sheetX = $("sheet-close");
-  if (sheetX) sheetX.onclick = () => closeSheet();
   const premBanner = $("prem-banner");
   if (premBanner) premBanner.onclick = () => openPremium();
   $("sheet-backdrop").onclick = () => closeSheet();
-  let sy = null;
+  bindSheetDrag();
+  window.addEventListener("resize", placeTabPill);
   $("sheet").addEventListener("click", (e) => {
     if (e.target.closest(".ps-x, button, a, [data-add], [data-del]")) return;
     const img = e.target.closest(".ps-photo img");
@@ -2548,14 +2550,110 @@ function bind() {
     const imgs = [...box.querySelectorAll(".ps-photo img")];
     openViewer(imgs.map((i) => i.currentSrc || i.src), Math.max(0, imgs.indexOf(img)));
   });
-  $("sheet").addEventListener("touchstart", (e) => { if (viewerOpen() || $("sheet-body").scrollTop > 0) { sy = null; return; } sy = e.touches[0].clientY; }, { passive: true });
-  $("sheet").addEventListener("touchmove", (e) => { if (sy == null) return; const dy = e.touches[0].clientY - sy; if (dy > 0) $("sheet").style.transform = `translateY(${dy}px)`; }, { passive: true });
-  $("sheet").addEventListener("touchend", (e) => { if (sy == null) return; const dy = e.changedTouches[0].clientY - sy; $("sheet").style.transform = ""; sy = null; if (dy > 110) closeSheet(); });
+}
+function placeTabPill() {
+  const bar = $("tabbar");
+  const pill = $("tab-pill");
+  if (!bar || !pill || bar.classList.contains("hidden")) return;
+  const on = bar.querySelector(".tab.on");
+  if (!on) return;
+  pill.style.width = on.offsetWidth + "px";
+  pill.style.transform = "translate3d(" + on.offsetLeft + "px,0,0)";
+  if (!pill.dataset.ready) requestAnimationFrame(() => { pill.dataset.ready = "1"; });
+}
+function bindSheetDrag() {
+  const sheet = $("sheet");
+  const body = $("sheet-body");
+  let drag = null;
+  sheet.addEventListener("pointerdown", (e) => {
+    if (viewerOpen() || sheet.classList.contains("hidden")) return;
+    if (e.button != null && e.button !== 0) return;
+    const onGrab = !!e.target.closest(".sheet-grab");
+    if (!onGrab && body && body.scrollTop > 2) return;
+    drag = { id: e.pointerId, y: e.clientY, lastY: e.clientY, lastT: performance.now(), dy: 0, v: 0, active: onGrab };
+  });
+  sheet.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dy = e.clientY - drag.y;
+    const now = performance.now();
+    const dt = Math.max(1, now - drag.lastT);
+    drag.v = (e.clientY - drag.lastY) / dt;
+    drag.lastY = e.clientY;
+    drag.lastT = now;
+    if (!drag.active) {
+      if (dy > 6 && (!body || body.scrollTop <= 0)) {
+        drag.active = true;
+        try { sheet.setPointerCapture(e.pointerId); } catch {}
+      } else return;
+    }
+    const y = Math.max(0, dy);
+    drag.dy = y;
+    sheet.classList.add("dragging");
+    sheet.style.transition = "none";
+    sheet.style.transform = "translate3d(0," + y + "px,0)";
+    if (y > 0) e.preventDefault();
+  }, { passive: false });
+  const end = (e) => {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    const d = drag;
+    drag = null;
+    if (!d.active) return;
+    const dismiss = d.dy > 108 || (d.dy > 28 && d.v > 0.45);
+    if (dismiss) {
+      sheet.style.transition = "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)";
+      sheet.style.transform = "translate3d(0,110%,0)";
+      $("sheet-backdrop").classList.add("out");
+      setTimeout(() => closeSheet(), 300);
+    } else {
+      sheet.style.transition = "transform 0.48s cubic-bezier(0.34, 1.4, 0.64, 1)";
+      sheet.style.transform = "translate3d(0,0,0)";
+      setTimeout(() => {
+        sheet.classList.remove("dragging");
+        sheet.style.transition = "";
+        sheet.style.transform = "";
+      }, 480);
+    }
+  };
+  sheet.addEventListener("pointerup", end);
+  sheet.addEventListener("pointercancel", end);
 }
 
 /* ---------- boot ---------- */
+function mountLetterFields() {
+  const letters = "АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЭЮЯ";
+  const palette = ["#E17076", "#EE7AAE", "#F48FB1", "#FF8AB8", "#E98BB3", "#C77DFF", "#F06292", "#FF9E80", "#EC407A", "#D48AB0", "#F7A1C4", "#FF6F91"];
+  const unit = (n) => {
+    const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const fill = (el) => {
+    if (!el || el.childElementCount) return;
+    for (let i = 0; i < 18; i++) {
+      const a = unit(i + 1), b = unit(i + 23), c = unit(i + 47), d = unit(i + 71);
+      let x = 8 + a * 84;
+      let y = 8 + b * 76;
+      if (Math.abs(x - 50) < 14 && Math.abs(y - 48) < 16) x += x < 50 ? -16 : 16;
+      const size = Math.round(24 + c * 48);
+      const depth = 1 - (size - 24) / 48;
+      const node = document.createElement("span");
+      node.className = "letter-av";
+      node.textContent = letters[(i * 7 + 2) % letters.length];
+      const c1 = palette[i % palette.length];
+      const c2 = palette[(i + 5) % palette.length];
+      node.style.cssText = "--s:" + size + "px;--x:" + x.toFixed(1) + "%;--y:" + y.toFixed(1) + "%;--o:" + (0.26 + (1 - depth) * 0.5).toFixed(2) + ";--blur:" + (depth * 2.4).toFixed(2) + "px;--dx:" + Math.round((d - 0.5) * 72) + "px;--dy:" + Math.round((a - 0.5) * 96) + "px;--dur:" + (18 + b * 20).toFixed(1) + "s;--delay:" + (-c * 24).toFixed(1) + "s;background:linear-gradient(155deg," + c1 + "," + c2 + ")";
+      el.appendChild(node);
+    }
+  };
+  fill($("letter-field"));
+  fill($("letter-field-srch"));
+  document.addEventListener("visibilitychange", () => {
+    const paused = document.hidden;
+    document.querySelectorAll(".letter-field").forEach((el) => el.classList.toggle("paused", paused));
+  });
+}
 function boot() {
   initTelegram();
+  mountLetterFields();
   paintIcons(); paintStaticAvatars(); paintObFlags();
   bind(); bindBackend();
   rollover();

@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#EFEFF4" />
   <meta name="format-detection" content="telephone=no" />
   <title>Cupion</title>
-  <link rel="icon" href="assets/cupion-mascot.png?v=37" type="image/png" />
-  <link rel="stylesheet" href="styles.css?v=37" />
-  <link rel="stylesheet" href="glass.css?v=37" />
+  <link rel="icon" href="assets/cupion-mascot.png?v=38" type="image/png" />
+  <link rel="stylesheet" href="styles.css?v=38" />
+  <link rel="stylesheet" href="glass.css?v=38" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     (function () {
@@ -35,7 +35,7 @@
     <div class="onboard-track" id="ob-track">
       <article class="ob-slide">
         <div class="ob-art art-cards">
-          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=37" alt="" draggable="false"></div>
+          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=38" alt="" draggable="false"></div>
           <div class="mini-card c3"><span class="av sm anon" data-anon></span><div><b>Лиза, 26</b><small>★ 9.4 · 301 чат</small></div></div>
           <div class="mini-card c2"><span class="av sm anon" data-anon></span><div><b>Даня, 27</b><small>★ 8.3 · 212 чатов</small></div></div>
           <div class="mini-card c1"><span class="av sm anon" data-anon></span><div><b>Аня, 22</b><small>★ 8.7 · 124 чата</small></div><span class="live-dot"></span></div>
@@ -128,6 +128,7 @@
 
   <!-- HOME -->
   <section class="screen hidden tabbed" data-screen="home">
+    <div class="letter-field" id="letter-field" aria-hidden="true"></div>
     <div class="scroll" id="home-scroll">
       <div class="search-hero" id="search-hero">
         <h1 class="find-title">Найти<br>собеседника</h1>
@@ -220,6 +221,7 @@
 
   <!-- SEARCHING -->
   <section class="screen hidden searching" data-screen="search">
+    <div class="letter-field" id="letter-field-srch" aria-hidden="true"></div>
     <div class="fly-field" id="fly-field"></div>
     <div class="srch-center">
       <div class="bump-field" id="bump-field"></div>
@@ -244,12 +246,12 @@
   <section class="screen hidden chat" data-screen="chat">
     <div class="chat-bg" aria-hidden="true"></div>
     <header class="chat-head">
-      <button class="glass-cap back-cap" id="chat-back" type="button" data-ic="back" aria-label="Назад"></button>
-      <button class="glass-cap center-cap" id="chat-who" type="button">
-        <b>Собеседник</b>
-        <small id="chat-status">в сети</small>
+      <button class="chat-pill report" id="chat-report" type="button">Жалоба</button>
+      <button class="chat-who" id="chat-who" type="button">
+        <span class="who-av" id="chat-avatar" aria-hidden="true"></span>
+        <span class="cw-info"><b>Собеседник</b><small id="chat-status">в сети</small></span>
       </button>
-      <span class="glass-cap av-cap" id="chat-avatar" aria-hidden="true"></span>
+      <button class="chat-pill skip" id="chat-skip" type="button">Дальше</button>
     </header>
     <div class="messages" id="messages"></div>
     <div class="typing hidden" id="typing"><i></i><i></i><i></i></div>
@@ -283,7 +285,7 @@
   <!-- RESTRICTED -->
   <section class="screen hidden restricted" data-screen="restricted">
     <div class="rs-center">
-      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=37" alt="" draggable="false"></div>
+      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=38" alt="" draggable="false"></div>
       <h1>Поиск временно ограничен</h1>
       <p id="rs-reason">На твой профиль пожаловались несколько человек. Низкие оценки к ограничениям не приводят — только жалобы.</p>
       <div class="rs-timer" id="rs-timer">59:59</div>
@@ -310,6 +312,7 @@
 
   <!-- FLOATING TAB BAR -->
   <nav class="tabbar hidden" id="tabbar">
+    <span class="tab-pill" id="tab-pill" aria-hidden="true"></span>
     <button class="tab on" data-tab="home"><span data-ic="search"></span><b>Поиск</b></button>
     <button class="tab" data-tab="ratings"><span data-ic="starO"></span><b>Оценки</b></button>
     <button class="tab" data-tab="profile"><span data-ic="user"></span><b>Профиль</b></button>
@@ -317,12 +320,12 @@
 
   <!-- SHEET + TOAST -->
   <div class="sheet-backdrop hidden" id="sheet-backdrop"></div>
-  <div class="sheet hidden" id="sheet" role="dialog"><div class="sheet-grab"></div><button class="sheet-close" id="sheet-close" type="button" data-ic="close" aria-label="Закрыть"></button><div class="prem-dock-top" id="prem-dock-top"></div><div class="sheet-body" id="sheet-body"></div><div class="prem-dock-bot" id="prem-dock-bot"></div></div>
+  <div class="sheet hidden" id="sheet" role="dialog"><div class="sheet-grab"></div><div class="prem-dock-top" id="prem-dock-top"></div><div class="sheet-body" id="sheet-body"></div><div class="prem-dock-bot" id="prem-dock-bot"></div></div>
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=37"></script>
-<script src="mock.js?v=37"></script>
-<script src="app.js?v=37"></script>
+<script src="rules.js?v=38"></script>
+<script src="mock.js?v=38"></script>
+<script src="app.js?v=38"></script>
 </body>
 </html>
