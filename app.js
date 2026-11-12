@@ -761,9 +761,10 @@ function paintChatFace() {
   if (!chat) return;
   const p = chat.partner;
   const crown = p.premium ? `<i class="name-crown">${ic("crown")}</i>` : "";
-  const stat = p.stats.count < RULES.NEW_UNTIL ? "новый" : "★ " + p.stats.avg.toFixed(1);
   const av = chat.masksOff ? avatarHTML(p, "sm") : anonHTML("sm");
-  $("chat-who").innerHTML = `${av}<span class="cw-info"><b>${esc(p.name)}${crown}</b><small>${chat.partnerGone ? "вышел" : stat}</small></span>`;
+  $("chat-who").innerHTML = `${av}<span class="cw-info"><b>${esc(p.name)}${crown}</b></span>`;
+  const photoBtn = $("chat-photo");
+  if (photoBtn) photoBtn.classList.toggle("hidden", !chat.masksOff);
   paintIcons($("chat-who"));
 }
 function paintMaskNote() {
@@ -1013,11 +1014,14 @@ function partnerShown(p) {
   if (chat && chat.partner && chat.partner.id === p.id) return !!chat.masksOff;
   return !!p.faceShown;
 }
-function openPartnerProfile(p) {
+function openPartnerProfile(p, opts) {
+  const fromChat = !!(opts && opts.lean);
   const shown = partnerShown(p);
-  const body = openSheet(`${shown ? photosHTML(p) : anonBlock()}
-    <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
-    <div class="ps-meta">${placeText(p)}</div>
+  const photos = shown ? photosHTML(p) : anonBlock();
+  const who = fromChat ? "" : `<div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
+    <div class="ps-meta">${placeText(p)}</div>`;
+  const body = openSheet(`${photos}
+    ${who}
     <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}${flagChips(p.flagCounts)}
     <div class="sh-actions row"><button class="btn btn-soft flat" id="pp-report">${ic("flag")}Жалоба</button><button class="btn btn-soft flat" id="pp-block">${ic("block")}Блок</button></div>`);
   bindPhotoDots(body);
@@ -1605,7 +1609,7 @@ function bind() {
     chat.entry = entry;
     openRateSheet(entry, "stay");
   };
-  $("chat-who").onclick = () => chat && openPartnerProfile(chat.partner);
+  $("chat-who").onclick = () => chat && openPartnerProfile(chat.partner, { lean: true });
   let chatPhotoTap = null;
   $("messages").addEventListener("pointerdown", (e) => {
     chatPhotoTap = e.target.closest(".msg.photo img");
