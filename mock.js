@@ -19,7 +19,7 @@
  *        "contactMatched"{ sessionId, username }
  *   findMatch({ filters, exclude, boost }) → Promise<{ sessionId, partner, startedAt }>
  *                                            rejects { code: "cancelled" | "empty" }
- *                                            Age pools are enforced here (16–17 ↔ 16–17, 18+ ↔ 18+).
+ *                                            Age gate is enforced here (18+ only; under 18 never matches).
  *   cancelSearch()
  *   sendMessage(sessionId, text)           → Promise<{ ts }>
  *   leave(sessionId)                       → Promise<{ dur, canRate }>
@@ -103,20 +103,20 @@
       stats: { avg: 8.1, count: 74, avgSec: 333, chats: 95 },
       greet: ["привет", "ну привет 👋"],
       lines: ["я в Вильнюсе, тут красиво", "катаюсь на велике каждый день", "какая у тебя самая крутая поездка?", "работаю в маркетинге", "что слушаешь?"] },
-    // 16–17 pool (only matched with 16–17)
-    { id: "t11", name: "Соня", age: 17, gender: "f", city: "Прага", country: "Чехия", premium: false, hue: 2,
+    // 18+ only — former teen personas stay in the adult pool
+    { id: "t11", name: "Соня", age: 18, gender: "f", city: "Прага", country: "Чехия", premium: false, hue: 2,
       about: "Школа, гитара, сериалы. В этом порядке, но не всегда.",
       interests: ["Музыка", "Сериалы", "Языки", "Книги"],
       stats: { avg: 8.2, count: 19, avgSec: 280, chats: 24 },
       greet: ["привет!", "хай, как дела?"],
       lines: ["учусь в последнем классе", "играю на гитаре, пока только аккорды", "какую музыку слушаешь?", "готовлюсь к экзаменам, спасай", "в Праге сейчас очень красиво"] },
-    { id: "t12", name: "Миша", age: 16, gender: "m", city: "Брно", country: "Чехия", premium: false, hue: 5,
+    { id: "t12", name: "Миша", age: 18, gender: "m", city: "Брно", country: "Чехия", premium: false, hue: 5,
       about: "Футбол и Minecraft. Могу объяснить редстоун.",
       interests: ["Игры", "Спорт", "IT", "Мемы"],
       stats: { avg: 7.7, count: 11, avgSec: 190, chats: 15 },
       greet: ["йо", "привет"],
       lines: ["играю за школьную команду", "строю в майнкрафте город", "во что играешь?", "хочу стать программистом", "какой у тебя любимый предмет?"] },
-    { id: "t13", name: "Вика", age: 17, gender: "f", city: "Рига", country: "Латвия", premium: false, hue: 6,
+    { id: "t13", name: "Вика", age: 18, gender: "f", city: "Рига", country: "Латвия", premium: false, hue: 6,
       about: "Танцую и снимаю короткие видео про котов.",
       interests: ["Танцы", "Животные", "Фото", "Музыка"],
       stats: { avg: 8.9, count: 9, avgSec: 310, chats: 12 },
@@ -140,7 +140,7 @@
       stats: { avg: 8.0, count: 40, avgSec: 260, chats: 52 },
       greet: ["добрый вечер", "привет"],
       lines: ["я во Вроцлаве", "сегодня готовил ужин", "ты чем занимаешься?", "люблю спокойные разговоры", "куда ездил в последний раз?"] },
-    { id: "t14", name: "Рома", age: 16, gender: "m", city: "Таллин", country: "Эстония", premium: false, hue: 9,
+    { id: "t14", name: "Рома", age: 18, gender: "m", city: "Таллин", country: "Эстония", premium: false, hue: 9,
       about: "Собираю компы и читаю фантастику.",
       interests: ["IT", "Книги", "Наука", "Игры"],
       stats: { avg: 7.2, count: 4, avgSec: 160, chats: 6 },

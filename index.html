@@ -3,14 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
-  <meta name="theme-color" content="#F2F3F5" />
+  <meta name="theme-color" content="#EFEFF4" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/cupion-mascot.png?v=34" type="image/png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=34" />
+  <link rel="icon" href="assets/cupion-mascot.png?v=35" type="image/png" />
+  <link rel="stylesheet" href="styles.css?v=35" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     (function () {
@@ -37,7 +34,7 @@
     <div class="onboard-track" id="ob-track">
       <article class="ob-slide">
         <div class="ob-art art-cards">
-          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=34" alt="" draggable="false"></div>
+          <div class="ob-cupid" data-cupid><img class="mascot" src="assets/cupion-mascot.png?v=35" alt="" draggable="false"></div>
           <div class="mini-card c3"><span class="av sm anon" data-anon></span><div><b>Лиза, 26</b><small>★ 9.4 · 301 чат</small></div></div>
           <div class="mini-card c2"><span class="av sm anon" data-anon></span><div><b>Даня, 27</b><small>★ 8.3 · 212 чатов</small></div></div>
           <div class="mini-card c1"><span class="av sm anon" data-anon></span><div><b>Аня, 22</b><small>★ 8.7 · 124 чата</small></div><span class="live-dot"></span></div>
@@ -73,59 +70,73 @@
 
   <!-- REGISTRATION -->
   <section class="screen hidden reg" data-screen="register">
-    <header class="nav-bar"><button class="icon-btn" id="reg-back" data-ic="back" aria-label="Назад"></button><div class="nav-title" id="reg-title">Твой профиль</div><span class="icon-btn ghost"></span></header>
-    <div class="scroll" id="reg-scroll">
-      <div class="reg-lead" id="reg-lead">Имя видно сразу. Фото — через две с половиной минуты. Пол и кого искать — только для подбора.</div>
-
-      <div class="group-title">Фото <span class="req">обязательно</span></div>
-      <p class="field-why">Их увидят, если разговор дойдёт до 2:30. Бесплатно — 3 фото, в PRO — до 6. Кружок — как фото встанет в аватар.</p>
-      <div class="photo-slots" id="photo-slots"></div>
-      <input type="file" id="photo-input" accept="image/*" hidden />
-
-      <div class="group-title">Имя <span class="req">обязательно</span></div>
-      <p class="field-why">Как к тебе будут обращаться.</p>
-      <label class="field"><input id="f-name" maxlength="20" placeholder="Как тебя называть" autocomplete="off" /></label>
-
-      <div class="group-title">Возраст <span class="req">от 16</span></div>
-      <p class="field-why">16–17 общаются только между собой, 18+ — только с 18+.</p>
-      <div class="age-row">
-        <button class="step-btn" id="age-minus" aria-label="Меньше">−</button>
-        <label class="field age-field"><input id="f-age" inputmode="numeric" maxlength="2" placeholder="16" /></label>
-        <button class="step-btn" id="age-plus" aria-label="Больше">+</button>
-      </div>
-      <div class="hint err hidden" id="age-hint"></div>
-
-      <div class="group-title">Пол <span class="req">обязательно</span></div>
-      <p class="field-why">Нужен для подбора. На профиле пол не показывается.</p>
-      <div class="segment" id="f-gender">
-        <button data-v="f">Девушка</button><button data-v="m">Парень</button>
-      </div>
-
-      <div class="group-title">Кого искать <span class="req">обязательно</span></div>
-      <p class="field-why">Тоже для подбора — кого тебе показывать.</p>
-      <div class="segment" id="f-seek">
-        <button data-v="f">Девушек</button><button data-v="m">Парней</button>
-      </div>
-
-      <label class="check-row" id="rules-row">
-        <input type="checkbox" id="f-rules" /><span class="check"></span>
-        <span>Я принимаю <button class="inline-link" id="open-rules-reg">правила Hunty</button>: без 18+ контента, оскорблений, скама и обмана с возрастом.</span>
-      </label>
-      <div class="spacer-bottom"></div>
+    <header class="nav-bar"><button class="icon-btn" id="reg-back" data-ic="back" aria-label="Назад"></button><div class="nav-title" id="reg-title">Возраст</div><span class="icon-btn ghost"></span></header>
+    <div class="reg-progress" id="reg-progress" role="progressbar" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1">
+      <i class="on"></i><i></i><i></i><i></i><i></i><i></i>
     </div>
-    <div class="bottom-cta"><button class="btn btn-primary btn-lg" id="reg-save">Начать</button></div>
+    <p class="reg-lead" id="reg-lead">Сколько тебе лет?</p>
+    <div class="reg-viewport" id="reg-scroll">
+      <div class="reg-track" id="reg-track">
+        <div class="reg-step is-current" data-step="age">
+          <div class="group-title">Возраст <span class="req">от 18</span></div>
+          <p class="field-why">Hunty только для тех, кому уже есть 18.</p>
+          <div class="age-row">
+            <button class="step-btn" id="age-minus" type="button" aria-label="Меньше">−</button>
+            <label class="field age-field"><input id="f-age" inputmode="numeric" maxlength="2" placeholder="18" /></label>
+            <button class="step-btn" id="age-plus" type="button" aria-label="Больше">+</button>
+          </div>
+          <div class="hint err hidden" id="age-hint"></div>
+        </div>
+        <div class="reg-step" data-step="name">
+          <div class="group-title">Имя <span class="req">обязательно</span></div>
+          <p class="field-why">Как к тебе будут обращаться. Имя видно сразу.</p>
+          <label class="field"><input id="f-name" maxlength="20" placeholder="Как тебя называть" autocomplete="off" enterkeyhint="next" /></label>
+        </div>
+        <div class="reg-step" data-step="photos">
+          <div class="group-title">Фото <span class="req">обязательно</span></div>
+          <p class="field-why">Их увидят, если разговор дойдёт до 2:30. Бесплатно — 3 фото, в PRO — до 6. Кружок — как фото встанет в аватар.</p>
+          <div class="photo-slots" id="photo-slots"></div>
+          <input type="file" id="photo-input" accept="image/*" hidden />
+        </div>
+        <div class="reg-step" data-step="gender">
+          <div class="group-title">Пол <span class="req">обязательно</span></div>
+          <p class="field-why">Нужен для подбора. На профиле пол не показывается.</p>
+          <div class="segment" id="f-gender">
+            <button type="button" data-v="f">Девушка</button><button type="button" data-v="m">Парень</button>
+          </div>
+        </div>
+        <div class="reg-step" data-step="seek">
+          <div class="group-title">Кого искать <span class="req">обязательно</span></div>
+          <p class="field-why">Тоже для подбора — кого тебе показывать.</p>
+          <div class="segment" id="f-seek">
+            <button type="button" data-v="f">Девушек</button><button type="button" data-v="m">Парней</button>
+          </div>
+        </div>
+        <div class="reg-step" data-step="rules">
+          <div class="group-title">Правила</div>
+          <p class="field-why">Без 18+ контента, оскорблений, скама и обмана с возрастом.</p>
+          <label class="check-row" id="rules-row">
+            <input type="checkbox" id="f-rules" /><span class="check"></span>
+            <span>Я принимаю <button class="inline-link" id="open-rules-reg">правила Hunty</button>: без 18+ контента, оскорблений, скама и обмана с возрастом.</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-cta"><button class="btn btn-primary btn-lg" id="reg-save" type="button">Дальше</button></div>
   </section>
 
   <!-- HOME -->
   <section class="screen hidden tabbed" data-screen="home">
     <div class="scroll" id="home-scroll">
       <div class="search-hero" id="search-hero">
-        <div class="sh-rings"><i></i><i></i><i></i></div>
-        <button class="search-btn" id="btn-search" type="button">
-          <span class="sb-icon" data-ic="search"></span>
-          <span class="sb-label">Поиск</span>
-          <span class="sb-hint">Найти собеседника</span>
-        </button>
+        <div class="orb-wrap">
+          <div class="sh-rings" aria-hidden="true"><i></i><i></i><i></i></div>
+          <button class="search-btn" id="btn-search" type="button">
+            <span class="sb-icon" data-ic="search"></span>
+            <span class="sb-label">Поиск</span>
+            <span class="sb-hint">Найти собеседника</span>
+          </button>
+        </div>
         <div class="sh-meta">
           <div class="cooldown hidden" id="cooldown-box">
             <div class="cd-kicker">Поиск снова через</div>
@@ -136,9 +147,11 @@
         </div>
       </div>
 
-      <div class="home-stats-row" id="my-stats"></div>
-      <div class="home-pro-hint hidden" id="home-premium"></div>
-      <div class="tip-card" id="home-tip"></div>
+      <div class="home-quiet">
+        <div class="home-stats-row" id="my-stats"></div>
+        <div class="home-pro-hint hidden" id="home-premium"></div>
+        <div class="tip-card" id="home-tip"></div>
+      </div>
       <div class="tab-spacer"></div>
     </div>
   </section>
@@ -153,7 +166,7 @@
         <label class="field"><input id="p-name" maxlength="20" placeholder="Имя" autocomplete="off" enterkeyhint="done" /></label>
         <div class="age-row">
           <button class="step-btn" id="p-age-minus" type="button" aria-label="Меньше">−</button>
-          <label class="field age-field"><input id="p-age" inputmode="numeric" enterkeyhint="done" maxlength="2" placeholder="16" /></label>
+          <label class="field age-field"><input id="p-age" inputmode="numeric" enterkeyhint="done" maxlength="2" placeholder="18" /></label>
           <button class="step-btn" id="p-age-plus" type="button" aria-label="Больше">+</button>
         </div>
         <div class="group-title">Пол</div>
@@ -240,7 +253,7 @@
   <!-- RESTRICTED -->
   <section class="screen hidden restricted" data-screen="restricted">
     <div class="rs-center">
-      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=34" alt="" draggable="false"></div>
+      <div class="brand-mark lg" data-mark><img class="mascot" src="assets/cupion-mascot.png?v=35" alt="" draggable="false"></div>
       <h1>Поиск временно ограничен</h1>
       <p id="rs-reason">На твой профиль пожаловались несколько человек. Низкие оценки к ограничениям не приводят — только жалобы.</p>
       <div class="rs-timer" id="rs-timer">59:59</div>
@@ -278,8 +291,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=34"></script>
-<script src="mock.js?v=34"></script>
-<script src="app.js?v=34"></script>
+<script src="rules.js?v=35"></script>
+<script src="mock.js?v=35"></script>
+<script src="app.js?v=35"></script>
 </body>
 </html>

@@ -50,7 +50,7 @@ const P = {
 function ic(name, cls) {
   return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
-const MASCOT_SRC = "assets/cupion-mascot.png?v=34";
+const MASCOT_SRC = "assets/cupion-mascot.png?v=35";
 function mascotImg(cls) { return `<img class="${cls || "mascot"}" src="${MASCOT_SRC}" alt="" draggable="false">`; }
 function maskArt(bg) {
   const ink = "#FFF7F6";
@@ -279,8 +279,11 @@ function scheduleChrome() {
 }
 function applyChrome() { applyFrame(); }
 function systemTheme() {
-  if (tg && tg.initData && tg.colorScheme) return tg.colorScheme === "dark" ? "dark" : "light";
-  return window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  try {
+    if (tg && (tg.colorScheme === "dark" || tg.colorScheme === "light")) return tg.colorScheme;
+  } catch {}
+  try { return window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }
+  catch { return "light"; }
 }
 const PHONE_PLATFORMS = { ios: 1, android: 1, android_x: 1 };
 const DESK_PLATFORMS = { tdesktop: 1, macos: 1, web: 1, weba: 1, webk: 1, unigram: 1 };
@@ -324,15 +327,36 @@ function toggleDeskFullscreen() {
   } catch {}
   setTimeout(() => { applyShell(); applyTheme(); }, 80);
 }
+const THEME_INLINE = ["--bg", "--surface", "--text", "--muted", "--secondary", "--header", "--subtitle", "--section-header", "--destructive", "--bottom-bar"];
 function applyTheme() {
   const pref = state.settings.theme || "auto";
   const theme = pref === "auto" ? systemTheme() : pref;
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = theme;
-  const desk = document.documentElement.classList.contains("desk");
-  const color = theme === "dark" ? (desk ? "#141218" : "#0E0F13") : (desk ? "#E8E4E6" : "#F2F3F5");
+  const root = document.documentElement;
+  root.dataset.theme = theme;
+  root.style.colorScheme = theme;
+  THEME_INLINE.forEach((k) => root.style.removeProperty(k));
+  if (pref === "auto" && tg && tg.themeParams) {
+    const p = tg.themeParams;
+    const set = (css, val) => { if (val) root.style.setProperty(css, val); };
+    set("--bg", p.secondaryBgColor || p.bgColor);
+    set("--surface", p.sectionBgColor || p.bgColor);
+    set("--text", p.textColor);
+    set("--muted", p.hintColor);
+    set("--secondary", p.secondaryBgColor);
+    set("--header", p.headerBgColor || p.bgColor);
+    set("--subtitle", p.subtitleTextColor || p.hintColor);
+    set("--section-header", p.sectionHeaderTextColor || p.hintColor);
+    set("--destructive", p.destructiveTextColor);
+    set("--bottom-bar", p.bottomBarBgColor || p.bgColor);
+  }
+  const inlineBg = (root.style.getPropertyValue("--bg") || "").trim();
+  const color = inlineBg || (theme === "dark" ? "#000000" : "#EFEFF4");
   const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute("content", color);
-  try { if (tg && tg.setBackgroundColor) tg.setBackgroundColor(color); if (tg && tg.setHeaderColor) tg.setHeaderColor(color); } catch {}
+  try {
+    if (tg && tg.setBackgroundColor) tg.setBackgroundColor(color);
+    if (tg && tg.setHeaderColor) tg.setHeaderColor(color);
+    if (tg && typeof tg.setBottomBarColor === "function") tg.setBottomBarColor(color);
+  } catch {}
 }
 function requestTgFullscreen() {
   try {
@@ -381,9 +405,27 @@ function initTelegram() {
 /* ---------- navigation ---------- */
 let current = "home";
 const TABS = ["home", "ratings", "profile"];
-function showScreen(name) {
-  document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("hidden", s.dataset.screen !== name));
+function showScreen(name, dir) {
+  const prev = current;
+  const changed = prev !== name;
+  document.querySelectorAll(".screen").forEach((s) => {
+    const on = s.dataset.screen === name;
+    s.classList.toggle("hidden", !on);
+    s.classList.remove("enter-fwd", "enter-back", "morph-in", "morph-chat");
+  });
   current = name;
+  if (changed) {
+    const el = document.querySelector('.screen[data-screen="' + name + '"]');
+    let reduce = false;
+    try { reduce = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch {}
+    if (el && !reduce) {
+      const kind = prev === "home" && name === "search" ? "morph-in"
+        : (prev === "search" && name === "chat") ? "morph-chat"
+        : (dir < 0 ? "enter-back" : "enter-fwd");
+      void el.offsetWidth;
+      el.classList.add(kind);
+    }
+  }
   $("tabbar").classList.toggle("hidden", !TABS.includes(name));
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.dataset.tab === name));
   if (name === "home") renderHome();
@@ -392,7 +434,7 @@ function showScreen(name) {
   if (name === "restricted") renderRestricted();
   try {
     if (tg && tg.BackButton) {
-      if (["register", "chat", "search"].includes(name) && !(name === "register" && !state.registered)) tg.BackButton.show();
+      if (["register", "chat", "search"].includes(name)) tg.BackButton.show();
       else tg.BackButton.hide();
     }
   } catch {}
@@ -405,7 +447,10 @@ function goBack() {
     return confirmEndChat();
   }
   if (current === "search") return cancelSearch();
-  if (current === "register") return showScreen(state.registered ? "profile" : "onboard");
+  if (current === "register") {
+    if (regStep > 0) { regStep -= 1; paintReg(-1); haptic("light"); return; }
+    return showScreen(state.registered ? "profile" : "onboard", -1);
+  }
   if (current !== "home" && TABS.includes(current)) return showScreen("home");
 }
 
@@ -473,19 +518,113 @@ function finishOnboarding() { state.onboarded = true; save(); openRegister(false
 
 /* ---------- registration ---------- */
 let draft = null;
+let regStep = 0;
+let regEdit = false;
+const REG_ORDER = ["age", "name", "photos", "gender", "seek", "rules"];
+const REG_TITLES = { age: "Возраст", name: "Имя", photos: "Фото", gender: "Пол", seek: "Кого искать", rules: "Правила" };
+const REG_LEADS = {
+  age: "Сколько тебе лет?",
+  name: "Как тебя называть?",
+  photos: "Добавь фото",
+  gender: "Ты…",
+  seek: "Кого ищем?",
+  rules: "Правила Hunty",
+};
+function regVisible() { return REG_ORDER.filter((id) => id !== "rules" || !regEdit); }
+function paintReg(dir) {
+  const vis = regVisible();
+  if (regStep >= vis.length) regStep = vis.length - 1;
+  if (regStep < 0) regStep = 0;
+  const id = vis[regStep];
+  const track = $("reg-track");
+  const idx = Math.max(0, REG_ORDER.indexOf(id));
+  if (track) {
+    track.dataset.dir = dir < 0 ? "back" : "fwd";
+    track.style.transform = "translate3d(" + (-idx * 100) + "%,0,0)";
+  }
+  document.querySelectorAll(".reg-step").forEach((el) => {
+    const on = el.dataset.step === id;
+    el.classList.toggle("is-current", on);
+    if (on) el.scrollTop = 0;
+  });
+  const prog = $("reg-progress");
+  if (prog) {
+    [...prog.children].forEach((bar, i) => {
+      const stepId = REG_ORDER[i];
+      const visIdx = vis.indexOf(stepId);
+      bar.classList.toggle("hidden", visIdx < 0);
+      bar.classList.toggle("on", visIdx > -1 && visIdx <= regStep);
+    });
+    prog.setAttribute("aria-valuemax", String(vis.length));
+    prog.setAttribute("aria-valuenow", String(regStep + 1));
+  }
+  const title = $("reg-title");
+  if (title) title.textContent = regEdit ? "Редактировать" : (REG_TITLES[id] || "Профиль");
+  const lead = $("reg-lead");
+  if (lead) {
+    lead.textContent = REG_LEADS[id] || "";
+    lead.classList.toggle("hidden", !!regEdit);
+  }
+  const save = $("reg-save");
+  if (save) save.textContent = regStep >= vis.length - 1 ? (regEdit ? "Сохранить" : "Начать") : "Дальше";
+}
+function validateRegStep() {
+  const id = regVisible()[regStep];
+  if (id === "age") {
+    const age = parseInt($("f-age").value, 10);
+    if (age && age < RULES.MIN_AGE) {
+      flagErr($("f-age").parentElement);
+      renderAgeHint();
+      toast("Нужно 18 или больше. Младше в Hunty не регистрируем.", "warn");
+      haptic("error");
+      return false;
+    }
+    if (!age || age > 99) { flagErr($("f-age").parentElement); toast("Укажи возраст", "warn"); haptic("error"); return false; }
+    return true;
+  }
+  if (id === "name") {
+    const name = $("f-name").value.trim();
+    if (name.length < 2) { flagErr($("f-name").parentElement); toast("Напиши имя — хотя бы 2 буквы", "warn"); haptic("error"); return false; }
+    return true;
+  }
+  if (id === "photos") {
+    if (!draft.photos.length) { flagErr($("photo-slots")); toast("Добавь хотя бы одно своё фото", "warn"); haptic("error"); return false; }
+    return true;
+  }
+  if (id === "gender") {
+    if (draft.gender !== "f" && draft.gender !== "m") { flagErr($("f-gender")); toast("Укажи пол", "warn"); haptic("error"); return false; }
+    return true;
+  }
+  if (id === "seek") {
+    if (draft.seeking !== "f" && draft.seeking !== "m") { flagErr($("f-seek")); toast("Выбери, кого искать", "warn"); haptic("error"); return false; }
+    return true;
+  }
+  if (id === "rules") {
+    if (!$("f-rules").checked) { flagErr($("rules-row")); toast("Нужно принять правила", "warn"); haptic("error"); return false; }
+    return true;
+  }
+  return true;
+}
+function regAdvance() {
+  if (!validateRegStep()) return;
+  const vis = regVisible();
+  if (regStep >= vis.length - 1) return saveRegister();
+  regStep += 1;
+  paintReg(1);
+  haptic("light");
+}
 function openRegister(edit) {
+  regEdit = !!edit;
+  regStep = 0;
   draft = JSON.parse(JSON.stringify(state.me));
-  $("reg-title").textContent = edit ? "Редактировать" : "Твой профиль";
-  $("reg-save").textContent = edit ? "Сохранить" : "Начать";
-  $("reg-lead").classList.toggle("hidden", !!edit);
   $("rules-row").classList.toggle("hidden", !!edit);
   document.querySelectorAll("#reg-scroll .field-why").forEach((el) => el.classList.toggle("hidden", !!edit));
   $("f-name").value = draft.name || "";
   $("f-age").value = draft.age || "";
   $("f-rules").checked = !!edit;
   renderGender(); renderSeek($("f-seek"), draft.seeking || ""); renderPhotos(); renderAgeHint();
+  paintReg(0);
   showScreen("register");
-  $("reg-scroll").scrollTop = 0;
 }
 function renderGender() { [...$("f-gender").children].forEach((b) => b.classList.toggle("on", b.dataset.v === (draft.gender || ""))); }
 function renderSeek(root, value) { if (!root) return; [...root.children].forEach((b) => b.classList.toggle("on", b.dataset.v === (value || ""))); }
@@ -508,7 +647,7 @@ function renderAgeHint() {
   const a = parseInt($("f-age").value, 10);
   const el = $("age-hint");
   if (!el) return;
-  if (a && a < RULES.MIN_AGE) { el.textContent = "Hunty доступен с 16 лет"; el.classList.add("err"); el.classList.remove("hidden"); return; }
+  if (a && a < RULES.MIN_AGE) { el.textContent = "Нужно 18 или больше. Младше в Hunty не регистрируем."; el.classList.add("err"); el.classList.remove("hidden"); return; }
   el.textContent = ""; el.classList.add("hidden"); el.classList.remove("err");
 }
 function resizeImage(file) {
@@ -533,11 +672,13 @@ function saveRegister() {
   const age = parseInt($("f-age").value, 10);
   if (!draft.photos.length) { flagErr($("photo-slots")); toast("Добавь хотя бы одно своё фото", "warn"); haptic("error"); return; }
   if (name.length < 2) { flagErr($("f-name").parentElement); toast("Напиши имя — хотя бы 2 буквы", "warn"); haptic("error"); return; }
-  if (!age || age < RULES.MIN_AGE || age > 99) { flagErr($("f-age").parentElement); toast(age && age < 16 ? "Hunty доступен с 16 лет" : "Укажи возраст", "warn"); haptic("error"); return; }
+  if (!age || age < RULES.MIN_AGE || age > 99) { flagErr($("f-age").parentElement); toast(age && age < RULES.MIN_AGE ? "Нужно 18 или больше. Младше в Hunty не регистрируем." : "Укажи возраст", "warn"); haptic("error"); return; }
   if (!state.registered && !$("f-rules").checked) { flagErr($("rules-row")); toast("Нужно принять правила", "warn"); haptic("error"); return; }
   if (draft.gender !== "f" && draft.gender !== "m") { flagErr($("f-gender")); toast("Укажи пол", "warn"); haptic("error"); return; }
   if (draft.seeking !== "f" && draft.seeking !== "m") { flagErr($("f-seek")); toast("Выбери, кого искать", "warn"); haptic("error"); return; }
-  if (state.registered && state.me.age && H.agePool(state.me.age) !== H.agePool(age)) {
+  const fromPool = H.agePool(state.me.age);
+  const toPool = H.agePool(age);
+  if (state.registered && fromPool && toPool && fromPool !== toPool) {
     toast("Так возраст не меняется", "warn"); haptic("error"); return;
   }
   draft.name = name.slice(0, 20); draft.age = age;
@@ -681,6 +822,7 @@ function mutualWrite(given, theirs) { return scoreHigh(given) && scoreHigh(their
 function writeTo(personId) {
   if (!personId) return;
   if (!state.registered) return openRegister(false);
+  if ((state.me.age | 0) < RULES.MIN_AGE) { toast("Нужно 18 или больше. Обнови возраст в профиле.", "warn"); haptic("error"); showScreen("profile"); return; }
   if (banned()) return showScreen("restricted");
   backend.findMatch({ preferId: personId, direct: true, fast: true }).then((m) => {
     if (!m || !m.partner) { toast("Сейчас не на связи"); return; }
@@ -700,6 +842,7 @@ function startSearch(opts) {
   opts = opts || {};
   rollover();
   if (!state.registered) return openRegister(false);
+  if ((state.me.age | 0) < RULES.MIN_AGE) { toast("Нужно 18 или больше. Обнови возраст в профиле.", "warn"); haptic("error"); showScreen("profile"); return; }
   if (banned()) return showScreen("restricted");
   if (syncCooldown()) { haptic("warning"); showScreen("home"); return; }
   haptic("medium");
@@ -1201,8 +1344,10 @@ function finishProfileField(el) {
     state.me.name = name.slice(0, 20);
   } else if (id === "p-age") {
     const age = parseInt(el.value, 10);
-    if (!age || age < RULES.MIN_AGE || age > 99) { toast(age && age < 16 ? "Hunty доступен с 16 лет" : "Укажи возраст", "warn"); el.value = state.me.age || ""; haptic("error"); el.blur(); return; }
-    if (state.me.age && H.agePool(state.me.age) !== H.agePool(age)) { toast("Так возраст не меняется", "warn"); el.value = state.me.age; haptic("error"); el.blur(); return; }
+    if (!age || age < RULES.MIN_AGE || age > 99) { toast(age && age < RULES.MIN_AGE ? "Нужно 18 или больше. Младше в Hunty не регистрируем." : "Укажи возраст", "warn"); el.value = state.me.age || ""; haptic("error"); el.blur(); return; }
+    const fromPool = H.agePool(state.me.age);
+    const toPool = H.agePool(age);
+    if (fromPool && toPool && fromPool !== toPool) { toast("Так возраст не меняется", "warn"); el.value = state.me.age; haptic("error"); el.blur(); return; }
     state.me.age = age;
   } else return;
   state.me.about = "";
@@ -1383,7 +1528,7 @@ function openLimitSheet() {
 
 /* ---------- rules / restricted ---------- */
 function openRules() {
-  const R0 = [["Только 16+", "Возраст от 16. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама", "Чужие ссылки и номера в чате не проходят. Юзернейм можно написать самим. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 — после разговора, если вы успели пообщаться. Фото в «Мои оценки» только если они успели открыться. Короткий пропуск не попадает в среднюю."]];
+  const R0 = [["Только 18+", "Возраст от 18. Младше зарегистрироваться нельзя. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама", "Чужие ссылки и номера в чате не проходят. Юзернейм можно написать самим. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 — после разговора, если вы успели пообщаться. Фото в «Мои оценки» только если они успели открыться. Короткий пропуск не попадает в среднюю."]];
   openSheet(`<div class="sh-title">Правила Hunty</div><div class="sh-sub">Коротко и по делу</div>
     <div class="rules-list">${R0.map(([b, p], i) => `<div class="rule"><span class="rn">${i + 1}</span><div><b>${b}</b><p>${p}</p></div></div>`).join("")}</div>
     <div class="rate-note">30 жалоб за 24 часа закрывают поиск на 10 часов. Низкие оценки никогда не ограничивают. Ещё 30 жалоб за сутки — снова 10 часов.</div>`);
@@ -1724,7 +1869,7 @@ function bind() {
   $("f-gender").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; draft.gender = b.dataset.v; renderGender(); haptic("select"); };
   $("f-seek").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; draft.seeking = b.dataset.v; renderSeek($("f-seek"), draft.seeking); haptic("select"); };
   $("f-age").addEventListener("input", () => { $("f-age").value = $("f-age").value.replace(/\D/g, ""); renderAgeHint(); });
-  const step = (d) => { const raw = parseInt($("f-age").value, 10); const a = raw || (d > 0 ? 15 : 17); $("f-age").value = Math.max(16, Math.min(99, a + d)); renderAgeHint(); haptic("select"); };
+  const step = (d) => { const raw = parseInt($("f-age").value, 10); const a = raw || (d > 0 ? RULES.MIN_AGE - 1 : RULES.MIN_AGE + 1); $("f-age").value = Math.max(RULES.MIN_AGE, Math.min(99, a + d)); renderAgeHint(); haptic("select"); };
   $("age-minus").onclick = () => step(-1); $("age-plus").onclick = () => step(1);
   let photoSlot = 0;
   $("photo-slots").onclick = (e) => {
@@ -1752,7 +1897,7 @@ function bind() {
     } catch { toast("Не удалось загрузить фото", "warn"); }
   };
   $("open-rules-reg").onclick = (e) => { e.preventDefault(); e.stopPropagation(); openRules(); };
-  $("reg-save").onclick = saveRegister;
+  $("reg-save").onclick = regAdvance;
 
   $("btn-search").onclick = () => startSearch();
   $("cd-skip").onclick = onCooldownAction;
@@ -1896,7 +2041,11 @@ function bind() {
     if (mutualWrite(givenFor(m.id, m.given), m.theirScore)) return writeTo(m.id);
     openPartnerProfile(Object.assign({}, m, { faceShown: true }));
   };
-  document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => { haptic("light"); showScreen(t.dataset.tab); }));
+  document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => {
+    haptic("light");
+    const dir = TABS.indexOf(t.dataset.tab) >= TABS.indexOf(current) ? 1 : -1;
+    showScreen(t.dataset.tab, dir);
+  }));
   $("rater-list").onclick = (e) => {
     const write = e.target.closest("[data-write]");
     if (write) { writeTo(write.dataset.write); return; }
@@ -1940,7 +2089,7 @@ function bind() {
     el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); finishProfileField(el); } });
     el.addEventListener("blur", () => finishProfileField(el));
   });
-  const pageStep = (d) => { const raw = parseInt($("p-age").value, 10); const a = raw || state.me.age || (d > 0 ? 15 : 17); $("p-age").value = Math.max(16, Math.min(99, a + d)); finishProfileField($("p-age")); haptic("select"); };
+  const pageStep = (d) => { const raw = parseInt($("p-age").value, 10); const a = raw || state.me.age || (d > 0 ? RULES.MIN_AGE - 1 : RULES.MIN_AGE + 1); $("p-age").value = Math.max(RULES.MIN_AGE, Math.min(99, a + d)); finishProfileField($("p-age")); haptic("select"); };
   $("p-age-minus").onclick = () => pageStep(-1);
   $("p-age-plus").onclick = () => pageStep(1);
   $("p-gender").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; state.me.gender = b.dataset.v; save(); backend.updateMe(publicMe()); renderSeek($("p-gender"), state.me.gender); haptic("select"); };
