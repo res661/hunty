@@ -63,15 +63,35 @@ function paintStaticAvatars() {
     el.setAttribute("style", avStyle(h));
   });
 }
-const CONV_TAGS = ["Смешно", "Интересно", "Приятно", "Легко", "Скучно", "Грубо", "Сухо", "Тяжело"];
-function tagChips(counts) {
-  const rows = CONV_TAGS.map((t) => [t, counts && counts[t] ? counts[t] | 0 : 0]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || CONV_TAGS.indexOf(a[0]) - CONV_TAGS.indexOf(b[0]));
-  if (!rows.length) return "";
-  return `<div class="tag-counts">${rows.map(([t, n]) => `<span class="chip static">${esc(t)} ${n}</span>`).join("")}</div>`;
+const FLAGS = [
+  { id: "green", name: "Грин флаг", cls: "flag-green" },
+  { id: "mid", name: "Жёлтый флаг", cls: "flag-mid" },
+  { id: "red", name: "Ред флаг", cls: "flag-red" },
+];
+function flagFor(score) {
+  const n = score | 0;
+  if (n >= 8 && n <= 10) return FLAGS[0];
+  if (n >= 5 && n <= 7) return FLAGS[1];
+  if (n >= 1 && n <= 4) return FLAGS[2];
+  return null;
 }
-function myTagCounts() {
-  const counts = {};
-  for (const r of state.ratingsReceived || []) for (const t of r.tags || []) if (CONV_TAGS.includes(t)) counts[t] = (counts[t] || 0) + 1;
+function flagMark() { return `<i class="flag-mark" aria-hidden="true"></i>`; }
+function flagWidget(flag, count, on) {
+  if (!flag) return "";
+  const n = count == null ? "" : `<em>${count}</em>`;
+  return `<span class="flag-w ${flag.cls}${on ? " on" : ""}" data-f="${flag.id}">${flagMark()}<b>${esc(flag.name)}</b>${n}</span>`;
+}
+function flagChips(counts) {
+  const rows = FLAGS.map((f) => [f, counts && counts[f.id] ? counts[f.id] | 0 : 0]).filter(([, n]) => n > 0);
+  if (!rows.length) return "";
+  return `<div class="flag-row">${rows.map(([f, n]) => flagWidget(f, n, false)).join("")}</div>`;
+}
+function myFlagCounts() {
+  const counts = { green: 0, mid: 0, red: 0 };
+  for (const r of state.ratingsReceived || []) {
+    const f = flagFor(r.score);
+    if (f) counts[f.id]++;
+  }
   return counts;
 }
 function avatarHTML(p, size) {
@@ -704,53 +724,42 @@ function afterChat(after) {
 }
 
 /* ---------- rating ---------- */
-const RATE_LABEL = ["", "Ужасно", "Очень плохо", "Плохо", "Так себе", "Нормально", "Неплохо", "Хорошо", "Отлично", "Супер", "Лучший разговор"];
 function openRateSheet(entry, after) {
   let score = null;
-  const tags = CONV_TAGS;
-  const picked = new Set();
   const stay = after === "stay";
-  const tagHint = isPremium() ? "Можно несколько меток." : "Одна метка. Несколько — в PRO.";
   const body = openSheet(`
     <div class="sh-title">Как прошёл разговор?</div>
     <div class="sh-sub">с ${esc(entry.partner.name)} · ${fmtDur(entry.dur)}</div>
     <div class="rate-big empty" id="rate-big"><b>–</b><span>Выбери от 1 до 10</span></div>
+    <div class="flag-row" id="flag-row">${FLAGS.map((f) => flagWidget(f, null, false)).join("")}</div>
     <div class="rate-grid" id="rate-grid">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button class="rate-btn" data-n="${n}">${n}</button>`).join("")}</div>
-    <div class="rate-tags" id="rate-tags">${tags.map((t) => `<button class="chip" data-t="${t}">${t}</button>`).join("")}</div>
     <div class="sh-actions row"><button class="btn btn-soft rate-act" id="rate-home">${stay ? "Не сейчас" : after === "next" ? "Пропустить" : "Не сейчас"}</button><button class="btn btn-primary rate-act" id="rate-send" disabled>${stay || after !== "next" ? "Оценить" : "Оценить и дальше"}</button></div>
-    <div class="rate-note">${tagHint} Имя и фото видны в «Мои оценки».</div>`, () => { if (!stay) afterChat(after); });
+    <div class="rate-note">Имя и фото видны в «Мои оценки».</div>`, () => { if (!stay) afterChat(after); });
   body.querySelector("#rate-grid").onclick = (e) => {
     const b = e.target.closest("[data-n]"); if (!b) return;
     score = +b.dataset.n; haptic("select");
+    const flag = flagFor(score);
     body.querySelectorAll(".rate-btn").forEach((x) => { x.className = "rate-btn"; });
-    b.classList.add("on", score <= 3 ? "lo" : score <= 6 ? "mid" : score <= 8 ? "hi" : "top");
+    b.classList.add("on", score <= 4 ? "lo" : score <= 7 ? "mid" : "top");
     const big = body.querySelector("#rate-big"); big.classList.remove("empty");
-    big.innerHTML = `<b>${score}</b><span>${RATE_LABEL[score]}</span>`;
+    big.innerHTML = `<b>${score}</b><span class="flag-hero ${flag.cls}">${flagMark()}${esc(flag.name)}</span>`;
+    body.querySelectorAll("#flag-row .flag-w").forEach((el) => el.classList.toggle("on", el.dataset.f === flag.id));
     body.querySelector("#rate-send").disabled = false;
-  };
-  body.querySelector("#rate-tags").onclick = (e) => {
-    const b = e.target.closest("[data-t]"); if (!b) return;
-    const name = b.dataset.t;
-    if (picked.has(name)) { picked.delete(name); b.classList.remove("on"); haptic("select"); return; }
-    if (!isPremium() && picked.size >= 1) { toast("Несколько меток — в PRO"); haptic("warning"); return; }
-    picked.add(name); b.classList.add("on"); haptic("select");
   };
   body.querySelector("#rate-home").onclick = () => { closeSheet(true); if (!stay) afterChat(after); };
   body.querySelector("#rate-send").onclick = async () => {
     if (!score) return;
-    const chosen = [...picked];
-    const r = await backend.rate(entry.id, score, chosen);
+    const r = await backend.rate(entry.id, score);
     if (r.accepted) {
       entry.given = score;
       if (!state.givenByMe) state.givenByMe = {};
-      if (chat && chat.partner) {
+      const flag = flagFor(score);
+      if (chat && chat.partner && flag) {
         state.givenByMe[chat.partner.id] = score;
         const row = state.raters.find((x) => x.id === chat.partner.id);
         if (row) row.given = score;
-        for (const t of chosen) {
-          const bag = chat.partner.tagCounts || (chat.partner.tagCounts = {});
-          bag[t] = (bag[t] | 0) + 1;
-        }
+        const bag = chat.partner.flagCounts || (chat.partner.flagCounts = { green: 0, mid: 0, red: 0 });
+        bag[flag.id] = (bag[flag.id] | 0) + 1;
       }
       if (chat) { chat.given = score; chat.entry = entry; }
       $("gone-rate").classList.add("hidden");
@@ -782,23 +791,24 @@ function openPartnerProfile(p) {
   const body = openSheet(`${photosHTML(p)}
     <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
     <div class="ps-meta">${placeText(p)}</div>
-    ${tagChips(p.tagCounts)}
-    <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}
+    <div class="ps-section">Репутация</div>${partnerStatsHTML(p)}${flagChips(p.flagCounts)}
     <div class="sh-actions row"><button class="btn btn-soft flat" id="pp-report">${ic("flag")}Жалоба</button><button class="btn btn-soft flat" id="pp-block">${ic("block")}Блок</button></div>`);
   bindPhotoDots(body);
   body.querySelector("#pp-report").onclick = () => openReport(p);
   body.querySelector("#pp-block").onclick = () => confirmBlock(p);
 }
+function scoreLine(score, label) {
+  const flag = flagFor(score);
+  return `<div class="given-score"><b>${score}</b><span>${label}</span></div>${flag ? `<div class="flag-row">${flagWidget(flag, null, true)}</div>` : ""}`;
+}
 function openRaterProfile(h) {
   const p = { name: h.name, age: h.age, hue: h.hue, photos: h.photos || [], country: h.country, city: h.city, premium: h.premium, about: "" };
   const mine = h.given != null ? h.given : (state.givenByMe && state.givenByMe[h.id]);
-  const theirTags = (h.tags || []).filter((t) => CONV_TAGS.includes(t));
   const body = openSheet(`${photosHTML(p)}
     <div class="ps-name"><h2>${esc(p.name)}${p.age ? ", " + p.age : ""}</h2>${p.premium ? `<i class="name-crown">${ic("crown")}</i>` : ""}</div>
     <div class="ps-meta">${placeText(p)}</div>
-    <div class="given-score"><b>${h.score}</b><span>Оценка мне</span></div>
-    ${mine != null ? `<div class="given-score"><b>${mine}</b><span>Оценка тебе</span></div>` : `<div class="ps-meta">Оценка тебе · нет</div>`}
-    ${theirTags.length ? `<div class="tag-counts">${theirTags.map((t) => `<span class="chip static">${esc(t)}</span>`).join("")}</div>` : ""}`);
+    ${scoreLine(h.score, "Оценка мне")}
+    ${mine != null ? scoreLine(mine, "Оценка тебе") : `<div class="ps-meta">Оценка тебе · нет</div>`}`);
   bindPhotoDots(body);
 }
 function openReport(p) {
@@ -876,7 +886,7 @@ function renderProfile() {
   renderSeek($("p-gender"), m.gender);
   renderSeek($("p-seek"), m.seeking);
   renderMyPhotos();
-  $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML() + tagChips(myTagCounts());
+  $("me-stats").innerHTML = `<div class="card-head"><h3>Статистика</h3><small>${rep.count} ${plural(rep.count, "оценка", "оценки", "оценок")}</small></div>` + myStatsHTML() + flagChips(myFlagCounts());
   $("me-premium").className = "card premium-card" + (pro ? " on" : "");
   $("me-premium").innerHTML = pro
     ? `<span class="pc-star">${ic("star")}</span><h3>${ic("crown")} PRO подписка</h3><p>До ${new Date(state.premium.until).toLocaleDateString("ru-RU")}. Оценки без лимита, фото в чате, поиск быстрее.</p>`
@@ -937,9 +947,10 @@ function renderRatings() {
   box.innerHTML = rows.length ? rows.map((h) => {
     const id = h.id || (h.name + ":" + h.ts);
     const open = isPremium() || revealed(id);
-    const tags = (h.tags || []).map((t) => `<i>${esc(t)}</i>`).join("");
+    const flag = flagFor(h.score);
+    const flagHtml = open && flag ? `<div class="flag-row">${flagWidget(flag, null, true)}</div>` : "";
     return `<div class="rated-row" data-rid="${esc(id)}">${open
-      ? `${avatarHTML(h, "sm")}<div class="rater-main"><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div>${tags ? `<div class="rater-tags">${tags}</div>` : ""}</div><span class="score">${h.score}</span>`
+      ? `${avatarHTML(h, "sm")}<div class="rater-main"><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div>${flagHtml}</div><span class="score">${h.score}</span>`
       : `<span class="av sm">?</span><div class="rater-main"><b>Скрыто</b><div class="hint" style="margin:0">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
   }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Нужны 3 сообщения в чате.</span></div>`;
 }
@@ -970,7 +981,7 @@ function openLimitSheet() {
 
 /* ---------- rules / restricted ---------- */
 function openRules() {
-  const R0 = [["Только 16+", "Возраст от 16. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 только после 3 сообщений в чате. Имя, фото и метки того, кто оценил, видны в «Мои оценки». Короткий пропуск не попадает в среднюю."]];
+  const R0 = [["Только 16+", "Возраст от 16. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 только после 3 сообщений в чате. Имя, фото и оценка видны в «Мои оценки». Короткий пропуск не попадает в среднюю."]];
   openSheet(`<div class="sh-title">Правила Hunty</div><div class="sh-sub">Коротко и по делу</div>
     <div class="rules-list">${R0.map(([b, p], i) => `<div class="rule"><span class="rn">${i + 1}</span><div><b>${b}</b><p>${p}</p></div></div>`).join("")}</div>
     <div class="rate-note">30 жалоб за 24 часа закрывают поиск на 10 часов. Низкие оценки никогда не ограничивают. Ещё 30 жалоб за сутки — снова 10 часов.</div>`);
@@ -1012,10 +1023,9 @@ function simulateRatings() {
     const p = pool[(Math.random() * pool.length) | 0];
     const id = p.id + "_" + i + "_" + Date.now();
     const score = 6 + ((Math.random() * 5) | 0);
-    const tag = CONV_TAGS[(Math.random() * CONV_TAGS.length) | 0];
     const dur = 90 + ((Math.random() * 400) | 0);
-    state.ratingsReceived.push({ from: id, score, dur, tags: [tag], ts: Date.now() });
-    state.raters.push({ id, name: p.name, age: p.age, country: p.country, city: p.city, premium: p.premium, hue: p.hue, photos: p.photos, tagCounts: p.tagCounts, score, dur, tags: [tag], ts: Date.now() });
+    state.ratingsReceived.push({ from: id, score, dur, ts: Date.now() });
+    state.raters.push({ id, name: p.name, age: p.age, country: p.country, city: p.city, premium: p.premium, hue: p.hue, photos: p.photos, score, dur, ts: Date.now() });
   }
   state.totals.chats += 5; state.totals.sec += 5 * 240;
   save(); refresh(); toast("Добавлено 5 тестовых оценок");
@@ -1049,7 +1059,7 @@ function bindBackend() {
     const rec = recent.get(sessionId);
     const partner = rec && rec.partner;
     state.ratingsReceived.push({ from: partnerId, score, dur, ts: Date.now(), tags: tags || [] });
-    if (partner) state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: partner.photos, age: partner.age, country: partner.country, city: partner.city, premium: partner.premium, tagCounts: partner.tagCounts, score, dur, tags: tags || [], ts: Date.now() });
+    if (partner) state.raters.push({ id: partnerId, name: partner.name, hue: partner.hue, photos: partner.photos, age: partner.age, country: partner.country, city: partner.city, premium: partner.premium, score, dur, ts: Date.now() });
     save(); refresh();
   });
 }

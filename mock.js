@@ -233,13 +233,11 @@
   };
   PROFILES.forEach((p, i) => {
     p.username = HANDLES[p.id];
-    const names = ["Смешно", "Интересно", "Приятно", "Легко", "Скучно", "Грубо", "Сухо", "Тяжело"];
-    const counts = {};
-    names.forEach((t, k) => {
-      const n = [8, 3, 5, 1, 12, 0, 4, 9, 2, 6, 7][(i * 3 + k) % 11];
-      if (n) counts[t] = n;
-    });
-    p.tagCounts = counts;
+    p.flagCounts = {
+      green: [11, 4, 8, 0, 6, 14, 2, 9][i % 8],
+      mid: [3, 7, 1, 5, 0, 4, 8, 2][i % 8],
+      red: [1, 0, 4, 2, 6, 0, 3, 1][i % 8],
+    };
   });
 
   function publicProfile(p) {
@@ -417,14 +415,7 @@
         if (qualified) {
           const score = Math.max(1, Math.min(10, Math.round(6 + Math.min(3.5, s.mine * 0.5) + (Math.random() * 2 - 1))));
           partnerRatings.set(s.partner.id, score);
-          const names = ["Смешно", "Интересно", "Приятно", "Легко", "Скучно", "Грубо", "Сухо", "Тяжело"];
-          const tags = [];
-          const n = Math.random() < 0.2 ? 0 : Math.random() < 0.65 ? 1 : 2;
-          while (tags.length < n) {
-            const t = names[(Math.random() * names.length) | 0];
-            if (!tags.includes(t)) tags.push(t);
-          }
-          setTimeout(() => em.emit("ratedByPartner", { sessionId, partnerId: s.partner.id, score, dur, tags }), 1200);
+          setTimeout(() => em.emit("ratedByPartner", { sessionId, partnerId: s.partner.id, score, dur }), 1200);
         }
         return { dur, canRate: qualified };
       },
@@ -435,11 +426,10 @@
         if (!R.canRate(s.dur || 0, s.mine, s.theirs)) return { accepted: false, reason: "short" };
         if (s.rated) return { accepted: false, reason: "duplicate" };
         s.rated = true;
-        const allowed = ["Смешно", "Интересно", "Приятно", "Легко", "Скучно", "Грубо", "Сухо", "Тяжело"];
-        const chosen = (tags || []).filter((t) => allowed.includes(t));
-        s.partner.tagCounts = s.partner.tagCounts || {};
-        for (const t of chosen) s.partner.tagCounts[t] = (s.partner.tagCounts[t] | 0) + 1;
-        myRatings.set(s.partner.id, { score, tags: chosen });
+        const flag = score >= 8 ? "green" : score >= 5 ? "mid" : "red";
+        s.partner.flagCounts = s.partner.flagCounts || { green: 0, mid: 0, red: 0 };
+        s.partner.flagCounts[flag] = (s.partner.flagCounts[flag] | 0) + 1;
+        myRatings.set(s.partner.id, { score });
         return { accepted: true };
       },
 
