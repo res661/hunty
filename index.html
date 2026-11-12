@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#F6F2EC" />
   <meta name="format-detection" content="telephone=no" />
   <title>Hunty</title>
-  <link rel="icon" href="assets/mark.svg?v=11" type="image/svg+xml" />
+  <link rel="icon" href="assets/mark.svg?v=12" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=12" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -215,6 +215,8 @@
     <div class="typing hidden" id="typing"><i></i><i></i><i></i></div>
     <footer class="composer" id="composer">
       <div class="composer-row">
+        <button class="attach-btn" id="chat-photo" type="button" data-ic="camera" aria-label="Фото"></button>
+        <input type="file" id="chat-photo-input" accept="image/*" hidden />
         <label class="msg-field"><input id="msg-input" placeholder="Сообщение" autocomplete="off" maxlength="500" enterkeyhint="send" /></label>
         <button class="send-btn" id="msg-send" data-ic="send" aria-label="Отправить"></button>
       </div>
@@ -256,8 +258,8 @@
   <div class="toast hidden" id="toast"></div>
 </div>
 
-<script src="rules.js?v=11"></script>
-<script src="mock.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="rules.js?v=12"></script>
+<script src="mock.js?v=12"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

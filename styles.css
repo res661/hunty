@@ -467,8 +467,15 @@ html[data-theme="dark"] .rating-chip { color: var(--gold); }
 @keyframes msgIn { from { opacity: 0; transform: translateY(8px) scale(.96); } }
 .msg.me { align-self: flex-end; background: var(--coral); color: #fff; border-bottom-right-radius: 6px; }
 .msg.them { align-self: flex-start; background: var(--bubble-them); box-shadow: 0 1px 1px rgba(0,0,0,.04), 0 0 0 1px var(--line) inset; border-bottom-left-radius: 6px; }
+.msg.photo, .msg.photo.me, .msg.photo.them { padding: 3px; background: transparent; box-shadow: none; }
 .msg + .msg.me, .msg + .msg.them { margin-top: 2px; }
 .msg.me + .msg.them, .msg.them + .msg.me { margin-top: 8px; }
+.msg.photo img { display: block; width: 168px; max-width: 58vw; height: 112px; object-fit: cover; border-radius: 16px; }
+.msg.photo.me img { border-bottom-right-radius: 6px; }
+.msg.photo.them img { border-bottom-left-radius: 6px; }
+.attach-btn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--coral); flex: none; }
+.attach-btn svg { width: 22px; height: 22px; }
+.attach-btn:active { background: var(--coral-soft); }
 .sys { align-self: center; text-align: center; max-width: 92%; margin: 8px 0; padding: 7px 12px; border-radius: 14px; background: var(--surface-2); color: var(--muted); font-size: 13px; animation: msgIn .3s var(--spring) both; }
 .sys.ok { background: rgba(31,185,143,.14); color: var(--mint); font-weight: 600; }
 .sys.warn { background: rgba(242,69,61,.12); color: var(--red); font-weight: 600; }

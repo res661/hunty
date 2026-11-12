@@ -382,7 +382,7 @@ const proBadge = () => `<span class="pro-badge">${ic("crown")}PRO</span>`;
 
 /* ---------- home ---------- */
 let onlineCount = 0;
-const TIPS = ["Оценка 1–10 — после 3 сообщений в чате", "Средняя оценка учитывается после 5 разговоров, до этого ты «Новый»", "«Дальше» с первой секунды. Меньше 3 сообщений — без оценки", "Ссылки, @ники и номера в чате блокируются — это защита от скама"];
+const TIPS = ["Оценка 1–10 — после 3 сообщений в чате", "Средняя оценка учитывается после 5 разговоров, до этого ты «Новый»", "Короткий пропуск не меняет среднюю и не считается чатом", "Ссылки, @ники и номера в чате блокируются — это защита от скама"];
 const filtersActive = () => { const f = state.filters; return f.gender !== "any" || f.ageMin || f.ageMax || f.city; };
 function renderHome() {
   rollover();
@@ -476,7 +476,7 @@ function openChat(m) {
   $("messages").innerHTML = `
     <button class="chat-intro" id="chat-intro">${avatarHTML(p, "lg")}<b>${esc(p.name)}, ${p.age}${where ? " · " + where : ""}</b>
     <small>${ratingChip(p)} ${p.stats.chats} ${plural(p.stats.chats, "чат", "чата", "чатов")} · ср. ${fmtDur(p.stats.avgSec)}</small><span class="ci-more">Профиль</span></button>
-    <div class="sys">Вы на связи. «Дальше» — сразу. Оценка — после 3 сообщений в чате.</div>`;
+    `;
   $("chat-intro").onclick = () => openPartnerProfile(p);
   $("composer").classList.remove("hidden"); $("composer-ended").classList.add("hidden");
   $("typing").classList.add("hidden");
@@ -499,12 +499,33 @@ function maybeUnlock() {
   if (!chat || chat.unlockedShown || chat.ended) return;
   if (!H.canRate(chatDur(), chat.mine || 0, chat.theirs || 0)) return;
   chat.unlockedShown = true; $("chat-timer").classList.add("unlocked");
-  addSys("Можно будет оценить разговор", "ok"); haptic("light");
 }
 function addMsg(text, who) {
   const box = $("messages");
   const el = document.createElement("div"); el.className = "msg " + who; el.textContent = text;
   box.appendChild(el); box.scrollTop = box.scrollHeight;
+}
+function addPhoto(src, who) {
+  const box = $("messages");
+  const el = document.createElement("div"); el.className = "msg photo " + who;
+  const img = document.createElement("img"); img.src = src; img.alt = "";
+  el.appendChild(img); box.appendChild(el); box.scrollTop = box.scrollHeight;
+}
+function openPhotoPaywall() {
+  const body = openSheet(`<div class="sh-title">Фото в чате</div><div class="sh-sub">Отправка фото — в PRO.</div>
+    <div class="sh-actions"><button class="btn btn-primary btn-lg" id="photo-pro">Подключить PRO</button><button class="btn btn-ghost" id="photo-no">Не сейчас</button></div>`);
+  body.querySelector("#photo-pro").onclick = () => { closeSheet(true); setTimeout(openPremium, 220); };
+  body.querySelector("#photo-no").onclick = () => closeSheet(true);
+}
+async function sendChatPhoto(file) {
+  if (!chat || chat.ended || !file) return;
+  if (!isPremium()) { openPhotoPaywall(); return; }
+  try {
+    const src = await resizeImage(file);
+    addPhoto(src, "me"); chat.mine++; maybeUnlock();
+    backend.sendPhoto(chat.id).catch(() => {});
+    haptic("light");
+  } catch { toast("Не удалось загрузить фото", "warn"); }
 }
 function addSys(text, kind) {
   const box = $("messages");
@@ -540,7 +561,7 @@ async function endChat() {
   const entry = { id: chat.id, partner: chat.partner, dur: res.dur, canRate: res.canRate, given: null };
   chat.entry = entry;
   recent.set(chat.id, entry);
-  state.totals.chats++; state.totals.sec += res.dur;
+  if (res.canRate) { state.totals.chats++; state.totals.sec += res.dur; }
   state.activity.push({ ts: Date.now(), dur: res.dur });
   if (state.activity.length > 400) state.activity.splice(0, state.activity.length - 400);
   state.recentPartnerIds = state.recentPartnerIds.filter((id) => id !== chat.partner.id).concat(chat.partner.id).slice(-3);
@@ -744,7 +765,7 @@ function openRaters() {
       const id = h.id || (h.name + ":" + h.ts);
       const open = revealed(id);
       return `<div class="rated-row" data-rid="${esc(id)}" data-i="${i}">${open ? `${avatarHTML(h, "sm")}<div><b>${esc(h.name)}</b><div class="hint" style="margin:0">${fmtDur(h.dur)}</div></div><span class="score">${h.score}</span>` : `<span class="av sm">?</span><div><b>Скрыто</b><div class="hint" style="margin:0">${left ? "нажми, чтобы открыть" : "лимит на сегодня"}</div></div><button class="btn btn-edit reveal-one" type="button">${left ? "Открыть" : "PRO"}</button>`}</div>`;
-    }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Нужны 30 секунд и по 3 сообщения.</span></div>`}</div>`);
+    }).join("") : `<div class="rated-row"><span class="hint">Пока никто. Нужны 3 сообщения в чате.</span></div>`}</div>`);
   body.querySelector("#rater-list").onclick = (e) => {
     const row = e.target.closest("[data-rid]");
     if (!row || revealed(row.dataset.rid)) return;
@@ -773,7 +794,7 @@ function openLimitSheet() {
 
 /* ---------- rules / restricted ---------- */
 function openRules() {
-  const R0 = [["Только 16+", "Возраст обязателен. 16–17 и 18+ — отдельные пулы, они никогда не пересекаются. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 появляется после 3 сообщений в чате, с любой стороны. «Дальше» с первой секунды: если сообщений меньше трёх, оценки нет."]];
+  const R0 = [["Только 16+", "Возраст обязателен. 16–17 и 18+ — отдельные пулы, они никогда не пересекаются. Обман с возрастом — бан."], ["Без 18+ контента", "Никакой эротики, интим-предложений и откровенных фото — для всех возрастов."], ["Уважение", "Оскорбления, угрозы, травля и дискриминация — повод для жалобы."], ["Без скама и рекламы", "Ссылки, @ники, номера и инвайты в чате блокируются. Не переводи деньги и не отправляй коды."], ["Жалобы, а не оценки", "Поиск ограничивают жалобы от разных людей. Низкие оценки никогда не банят."], ["Честные оценки", "Оценка 1–10 только после 3 сообщений в чате. Короткий пропуск не попадает в среднюю и не считается чатом."]];
   openSheet(`<div class="sh-title">Правила Hunty</div><div class="sh-sub">Коротко и по делу</div>
     <div class="rules-list">${R0.map(([b, p], i) => `<div class="rule"><span class="rn">${i + 1}</span><div><b>${b}</b><p>${p}</p></div></div>`).join("")}</div>
     <div class="rate-note">Ограничение поиска: 30 жалоб за 24 часа — пауза на 10 часов. Низкие оценки никогда не ограничивают. После таймера можно снова пользоваться; ещё 30 жалоб за сутки — снова 10 часов.</div>`);
@@ -833,9 +854,11 @@ function bindBackend() {
     $("typing").classList.toggle("hidden", !on);
     if (on) { const b = $("messages"); b.scrollTop = b.scrollHeight; }
   });
-  backend.on("message", ({ sessionId, text }) => {
+  backend.on("message", ({ sessionId, text, photo }) => {
     if (!chat || chat.id !== sessionId || chat.ended) return;
-    $("typing").classList.add("hidden"); chat.theirs++; addMsg(text, "them"); maybeUnlock(); haptic("light");
+    $("typing").classList.add("hidden"); chat.theirs++;
+    if (photo) addPhoto(photo, "them"); else addMsg(text, "them");
+    maybeUnlock(); haptic("light");
   });
   backend.on("partnerLeft", async ({ sessionId }) => {
     if (!chat || chat.id !== sessionId || chat.ended) return;
@@ -902,6 +925,8 @@ function bind() {
   $("msg-send").addEventListener("pointerdown", (e) => e.preventDefault());
   $("msg-send").addEventListener("mousedown", (e) => e.preventDefault());
   $("msg-send").onclick = sendMsg;
+  $("chat-photo").onclick = () => { if (!isPremium()) openPhotoPaywall(); else $("chat-photo-input").click(); };
+  $("chat-photo-input").onchange = () => { const f = $("chat-photo-input").files[0]; $("chat-photo-input").value = ""; sendChatPhoto(f); };
   $("ended-home").onclick = () => leaveChat("home");
   $("ended-next").onclick = () => leaveChat("next");
 
