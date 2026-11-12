@@ -134,19 +134,13 @@ function haptic(kind) {
 }
 let chromeRaf = 0;
 let lastChrome = "";
-let scrollSettle = 0;
-function scrollMessagesNow() {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const box = document.getElementById("messages");
-      const chatOn = document.querySelector('[data-screen="chat"]');
-      if (box && chatOn && !chatOn.classList.contains("hidden")) box.scrollTop = box.scrollHeight;
-    });
-  });
+function pinMessages() {
+  const box = document.getElementById("messages");
+  const chatOn = document.querySelector('[data-screen="chat"]');
+  if (box && chatOn && !chatOn.classList.contains("hidden")) box.scrollTop = box.scrollHeight;
 }
-function scrollMessagesSettled() {
-  clearTimeout(scrollSettle);
-  scrollSettle = setTimeout(scrollMessagesNow, 100);
+function scrollMessagesNow() {
+  requestAnimationFrame(() => requestAnimationFrame(pinMessages));
 }
 function scheduleChrome() {
   if (chromeRaf) return;
@@ -182,7 +176,7 @@ function applyChrome() {
   root.style.setProperty("--vv-h", vvH + "px");
   root.style.setProperty("--app-h", vvH + "px");
   root.dataset.kb = kbOpen ? "1" : "0";
-  if (viewChanged) scrollMessagesSettled();
+  if (viewChanged) pinMessages();
 }
 function systemTheme() {
   if (tg && tg.initData && tg.colorScheme) return tg.colorScheme === "dark" ? "dark" : "light";
